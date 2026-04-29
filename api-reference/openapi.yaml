@@ -1,0 +1,1366 @@
+openapi: 3.1.0
+info:
+  title: HG.Cash API
+  description: |
+    # 🚀 HG.Cash Transaction API
+    
+    Modern REST API for users to create outbound transactions from their accounts.
+    
+    ## 🧾 How it works
+    
+    - We assign accounts to your user in HG.Cash
+    - When these accounts have transactions (inbound or outbound), HG.Cash will notify your backend using the webhook URL you configure in the HG.Cash dashboard
+    - **Webhook signature (HMAC)**: In account settings you can generate a signing secret. When configured, each webhook POST includes the header `X-HG-Webhook-Signature: sha256=<hex>` where the value is HMAC-SHA256 of the raw JSON body using your secret. Verify this in your endpoint to ensure the request is authentic.
+    - To create cash-outs (money leaving your accounts), you must call the **Cash Out** endpoint: **Create Transaction Request (Cash Out)** (`POST /transactions`)
+    
+    ## 📊 Getting Started
+    
+    1. **Generate your API token** in the account settings page
+    2. **Test endpoints** using the interactive documentation below
+    3. **Implement** in your backend services (never expose tokens in frontend)
+    4. **Monitor** your integration and handle errors appropriately
+
+    ## 🔐 Authentication
+    
+    This API uses **Bearer Token** authentication. Include your user API token in the Authorization header:
+    
+    ```
+    Authorization: Bearer cash_your_token_here
+    ```
+    
+    ## ⚠️ Important Security Notes
+    
+    - Never share or expose your user API authentication token
+    - Store tokens securely on your backend servers only
+    - All API calls must be made from secure backend services
+    - Contact administrators immediately if your token is compromised
+    
+  version: 1.0.0
+  contact:
+    name: HG.Cash API Support
+    email: api-support@hg.cash
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://hg.cash/api/v1
+    description: Production server
+  - url: http://dev.hg.cash/api/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        User API authentication token with format: `cash_<64-char-hex>`
+        
+        Example: `cash_16cdc3b6f83c72d9d2680adca4f430962981f6bf32613a129dded0aa060387d2`
+    webhookHmac:
+      type: apiKey
+      in: header
+      name: X-HG-Webhook-Signature
+      description: |
+        HMAC-SHA256 signature of the raw JSON body. Format: `sha256=<hex>`.
+        When you configure a webhook signing secret in account settings, HG.Cash includes
+        this header on every webhook POST. Verify the signature in your endpoint to ensure the request is authentic.
+
+  schemas:
+    Transaction:
+      type: object
+      description: Outbound transaction creation request by a user
+      required:
+        - accountId
+        - amount
+      properties:
+        accountId:
+          type: string
+          format: uuid
+          description: ID of the user's account to send funds from
+          example: "550e8400-e29b-41d4-a716-446655440123"
+        fromName:
+          type: string
+          description: Name of the transaction sender
+          example: "Juan Pérez"
+          maxLength: 255
+        toName:
+          type: string
+          description: Name of the transaction recipient
+          example: "María García"
+          maxLength: 255
+        fromCBU:
+          type: number
+          description: CBU (bank account number) of the sender
+          example: 170001540000000000001
+        toCBU:
+          type: string
+          description: Recipient CBU (22 digits). Provide either toCBU or toCVU.
+          example: "1100015400000000000021"
+        toCVU:
+          type: string
+          description: Recipient CVU (22 digits). Provide either toCBU or toCVU.
+          example: "0000003100012345678901"
+        amount:
+          type: number
+          format: decimal
+          description: Transaction amount (must be positive)
+          example: 15000.50
+        fromCUIT:
+          type: number
+          description: CUIT/CUIL of the sender
+          example: 20123456789
+        toCUIT:
+          type: number
+          description: CUIT/CUIL of the recipient
+          example: 27987654321
+        concept:
+          type: string
+          description: Transaction concept or description
+          example: "Payment for services"
+          maxLength: 500
+        externalDate:
+          type: string
+          format: date-time
+          description: Transaction date in your system (ISO 8601 format)
+          example: "2024-06-19T10:30:00Z"
+        coelsaCode:
+          type: string
+          description: Coelsa transaction code
+          example: "COELSA123456"
+          maxLength: 100
+        data:
+          type: object
+          description: Additional JSON data for the transaction
+          example: 
+            reference: "REF-001"
+            category: "services"
+            metadata:
+              source: "mobile_app"
+              version: "1.2.3"
+        webhookUrl:
+          type: string
+          format: uri
+          description: Optional webhook URL to receive status updates for this request
+          example: "https://client.example.com/webhooks/transaction-request"
+
+    TransactionRequestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Internal transaction request ID
+          example: "789e0123-e89b-12d3-a456-426614174999"
+        externalID:
+          type: string
+          example: "REQ-2024-001234"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-06-19T10:30:00Z"
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, DONE, ERROR]
+          example: "PENDING"
+
+    TransactionStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "pending"
+        description:
+          type: string
+          example: "Transaction is pending processing"
+
+    TransactionType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+        name:
+          type: string
+          example: "transfer"
+        description:
+          type: string
+          example: "Bank transfer transaction"
+
+    AliasLookupRequest:
+      type: object
+      required:
+        - alias
+      properties:
+        alias:
+          type: string
+          description: CVU (22 digits) or alias to look up
+          example: "miempresa.cbu"
+    AliasLookupResponse:
+      type: object
+      properties:
+        alias:
+          type: string
+          nullable: true
+          description: Alias of the account
+        cuit:
+          type: string
+          nullable: true
+          description: CUIT/CUIL of the account holder
+        cvu:
+          type: string
+          description: CVU (22 digits)
+        nombre:
+          type: string
+          nullable: true
+          description: Name of the account holder
+        tipoPersona:
+          type: string
+          nullable: true
+          description: Person type
+    ErrorResponse:
+      type: object
+      description: Error payload returned by the API.
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: "Invalid request"
+        code:
+          type: string
+          description: Machine-readable error code (when available)
+          example: "INSUFFICIENT_NET_BALANCE"
+        message:
+          type: string
+          example: "The provided data is invalid"
+        details:
+          type: object
+          description: Additional error details
+          example:
+            field: "amount"
+            code: "INVALID_VALUE"
+
+    TransactionRequestStatusWebhook:
+      type: object
+      description: |
+        Payload sent to your webhook endpoint when a transaction request status changes.
+        
+        **Headers:** When you configure a webhook signing secret in account settings, HG.Cash sends the header `X-HG-Webhook-Signature: sha256=<hex>` where the value is HMAC-SHA256 of the raw JSON body using your secret. Verify this to ensure the request is authentic.
+        
+        Notes:
+        - Numeric values (like `amount`, CBU/CUIT) are sent as strings to preserve precision and formatting.
+        - `date` is a local date-time and must be interpreted using `timezone`.
+        - Configure your webhook URL in the account settings page.
+      required:
+        - id
+        - externalID
+        - amount
+        - currency
+        - direction
+        - status
+        - type
+        - accountId
+        - date
+        - timezone
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Internal transaction ID
+          example: "789e0123-e89b-12d3-a456-426614174999"
+        externalID:
+          type: string
+          description: External ID provided when creating the transaction
+          example: "TXN-2024-001234"
+        amount:
+          type: string
+          description: Transaction amount as a decimal string
+          example: "15000.50"
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          pattern: "^[A-Z]{3}$"
+          example: "ARS"
+        direction:
+          type: string
+          enum: [Inbound, Outbound]
+          description: Transaction direction
+          example: "Inbound"
+        status:
+          type: string
+          description: Current transaction request status
+          enum: [PENDING, PROCESSING, DONE, ERROR]
+          example: "PENDING"
+        type:
+          type: string
+          description: Type of notification. Always "request" for transaction requests
+          example: "request"
+        accountId:
+          type: string
+          format: uuid
+          description: HG.Cash account ID associated with the transaction
+          example: "550e8400-e29b-41d4-a716-446655440123"
+        date:
+          type: string
+          format: date-time
+          description: Transaction local date-time in the provided timezone
+          example: "2024-06-19T10:30:00"
+        timezone:
+          type: string
+          description: IANA timezone identifier used to interpret `date`
+          example: "America/Argentina/Buenos_Aires"
+        error:
+          type: string
+          description: Optional error message when status is ERROR
+          example: "Insufficient funds on destination account"
+        errorCode:
+          type: string
+          description: Machine-readable error code when status is ERROR
+          enum: [INSUFFICIENT_BALANCE, DESTINATION_ERROR]
+          example: "INSUFFICIENT_BALANCE"
+        fromName:
+          type: string
+          description: Name of the sender
+          example: "Juan Pérez"
+        toName:
+          type: string
+          description: Name of the recipient
+          example: "María García"
+        fromCBU:
+          type: string
+          description: Sender CBU (22-digit). Sent as string.
+          pattern: "^\\d{22}$"
+          example: "1700015400000000000010"
+        toCBU:
+          type: string
+          description: Recipient CBU (22-digit). Sent as string.
+          pattern: "^\\d{22}$"
+          example: "1100015400000000000021"
+        toCVU:
+          type: string
+          description: Recipient CVU (22-digit). Sent as string.
+          pattern: "^\\d{22}$"
+          example: "0000003100012345678901"
+        fromCUIT:
+          type: string
+          description: Sender CUIT/CUIL (11-digit). Sent as string.
+          pattern: "^\\d{11}$"
+          example: "20123456789"
+        toCUIT:
+          type: string
+          description: Recipient CUIT/CUIL (11-digit). Sent as string.
+          pattern: "^\\d{11}$"
+          example: "27987654321"
+        concept:
+          type: string
+          description: Transaction concept or description
+          example: "Payment for services"
+        coelsaCode:
+          type: string
+          description: Coelsa transaction code
+          example: "COELSA123456"
+    AccountMovementWebhook:
+      type: object
+      description: |
+        Payload sent to your webhook endpoint whenever money moves in or out of one of your HG.Cash accounts.
+        
+        **Headers:** When you configure a webhook signing secret in account settings, HG.Cash sends the header `X-HG-Webhook-Signature: sha256=<hex>` where the value is HMAC-SHA256 of the raw JSON body using your secret. Verify this to ensure the request is authentic.
+        
+        Notes:
+        - Numeric values (like `amount`, CBU/CUIT) are sent as strings to preserve precision and formatting.
+        - `date` is a local date-time and must be interpreted using `timezone`.
+      required:
+        - id
+        - externalID
+        - amount
+        - currency
+        - direction
+        - status
+        - type
+        - accountId
+        - date
+        - timezone
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Internal movement ID
+        externalID:
+          type: string
+          description: Provider- or bank-level external identifier for the movement
+        amount:
+          type: string
+          description: Movement amount as a decimal string
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          pattern: "^[A-Z]{3}$"
+        direction:
+          type: string
+          description: Movement direction relative to your account
+          enum: [Inbound, Outbound]
+        status:
+          type: string
+          description: Current status of the movement
+        type:
+          type: string
+          description: Type of movement (for example `inbound` or `outbound`)
+        accountId:
+          type: string
+          format: uuid
+          description: HG.Cash account ID associated with the movement
+        date:
+          type: string
+          format: date-time
+          description: Movement local date-time in the provided timezone
+        timezone:
+          type: string
+          description: IANA timezone identifier used to interpret `date`
+        fromName:
+          type: string
+          description: Name of the sender
+        toName:
+          type: string
+          description: Name of the recipient
+        fromCBU:
+          type: string
+          description: Sender CBU (22-digit). Sent as string.
+          pattern: "^\\d{22}$"
+        toCBU:
+          type: string
+          description: Recipient CBU (22-digit). Sent as string.
+          pattern: "^\\d{22}$"
+        fromCUIT:
+          type: string
+          description: Sender CUIT/CUIL (11-digit). Sent as string.
+          pattern: "^\\d{11}$"
+        toCUIT:
+          type: string
+          description: Recipient CUIT/CUIL (11-digit). Sent as string.
+          pattern: "^\\d{11}$"
+        coelsaCode:
+          type: string
+          description: Coelsa transaction code
+
+    InboundTransactionRequest:
+      type: object
+      description: Request to create an inbound transaction (receive payment) for Brazil BRL accounts
+      required:
+        - accountId
+        - amount
+        - email
+      properties:
+        accountId:
+          type: string
+          format: uuid
+          description: ID of the account to receive funds into
+        amount:
+          type: number
+          format: decimal
+          description: Amount to receive (positive)
+        email:
+          type: string
+          format: email
+          description: Payer email for the charge
+        webhookUrl:
+          type: string
+          format: uri
+          description: Optional URL to receive status updates
+
+    InboundTransactionResponse:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: HG.Cash transaction ID
+        qrCode:
+          type: string
+          description: QR code string for the payer to scan (base64 or PIX string)
+        pixCopiaECola:
+          type: string
+          description: PIX copy-paste string (alternative to QR code)
+        status:
+          type: string
+          enum: [pending]
+
+    OutboundTransactionRequest:
+      type: object
+      description: Request to create an outbound transaction (withdraw) for Brazil BRL accounts
+      required:
+        - accountId
+        - amount
+        - name
+        - keyType
+        - keyPix
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        name:
+          type: string
+          description: Recipient name
+        keyType:
+          type: string
+          enum: [document, email, evp, phone, cnpj]
+          description: PIX key type (document=CPF, evp=random key)
+        keyPix:
+          type: string
+          description: PIX key value (email, CPF, CNPJ, phone, or random key)
+        webhookUrl:
+          type: string
+          format: uri
+
+    OutboundTransactionResponse:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: HG.Cash transaction ID
+        status:
+          type: string
+          enum: [processing, cancelled]
+          description: |
+            - `processing`: Provider accepted the withdraw (HTTP 200). Transaction is being processed.
+            - `cancelled`: Provider rejected or failed (non-200). Transaction was marked cancelled.
+
+    DirectTransactionStatus:
+      type: object
+      description: Status of a direct transaction (inbound or outbound)
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalID:
+          type: string
+        status:
+          type: string
+          enum: [pending, done, expired, cancelled]
+        direction:
+          type: string
+          enum: [Inbound, Outbound]
+        amount:
+          type: string
+        currency:
+          type: string
+
+paths:
+  /transactions:
+    post:
+      summary: Create Transaction Request (Cash Out)
+      description: |
+        Create a new transaction request from one of your accounts. This does not perform an on-chain/bank transfer. You may provide a `webhookUrl` to receive status updates.
+        
+        ## 📝 Required Fields
+        
+        - `accountId`: Your account ID to debit from
+        - `toCBU` or `toCVU`: Recipient bank CBU/CVU (22 digits)
+        - `amount`: Positive decimal number
+        - Optional `webhookUrl`: URL to receive status updates
+        
+        ## 🔍 Validation Rules
+        
+        - Account must belong to the authenticated user
+        - CBU must be a valid 22-digit number
+        - Optional `externalID` must be unique per account if provided
+        
+      operationId: createTransactionRequest
+      tags:
+        - Transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+            examples:
+              basic_request_cbu:
+                summary: Basic request
+                description: Minimal required fields for an outbound transfer request
+                value:
+                  accountId: "550e8400-e29b-41d4-a716-446655440123"
+                  toCBU: "1100015400000000000021"
+                  amount: 15000.50
+              basic_request_cvu:
+                summary: Basic request with CVU
+                description: Minimal required fields using CVU destination
+                value:
+                  accountId: "550e8400-e29b-41d4-a716-446655440123"
+                  toCVU: "0000003100012345678901"
+                  amount: 15000.50
+              complete_request:
+                summary: Complete request with webhook
+                description: Outbound transfer request with optional metadata and webhook URL for status updates
+                value:
+                  accountId: "550e8400-e29b-41d4-a716-446655440123"
+                  toCBU: "1100015400000000000021"
+                  amount: 25000.00
+                  toName: "María García"
+                  toCUIT: 27987654321
+                  concept: "Payment for consulting services"
+                  externalDate: "2024-06-19T10:30:00Z"
+                  coelsaCode: "COELSA123456"
+                  data:
+                    reference: "REF-001"
+                    category: "services"
+                    client_id: "CLIENT-789"
+                  webhookUrl: "https://client.example.com/webhooks/transaction-request"
+      responses:
+        '201':
+          description: Transaction request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRequestResponse'
+              examples:
+                success:
+                  summary: Successful Creation
+                  value:
+                    id: "789e0123-e89b-12d3-a456-426614174999"
+                    externalID: "REQ-2024-001234"
+                    createdAt: "2024-06-19T10:30:00Z"
+                    status: "PENDING"
+        '400':
+          description: Bad Request - Invalid data provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Validation Error
+                  value:
+                    error: "Validation failed"
+                    message: "The provided data is invalid"
+                    details:
+                      amount: "Amount must be positive"
+                      currency: "Currency must be 3 letters"
+        '403':
+          description: Forbidden - Account does not belong to the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden_account:
+                  summary: Account access denied
+                  value:
+                    error: "You do not have access to this account"
+        '409':
+          description: Conflict - Request cannot be created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate_external_id:
+                  summary: Duplicate External ID
+                  value:
+                    error: "Transaction request with this external ID already exists for this account"
+                    code: "DUPLICATE_EXTERNAL_ID"
+                    message: "The provided externalID already exists for this account"
+                insufficient_net_balance:
+                  summary: Insufficient Net Balance
+                  description: Rejected because net balance (balance - pending fees) is lower than the requested amount
+                  value:
+                    error: "Insufficient net balance"
+                    code: "INSUFFICIENT_NET_BALANCE"
+                    message: "Net available balance (balance - pending fees) is not enough to cover the requested amount"
+                    details:
+                      accountId: "550e8400-e29b-41d4-a716-446655440123"
+                      currency: "ARS"
+                      amount: 15000.5
+                      balance: 12000
+                      pendingFees: 2000
+                      netBalance: 10000
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_token:
+                  summary: Missing Token
+                  value:
+                    error: "Authentication required"
+                    message: "Bearer token is required"
+                invalid_token:
+                  summary: Invalid Token
+                  value:
+                    error: "Invalid token"
+                    message: "The provided token is invalid or expired"
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                server_error:
+                  summary: Server Error
+                  value:
+                    error: "Internal server error"
+                    message: "An unexpected error occurred"
+
+  /transaction/{id}/status:
+    get:
+      summary: Get Transaction Request Status
+      description: |
+        Retrieve the status of a transaction request created via `/transactions`.
+        Requires the bearer token of the user that created the request.
+      operationId: getTransactionRequestStatus
+      tags:
+        - Transactions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Transaction request ID
+      responses:
+        '200':
+          description: Status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  externalID:
+                    type: string
+                    nullable: true
+                  status:
+                    type: string
+                    enum: [PENDING, PROCESSING, DONE, ERROR]
+                  errorMessage:
+                    type: string
+                    nullable: true
+                  errorCode:
+                    type: string
+                    nullable: true
+                    enum: [INSUFFICIENT_BALANCE, DESTINATION_ERROR]
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+
+  /br/transactions/inbound:
+    post:
+      summary: Create Inbound Transaction (Brazil)
+      description: |
+        Create an inbound transaction to receive a payment. Returns a QR code for the payer to scan.
+        Account must be a Brazil (BRL) account. Transaction starts in `pending` status until payment is confirmed.
+      operationId: createBrInboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundTransactionRequest'
+      tags:
+        - Brazil
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundTransactionResponse'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Account not found
+        '502':
+          description: Provider error
+
+  /br/transactions/outbound:
+    post:
+      summary: Create Outbound Transaction (Brazil)
+      description: |
+        Create an outbound transaction (withdraw) from a Brazil (BRL) account.
+        Requires sufficient net balance. Transaction starts in `processing` status.
+      operationId: createBrOutboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutboundTransactionRequest'
+      tags:
+        - Brazil
+      responses:
+        '201':
+          description: |
+            Transaction created. Returns `status: processing` when the provider accepted the withdraw (HTTP 200).
+            Returns `status: cancelled` when the provider rejected or failed (non-200); the transaction is stored and marked cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboundTransactionResponse'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Account not found
+        '409':
+          description: Insufficient balance
+
+  /br/transactions/{id}/status:
+    get:
+      summary: Get Transaction Status (Brazil)
+      description: |
+        Fetch the current status of a direct transaction (inbound or outbound).
+        Distinct from `GET /transaction/{id}/status` which returns TransactionRequest status.
+      operationId: getBrTransactionStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Transaction ID
+      tags:
+        - Brazil
+      responses:
+        '200':
+          description: Transaction status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectTransactionStatus'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Transaction not found
+        '502':
+          description: Provider error
+
+  /transactions/{id}/receipt:
+    get:
+      summary: Get Transaction Receipt
+      description: |
+        Generate a PDF receipt for a transaction and return a signed URL to download it.
+        The receipt is stored in Supabase storage and cached for subsequent requests.
+        The signed URL expires after 1 hour.
+      operationId: getTransactionReceipt
+      tags:
+        - Transactions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Transaction ID (the actual bank transaction, not the request)
+      responses:
+        '200':
+          description: Signed URL to download the receipt PDF
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - signedUrl
+                properties:
+                  signedUrl:
+                    type: string
+                    format: uri
+                    description: Temporary signed URL to download the receipt PDF (expires in 1 hour)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Transaction not found
+        '500':
+          description: Internal Server Error
+
+  /transaction-requests/{id}/transaction-id:
+    get:
+      summary: Get Transaction ID for Request
+      description: |
+        Retrieve the linked Transaction ID for a transaction request.
+        Returns the actual bank transaction ID once the request has been processed (status DONE).
+        Returns `null` if the transaction has not yet been linked (e.g. still PENDING or PROCESSING).
+      operationId: getTransactionIdForRequest
+      tags:
+        - Transactions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Transaction request ID
+      responses:
+        '200':
+          description: Linked transaction ID (or null if not yet available)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - transactionId
+                properties:
+                  transactionId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                    description: The Transaction ID linked to this request, or null if not yet processed
+        '401':
+          description: Unauthorized
+        '404':
+          description: Transaction request not found
+        '500':
+          description: Internal Server Error
+
+  /alias-lookup:
+    post:
+      summary: Look up CVU or Alias
+      description: |
+        Look up beneficiary information by CVU (22 digits) or alias.
+        Returns alias, CUIT, CVU, name, and person type.
+
+        **Paid service**: This endpoint is a paid feature. Usage may incur charges. Consult your accountant or HG.Cash billing team for pricing details.
+      operationId: aliasLookup
+      tags:
+        - Reference Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AliasLookupRequest'
+            examples:
+              by_alias:
+                summary: Lookup by alias
+                value:
+                  alias: "miempresa.cbu"
+              by_cvu:
+                summary: Lookup by CVU
+                value:
+                  alias: "0000003100012345678901"
+      responses:
+        '200':
+          description: Beneficiary information found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AliasLookupResponse'
+        '400':
+          description: Bad Request - Invalid input or not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  summary: not found
+                  value:
+                    error: "Not found"
+                    message: "No information found for this CVU or alias"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User does not have access to the alias lookup service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                service_not_enabled:
+                  summary: Service not enabled
+                  value:
+                    error: "Access denied"
+                    code: "ALIAS_LOOKUP_NOT_ENABLED"
+                    message: "This user does not have access to the alias lookup service. Contact your administrator."
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts:
+    get:
+      summary: Get User Accounts
+      description: |
+        Returns the authenticated user's accounts.
+      operationId: getUserAccounts
+      tags:
+        - Accounts
+      responses:
+        '200':
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        balance:
+                          type: number
+                          description: Account balance rounded to 2 decimals
+                        currency:
+                          type: string
+                        number:
+                          type: string
+                        alias:
+                          type: string
+                          nullable: true
+                        platform:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+                        company:
+                          type: object
+                          nullable: true
+                          description: Company the account belongs to (optional)
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+                  count:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+
+  /account/{id}/balance:
+    get:
+      summary: Get Account Balance
+      description: |
+        Returns the balance for the authenticated user's account by ID.
+      operationId: getAccountBalance
+      tags:
+        - Accounts
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Account ID
+      responses:
+        '200':
+          description: Account balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  balance:
+                    type: number
+                    description: Account balance rounded to 2 decimals
+                  currency:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+    
+  /transaction-statuses:
+    get:
+      summary: Get Transaction Statuses
+      description: |
+        Retrieve all available transaction statuses.
+        
+        Use the returned IDs for informational purposes.
+        
+        ## 📋 Common Statuses
+        
+        - **processing**: Transaction is being processed
+        - **done**: Transaction completed successfully
+        - **failed**: Transaction processing failed
+        
+      operationId: getTransactionStatuses
+      tags:
+        - Reference Data
+      responses:
+        '200':
+          description: List of transaction statuses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionStatus'
+              examples:
+                statuses:
+                  summary: Transaction Statuses
+                  value:
+                    success: true
+                    data:
+                      - id: "550e8400-e29b-41d4-a716-446655440000"
+                        name: "pending"
+                        description: "Transaction is pending processing"
+                      - id: "550e8400-e29b-41d4-a716-446655440001"
+                        name: "completed"
+                        description: "Transaction completed successfully"
+                      - id: "550e8400-e29b-41d4-a716-446655440002"
+                        name: "failed"
+                        description: "Transaction processing failed"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_token:
+                  summary: Missing Token
+                  value:
+                    success: false
+                    error: "Authentication required"
+                    message: "Bearer token is required"
+                invalid_token:
+                  summary: Invalid Token
+                  value:
+                    success: false
+                    error: "Invalid token"
+                    message: "The provided token is invalid or expired"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /transaction-types:
+    get:
+      summary: Get Transaction Types
+      description: |
+        Retrieve all available transaction types.
+        
+        Use the returned IDs in the `typeID` field when creating transactions.
+        
+        ## 📋 Common Types
+        
+        - **transfer**: Bank transfer
+        - **payment**: Payment transaction
+        - **deposit**: Money deposit
+        - **withdrawal**: Money withdrawal
+        
+      operationId: getTransactionTypes
+      tags:
+        - Reference Data
+      responses:
+        '200':
+          description: List of transaction types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionType'
+              examples:
+                types:
+                  summary: Transaction Types
+                  value:
+                    success: true
+                    data:
+                      - id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+                        name: "transfer"
+                        description: "Bank transfer transaction"
+                      - id: "6ba7b810-9dad-11d1-80b4-00c04fd430c9"
+                        name: "payment"
+                        description: "Payment transaction"
+                      - id: "6ba7b810-9dad-11d1-80b4-00c04fd430ca"
+                        name: "deposit"
+                        description: "Money deposit transaction"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_token:
+                  summary: Missing Token
+                  value:
+                    success: false
+                    error: "Authentication required"
+                    message: "Bearer token is required"
+                invalid_token:
+                  summary: Invalid Token
+                  value:
+                    success: false
+                    error: "Invalid token"
+                    message: "The provided token is invalid or expired"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+webhooks:
+  transaction-request-status-updated:
+    post:
+      summary: Transaction Request Status Updated
+      description: |
+        HG.Cash will send this webhook when a transaction request status changes. The request body contains the request details and current status.
+        You can provide a `webhookUrl` in the create request payload, or configure a default in user settings.
+      operationId: transactionRequestStatusUpdatedWebhook
+      tags:
+        - Webhooks
+      security:
+        - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequestStatusWebhook'
+            examples:
+              example:
+                summary: Example payload
+                value:
+                  id: "789e0123-e89b-12d3-a456-426614174999"
+                  externalID: "REQ-2024-001234"
+                  amount: "15000.50"
+                  currency: "ARS"
+                  direction: "Inbound"
+                  status: "PENDING"
+                  type: "request"
+                  accountId: "550e8400-e29b-41d4-a716-446655440123"
+                  date: "2024-06-19T10:30:00"
+                  timezone: "America/Argentina/Buenos_Aires"
+                  fromName: "Juan Pérez"
+                  toName: "María García"
+                  fromCBU: "1700015400000000000010"
+                  toCBU: "1100015400000000000021"
+                  error: "Insufficient funds on destination account"
+                  fromCUIT: "20123456789"
+                  toCUIT: "27987654321"
+                  concept: "Payment for services"
+                  coelsaCode: "COELSA123456"
+  account-movement:
+    post:
+      summary: Account Movement
+      description: |
+        HG.Cash will send this webhook whenever money moves in or out of one of your accounts. The request body contains the movement details.
+        
+        Use this to keep your internal balances and ledgers in sync with HG.Cash.
+      operationId: accountMovementWebhook
+      tags:
+        - Webhooks
+      security:
+        - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountMovementWebhook'
+            examples:
+              example:
+                summary: Account movement example payload
+                value:
+                  id: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  externalID: "E-67REZ8NPQDQ460QK94KVGO-2026-01-14 09:17:21"
+                  amount: "12000"
+                  currency: "ARS"
+                  direction: "Inbound"
+                  status: "hecha"
+                  type: "inbound"
+                  date: "2026-01-14T09:17:21"
+                  timezone: "America/Argentina/Buenos_Aires"
+                  fromName: "Jose Angel Gallucci"
+                  toName: "MUNDO OFERTA IMPORTACIONES S.A"
+                  fromCBU: "0000003100117987328844"
+                  toCBU: "0000151500037626120131"
+                  fromCUIT: "20125680667"
+                  toCUIT: "30718891813"
+                  coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+                  accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+tags:
+  - name: Transactions
+    description: "Transaction Management - Create and manage transactions in the HG.Cash system. All transaction endpoints require authentication."
+  - name: Accounts
+    description: "Accounts - Retrieve account information and balances for the authenticated user. All account endpoints require authentication."
+  - name: Reference Data
+    description: "Reference Data - Get reference data like transaction statuses and types. These endpoints require authentication."
+  - name: Webhooks
+    description: "Webhooks - Event notifications sent to your HTTP endpoint."
+  - name: Brazil
+    description: "Transaction management - Create and manage transactions in Pix system for Brazil operations"

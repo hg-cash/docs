@@ -1,0 +1,48 @@
+---
+title: "USDT Withdrawals"
+description: "Create USDT withdrawals"
+icon: "recycle"
+---
+
+## Create a USDT withdrawal
+
+### Prerequisites
+
+- **Two-factor authentication (2FA)** must be **enabled** on your account (TOTP app). The withdrawal dialog requires a **2FA code** and other checks.
+- At least one withdrawal wallet in status **Aprobada** (see [Section 1](#1-verify-and-sign-withdrawal-wallets)).
+- A **USDT** account with sufficient balance to cover the amount you request.
+
+### Open the withdrawal flow
+
+1. Go to **Exchange** → **Retiros USDT** tab (`/app/exchange?tab=withdrawals`).
+2. Click **Nuevo retiro**.
+
+### 3.3 Complete the “Nuevo retiro USDT” dialog
+
+Fill the fields **in order** as required by the app:
+
+1. **Código de email (6 dígitos)**
+   - Click **Enviar código por email** to receive a one-time code.
+   - Enter the **6-digit** code from your inbox (check spam).
+2. **Código 2FA**
+   - Enter the current code from your authenticator app.
+3. **Contraseña (verificación)**
+   - Enter your **HG.cash login password** for re-authentication before the withdrawal is submitted.
+4. **Cuenta USDT (origen)**
+   - Select the USDT account to debit. The list shows the **available balance** per account.
+5. **Monto USDT**
+   - Enter the amount to withdraw (decimal format as accepted by the form).
+6. **Wallet de destino (aprobada)**
+   - Select one of your **approved** destination wallets (network and masked address are shown).
+   - If the list is empty, use **Agregar una wallet** to go to the wallets tab, or finish wallet approval first.
+
+### Submit
+
+Click **Confirmar retiro**. On success, the request appears under **Mis retiros** with a status such as **Pendiente revisión**. Staff **review** the request before processing; states can progress to **Aprobado**, **En proceso**, **Completado**, or **Rechazado** depending on operations.
+
+### Security notes (for users)
+
+- Never share **email codes**, **2FA codes**, or your **password** with anyone.
+- Always confirm the **network** and **address** on an **approved** wallet match where you intend to receive funds; mistaken networks are a common cause of loss on-chain.
+
+---

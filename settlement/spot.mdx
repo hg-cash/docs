@@ -1,0 +1,41 @@
+---
+title: "Buy SPOT  USDT"
+description: "Buy spot USDT"
+icon: "money-bill"
+---
+
+---
+
+## Buy spot USDT (“compra al precio de pantalla”)
+
+**Spot** here means buying USDT at the **current displayed sell rate** (ARS per 1 USDT), not a separate negotiated quote. The purchase creates the same kind of **purchase / quote** record you see under **Compras USDT**, and ARS movements run as configured for your environment.
+
+### 2.1 Open the purchase dialog
+
+1. Go to **Exchange** → **Compras USDT** tab (`/app/exchange` or `/app/exchange?tab=purchases` when that is the default). 
+
+2. In the **Precio USDT** card, review the **Tasa final de compra (ARS por 1 USDT)** and when it was last updated. 
+
+3. Click **Comprar USDT** to open the **Comprar USDT** dialog.
+
+The button is only available when a **valid reference price** is shown and other checks pass (see restrictions below).
+
+### 2.2 Fill in the form
+
+1. **Cuenta USDT de destino**: Choose the **internal USDT account** where purchased USDT should be credited. 
+
+2. **Cuentas ARS (origen)**: Tick one or more **ARS** accounts whose combined available balance will fund the purchase. You must use ARS accounts from the **same country**; if you select accounts from different countries, the app blocks the purchase until you narrow the selection. 
+
+3. **Monto ARS**: Enter the amount in ARS to spend. You can use **Máximo** to fill up to the **net available** total shown for the selected ARS accounts. The amount cannot exceed that net.
+
+The **rate** applied at confirmation is the one **on screen at submit time** (`venta` / “sell” side for you as buyer). If the price changes before you confirm, you may need to **refresh** and try again.
+
+### 2.3 Confirm
+
+Click **Confirmar compra**. On success, you should see a message that the purchase started and that **ARS transfers will be processed automatically**. Track progress in the **Compras USDT** list and in the **Detalle de cotización** when you open a row.
+
+### 2.4 When spot purchase may be blocked
+
+Even if a price appears on screen, purchase can be **disabled** until conditions are met. Typical cases (messages appear in the app):
+
+- **Outside banking hours** or **wrong weekday** for your country’s **spot schedule**. - **Bank holiday** (no operations that day). - **No schedule** for your country (feature not enabled for that region). - **Mixed countries** on ARS accounts (use one country per operation). - **No ARS accounts** available for the flow. - **Stale or missing** reference price (no valid quote to lock).
