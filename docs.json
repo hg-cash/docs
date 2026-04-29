@@ -34,16 +34,7 @@
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Dashboard",
-          "href": "https://hg.cash/login",
-          "icon": "book-open-cover"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.png",
