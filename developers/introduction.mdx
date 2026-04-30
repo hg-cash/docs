@@ -1,0 +1,15 @@
+---
+title: "Overview"
+description: "Webhooks developers use with HG.Cash"
+icon: "square-code"
+---
+
+## Who this section is for
+
+Partners and backends can receive **HTTPS callbacks from HG.Cash**. HG.Cash sends `POST` requests with JSON when ledger **transactions** change or **transaction requests** (such as outbound / cash-out transfers) transition state. Optionally verify deliveries with **HMAC-SHA256**.
+
+Work with HG.Cash onboarding for **URLs**, **signing secrets**, and sandbox vs production endpoints.
+
+## Guides in this section
+
+- **[Receiving webhooks](/developers/receiving-webhooks)** — Default callback URL & signing secret, `X-HG-Webhook-Signature`, JSON body (`type`: ledger transaction vs `request` for transaction requests).

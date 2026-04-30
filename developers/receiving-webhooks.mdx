@@ -1,0 +1,62 @@
+---
+title: "Receiving webhooks from HG.Cash"
+description: "Callbacks for transactions and transaction requests with optional HMAC verification"
+icon: "inbox-arrow-down"
+---
+
+## What gets delivered
+
+HG.Cash enqueues an asynchronous **`POST`** to:
+
+1. Your user’s **default webhook URL** (configured in HG.Cash **Settings** alongside the webhook signing secret), **or**
+2. A **`webhookUrl`** you pass **per operation** where the API or form allows it — for example creating a ledger transaction via the REST API (`POST /api/v1/transactions`) or a **transaction request** from the transfers flow when that field is available.
+
+Payloads are identical in shape regardless of queue: **`Content-Type: application/json`** and the **request body is a single flat JSON object** (not nested under `{ "transaction": ... }`).
+
+**Payload shape and examples** live in the **API reference** (open the **API reference** tab, then **Webhooks**):
+
+- **Transaction requests** (cash-out pipeline, `type` is always **`"request"`**): [**Transaction Request Status Updated**](/api-reference/webhooks/transaction-request-status-updated) — schema **`TransactionRequestStatusWebhook`** with a full example payload.
+- **Ledger / account movements** (money in or out of your HG.Cash accounts; `type` is your movement / transaction type name such as `inbound` or `outbound`): [**Account movement**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** with a full example payload.
+
+**Transaction requests (`type: "request"`)**
+
+Callbacks are sent when HG.Cash **updates** a transaction request’s status or when a request is **cancelled**. You may **not** receive a webhook as soon as a request is created while it is only **`PENDING`**; integrate defensively against **ordering** and **duplicates**.
+
+**Ledger transactions**
+
+When a ledger **transaction row** is ingested from webhooks/API and your resolved URL applies, HG.Cash can notify immediately after persistence; `type` is the **business type name**, not `"request"`.
+
+## Signing secret (`X-HG-Webhook-Signature`)
+
+If your HG.Cash profile has a **webhook signing secret** set, HG.Cash signs the **exact raw JSON body**:
+
+- Algorithm: **`HMAC-SHA256`** over the UTF-8 bytes of the body string HG.Cash will send (`JSON.stringify` equivalent of the payload object).
+- Header: **`X-HG-Webhook-Signature`**.
+- Format: **`sha256=<hex>`** where `<hex>` is lowercase hex (64 chars).
+
+Verification steps on your server:
+
+1. Read the raw request body **as delivered** — do **not** re-serialize parsed JSON unless you replicate every key order/spacing HG.Cash used.
+2. Compute `hex = HMAC_SHA256(secret, rawBody_utf8)` and compare securely to header value after stripping the optional **`sha256=`** prefix (case insensitive).
+3. Reject mismatches (**`401`/`403`** on your side is fine).
+
+If no secret is configured in HG.Cash, the **`X-HG-Webhook-Signature`** header **omitted** entirely.
+
+## Retries
+
+Failed deliveries (non-**`2xx`** HTTP status, network errors, or timeouts) are **retried** automatically with this policy:
+
+| Setting | Value |
+| --- | --- |
+| Max attempts | **4** (includes the first try) |
+| Backoff factor | **5** |
+| Minimum wait between attempts | **500** ms |
+| Maximum wait between attempts | **30** s |
+| Jitter | **Off** (no randomization) |
+
+Each attempt is allowed up to **30** seconds of total run time before the delivery job is treated as failed for that attempt.
+
+## Operational expectations
+
+- Respond with **`2xx`** quickly so the delivery counts as successful; otherwise you may receive **repeat** `POST`s until attempts are exhausted or one succeeds.
+- Prefer **idempotent** handlers keyed by HG.Cash `id` and `status` transitions you care about — redeliveries or duplicate emits are possible alongside provider quirks.

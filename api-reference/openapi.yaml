@@ -1276,6 +1276,8 @@ paths:
 webhooks:
   transaction-request-status-updated:
     post:
+      x-mint:
+        href: /api-reference/webhooks/transaction-request-status-updated
       summary: Transaction Request Status Updated
       description: |
         HG.Cash will send this webhook when a transaction request status changes. The request body contains the request details and current status.
@@ -1316,6 +1318,8 @@ webhooks:
                   coelsaCode: "COELSA123456"
   account-movement:
     post:
+      x-mint:
+        href: /api-reference/webhooks/account-movement
       summary: Account Movement
       description: |
         HG.Cash will send this webhook whenever money moves in or out of one of your accounts. The request body contains the movement details.

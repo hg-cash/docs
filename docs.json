@@ -11,7 +11,7 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Getting started",
+        "tab": "Documentation",
         "pages": [
           "introduction",
           {
@@ -21,6 +21,13 @@
               "settlement/withdrawals",
               "settlement/spot",
               "exchange/usdt-withdrawals"
+            ]
+          },
+          {
+            "group": "Developers",
+            "pages": [
+              "developers/introduction",
+              "developers/receiving-webhooks"
             ]
           }
         ]
