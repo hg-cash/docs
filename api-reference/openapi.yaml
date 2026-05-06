@@ -166,7 +166,7 @@ components:
           example: "2024-06-19T10:30:00Z"
         status:
           type: string
-          enum: [PENDING, PROCESSING, DONE, ERROR]
+          enum: [PENDING, AWAITING_REVIEW, PROCESSING, DONE, ERROR, CANCELLED]
           example: "PENDING"
 
     TransactionStatus:
@@ -301,7 +301,7 @@ components:
         status:
           type: string
           description: Current transaction request status
-          enum: [PENDING, PROCESSING, DONE, ERROR]
+          enum: [PENDING, AWAITING_REVIEW, PROCESSING, DONE, ERROR, CANCELLED]
           example: "PENDING"
         type:
           type: string
@@ -371,6 +371,15 @@ components:
           type: string
           description: Coelsa transaction code
           example: "COELSA123456"
+        data:
+          type: object
+          description: Optional JSON metadata from the transaction request
+        isSecurityFlagged:
+          type: boolean
+          description: When true, the request was held for security review before processing
+        securityFlagReason:
+          type: string
+          description: Optional machine-readable reason when flagged for security review
     AccountMovementWebhook:
       type: object
       description: |
@@ -756,7 +765,7 @@ paths:
                     nullable: true
                   status:
                     type: string
-                    enum: [PENDING, PROCESSING, DONE, ERROR]
+                    enum: [PENDING, AWAITING_REVIEW, PROCESSING, DONE, ERROR, CANCELLED]
                   errorMessage:
                     type: string
                     nullable: true
