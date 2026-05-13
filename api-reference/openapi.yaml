@@ -1039,7 +1039,8 @@ paths:
     get:
       summary: Get User Accounts
       description: |
-        Returns the authenticated user's accounts.
+        Returns the authenticated user's accounts, including ledger balance, pending fees,
+        net available balance (balance minus pending fees), and account status.
       operationId: getUserAccounts
       tags:
         - Accounts
@@ -1063,7 +1064,20 @@ paths:
                           type: string
                         balance:
                           type: number
-                          description: Account balance rounded to 2 decimals
+                          description: Account ledger balance rounded to 2 decimals
+                        pendingFees:
+                          type: number
+                          description: Fees accrued but not yet collected, rounded to 2 decimals
+                        netBalance:
+                          type: number
+                          description: Available balance after pending fees (balance minus pending fees), rounded to 2 decimals
+                        status:
+                          type: string
+                          description: Account lifecycle status
+                          enum:
+                            - Operativa
+                            - Bloqueada
+                            - Cerrada
                         currency:
                           type: string
                         number:
@@ -1100,7 +1114,8 @@ paths:
     get:
       summary: Get Account Balance
       description: |
-        Returns the balance for the authenticated user's account by ID.
+        Returns the balance, pending fees, net available balance, currency, and account status
+        for the authenticated user's account by ID.
       operationId: getAccountBalance
       tags:
         - Accounts
@@ -1125,9 +1140,22 @@ paths:
                     format: uuid
                   balance:
                     type: number
-                    description: Account balance rounded to 2 decimals
+                    description: Account ledger balance rounded to 2 decimals
                   currency:
                     type: string
+                  pendingFees:
+                    type: number
+                    description: Fees accrued but not yet collected, rounded to 2 decimals
+                  netBalance:
+                    type: number
+                    description: Available balance after pending fees (balance minus pending fees), rounded to 2 decimals
+                  status:
+                    type: string
+                    description: Account lifecycle status
+                    enum:
+                      - Operativa
+                      - Bloqueada
+                      - Cerrada
         '401':
           description: Unauthorized
         '404':
@@ -1285,8 +1313,6 @@ paths:
 webhooks:
   transaction-request-status-updated:
     post:
-      x-mint:
-        href: /api-reference/webhooks/transaction-request-status-updated
       summary: Transaction Request Status Updated
       description: |
         HG.Cash will send this webhook when a transaction request status changes. The request body contains the request details and current status.
@@ -1327,8 +1353,6 @@ webhooks:
                   coelsaCode: "COELSA123456"
   account-movement:
     post:
-      x-mint:
-        href: /api-reference/webhooks/account-movement
       summary: Account Movement
       description: |
         HG.Cash will send this webhook whenever money moves in or out of one of your accounts. The request body contains the movement details.
