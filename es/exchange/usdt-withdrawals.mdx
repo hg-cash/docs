@@ -1,0 +1,48 @@
+---
+title: "Retiros USDT"
+description: "Crea retiros USDT"
+icon: "recycle"
+---
+
+## Crear un retiro USDT
+
+### Requisitos previos
+
+- Debes tener habilitada la **autenticación en dos pasos (2FA)** en tu cuenta (app TOTP). El diálogo de retiro pide un **código 2FA** y otras validaciones.
+- Al menos una wallet de retiro en estado **Aprobada** (ver [**Wallets de retiro**](/es/settlement/withdrawals#withdrawal-wallets)).
+- Una cuenta **USDT** con saldo suficiente para el monto que solicitas.
+
+### Abrir el flujo de retiro
+
+1. En la barra lateral, abre **Exchange** → pestaña **Retiros USDT**.
+2. Haz clic en **Nuevo retiro**.
+
+### Completar el diálogo “Nuevo retiro USDT”
+
+Completa los campos **en el orden** que exige la app:
+
+1. **Código de email (6 dígitos)**
+   - Haz clic en **Enviar código por email** para recibir un código de un solo uso.
+   - Ingresa el código de **6 dígitos** de tu bandeja (revisa spam).
+2. **Código 2FA**
+   - Ingresa el código actual de tu app autenticadora.
+3. **Contraseña (verificación)**
+   - Ingresa tu **contraseña de inicio de sesión** de HG.cash para reautenticarte antes de enviar el retiro.
+4. **Cuenta USDT (origen)**
+   - Selecciona la cuenta USDT a debitar. La lista muestra el **saldo disponible** por cuenta.
+5. **Monto USDT**
+   - Ingresa el monto a retirar (formato decimal aceptado por el formulario).
+6. **Wallet de destino (aprobada)**
+   - Elige una de tus wallets de destino **aprobadas** (se muestran red y dirección enmascarada).
+   - Si la lista está vacía, usa **Agregar una wallet** para ir a la pestaña de wallets, o termina primero la aprobación.
+
+### Enviar
+
+Haz clic en **Confirmar retiro**. Si todo va bien, la solicitud aparece en **Mis retiros** con un estado como **Pendiente revisión**. El equipo **revisa** la solicitud antes de procesarla; los estados pueden avanzar a **Aprobado**, **En proceso**, **Completado** o **Rechazado** según operaciones.
+
+### Notas de seguridad
+
+- No compartas **códigos de correo**, **códigos 2FA** ni tu **contraseña** con nadie.
+- Confirma siempre que la **red** y la **dirección** de una wallet **aprobada** coincidan con donde quieres recibir fondos; redes equivocadas son una causa frecuente de pérdida on-chain.
+
+---

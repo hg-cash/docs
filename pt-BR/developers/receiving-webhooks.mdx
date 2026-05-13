@@ -1,0 +1,62 @@
+---
+title: "Receber webhooks da HG.Cash"
+description: "Callbacks para transações e solicitações de transação com verificação HMAC opcional"
+icon: "inbox-arrow-down"
+---
+
+## O que é entregue
+
+A HG.Cash enfileira um **`POST`** assíncrono para:
+
+1. A **URL de webhook padrão** do usuário (configurada em **Configurações** da HG.Cash junto com o segredo de assinatura do webhook), **ou**
+2. Um **`webhookUrl`** informado **por operação** onde a API ou o formulário permitirem — por exemplo ao criar uma transação de ledger pela API REST (`POST /api/v1/transactions`) ou uma **solicitação de transação** nos fluxos de transferência quando o campo existir.
+
+Os payloads têm o mesmo formato independentemente da fila: **`Content-Type: application/json`** e o **corpo é um único objeto JSON plano** (não aninhado em `{ "transaction": ... }`).
+
+O **formato do payload e exemplos** estão na **referência da API** (aba **Referência da API**, seção **Webhooks**):
+
+- **Solicitações de transação** (pipeline cash-out; `type` é sempre **`"request"`**): [**Atualização de status da solicitação de transação**](/api-reference/webhooks/transaction-request-status-updated) — schema **`TransactionRequestStatusWebhook`** com exemplo completo.
+- **Movimentações de conta / ledger** (dinheiro entrando ou saindo das contas HG.Cash; `type` é o nome do tipo de movimento como `inbound` ou `outbound`): [**Movimento de conta**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** com exemplo completo.
+
+**Solicitações de transação (`type: "request"`)**
+
+Callbacks são enviados quando a HG.Cash **atualiza** o status de uma solicitação ou quando uma solicitação é **cancelada**. Você pode **não** receber webhook assim que uma solicitação é criada enquanto estiver apenas **`PENDING`**; integre de forma defensiva contra **ordem** e **duplicatas**.
+
+**Transações de ledger**
+
+Quando uma linha de **transação** do ledger é persistida a partir de webhooks/API e sua URL resolvida se aplica, a HG.Cash pode notificar logo após persistir; `type` é o **nome do tipo de negócio**, não `"request"`.
+
+## Segredo de assinatura (`X-HG-Webhook-Signature`)
+
+Se o perfil HG.Cash tiver um **segredo de assinatura de webhook** configurado, a HG.Cash assina o **corpo JSON bruto exato**:
+
+- Algoritmo: **`HMAC-SHA256`** sobre os bytes UTF-8 da string do corpo que a HG.Cash enviará (equivalente a `JSON.stringify` do objeto payload).
+- Cabeçalho: **`X-HG-Webhook-Signature`**.
+- Formato: **`sha256=<hex>`** onde `<hex>` é hexadecimal minúsculo (64 caracteres).
+
+Passos de verificação no seu servidor:
+
+1. Leia o corpo bruto **como recebido** — **não** re-serialize JSON parseado salvo que replique cada ordem/espaçamento que a HG.Cash usou.
+2. Calcule `hex = HMAC_SHA256(secret, rawBody_utf8)` e compare com segurança ao valor do cabeçalho após remover o prefixo opcional **`sha256=`** (sem diferenciar maiúsculas/minúsculas).
+3. Rejeite divergências (**`401`/`403`** no seu lado é aceitável).
+
+Se não houver segredo configurado na HG.Cash, o cabeçalho **`X-HG-Webhook-Signature`** é **omitido** por completo.
+
+## Tentativas novamente
+
+Entregas com falha (HTTP diferente de **`2xx`**, erros de rede ou timeouts) são **repetidas** automaticamente com esta política:
+
+| Configuração | Valor |
+| --- | --- |
+| Tentativas máximas | **4** (inclui a primeira) |
+| Fator de backoff | **5** |
+| Espera mínima entre tentativas | **500** ms |
+| Espera máxima entre tentativas | **30** s |
+| Jitter | **Desligado** (sem aleatoriedade) |
+
+Cada tentativa tem até **30** segundos de tempo total de execução antes da entrega ser tratada como falha naquela tentativa.
+
+## Expectativas operacionais
+
+- Responda com **`2xx`** rapidamente para que a entrega conte como sucesso; caso contrário você pode receber **`POST`** repetidos até esgotar tentativas ou até uma tentativa bem-sucedida.
+- Prefira handlers **idempotentes** chaveados pelo `id` da HG.Cash e transições de `status` relevantes — reenvios ou emissões duplicadas são possíveis junto com particularidades de provedores.

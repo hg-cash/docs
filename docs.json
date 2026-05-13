@@ -9,35 +9,151 @@
   },
   "favicon": "/favicon.ico",
   "navigation": {
-    "tabs": [
+    "languages": [
       {
-        "tab": "Documentation",
-        "pages": [
-          "introduction",
+        "language": "en",
+        "navbar": {
+          "links": [
+            {
+              "label": "Support",
+              "href": "mailto:support@hg.cash"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Dashboard",
+            "href": "https://hg.cash"
+          }
+        },
+        "tabs": [
           {
-            "group": "Settlement",
+            "tab": "Documentation",
             "pages": [
-              "settlement/introduction",
-              "settlement/withdrawals",
-              "settlement/spot",
-              "exchange/usdt-withdrawals"
+              "introduction",
+              {
+                "group": "Settlement",
+                "pages": [
+                  "settlement/introduction",
+                  "settlement/withdrawals",
+                  "settlement/spot",
+                  "exchange/usdt-withdrawals"
+                ]
+              },
+              {
+                "group": "Developers",
+                "pages": [
+                  "developers/introduction",
+                  "developers/receiving-webhooks"
+                ]
+              }
             ]
           },
           {
-            "group": "Developers",
-            "pages": [
-              "developers/introduction",
-              "developers/receiving-webhooks"
+            "tab": "API reference",
+            "groups": [
+              {
+                "group": "API documentation",
+                "openapi": "api-reference/openapi.yaml"
+              }
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
-        "groups": [
+        "language": "es",
+        "navbar": {
+          "links": [
+            {
+              "label": "Soporte",
+              "href": "mailto:support@hg.cash"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Ir al panel",
+            "href": "https://hg.cash"
+          }
+        },
+        "tabs": [
           {
-            "group": "API documentation",
-            "openapi": "api-reference/openapi.yaml"
+            "tab": "Documentación",
+            "pages": [
+              "es/introduction",
+              {
+                "group": "Liquidaciones",
+                "pages": [
+                  "es/settlement/introduction",
+                  "es/settlement/withdrawals",
+                  "es/settlement/spot",
+                  "es/exchange/usdt-withdrawals"
+                ]
+              },
+              {
+                "group": "Desarrolladores",
+                "pages": [
+                  "es/developers/introduction",
+                  "es/developers/receiving-webhooks"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Referencia API",
+            "groups": [
+              {
+                "group": "Documentación API",
+                "openapi": "api-reference/openapi.es.yaml"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "pt-BR",
+        "navbar": {
+          "links": [
+            {
+              "label": "Suporte",
+              "href": "mailto:support@hg.cash"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Abrir painel",
+            "href": "https://hg.cash"
+          }
+        },
+        "tabs": [
+          {
+            "tab": "Documentação",
+            "pages": [
+              "pt-BR/introduction",
+              {
+                "group": "Liquidação",
+                "pages": [
+                  "pt-BR/settlement/introduction",
+                  "pt-BR/settlement/withdrawals",
+                  "pt-BR/settlement/spot",
+                  "pt-BR/exchange/usdt-withdrawals"
+                ]
+              },
+              {
+                "group": "Desenvolvedores",
+                "pages": [
+                  "pt-BR/developers/introduction",
+                  "pt-BR/developers/receiving-webhooks"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Referência da API",
+            "groups": [
+              {
+                "group": "Documentação da API",
+                "openapi": "api-reference/openapi.pt-BR.yaml"
+              }
+            ]
           }
         ]
       }
@@ -47,31 +163,17 @@
     "light": "/logo/light.png",
     "dark": "/logo/dark.png"
   },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:support@hg.cash"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://hg.cash"
-    }
-  },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
-  "footer": {
-  }
+  "footer": {}
 }

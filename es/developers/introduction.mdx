@@ -1,0 +1,15 @@
+---
+title: "Descripción general"
+description: "Webhooks que usan desarrolladores con HG.Cash"
+icon: "square-code"
+---
+
+## Para quién es esta sección
+
+Socios y backends pueden recibir **callbacks HTTPS desde HG.Cash**. HG.Cash envía solicitudes `POST` con JSON cuando cambian **transacciones** del libro o las **solicitudes de transacción** (por ejemplo transferencias salientes / cash-out) cambian de estado. Opcionalmente puedes verificar las entregas con **HMAC-SHA256**.
+
+Coordina con onboarding de HG.Cash las **URLs**, **secretos de firma** y los endpoints de sandbox vs producción.
+
+## Guías en esta sección
+
+- **[Recepción de webhooks](/es/developers/receiving-webhooks)** — URL de callback predeterminada y secreto de firma, encabezado `X-HG-Webhook-Signature`, cuerpo JSON (`type`: transacción de libro vs `request` para solicitudes de transacción).

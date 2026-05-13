@@ -1,0 +1,45 @@
+---
+title: "Wallets de retiro"
+description: "Verifica y firma wallets de retiro"
+icon: "wallet"
+---
+
+## Verificar y firmar wallets de retiro {#withdrawal-wallets}
+
+Los retiros solo van a direcciones que **registras**, **firmas electrónicamente** y que el equipo **aprueba**. La “verificación” on-chain aquí significa **declarar titularidad** mediante un documento que firmas en la app; no es conectar una hardware wallet en la interfaz.
+
+### Abrir el área de wallets
+
+1. Inicia sesión y abre la app.
+2. En la barra lateral, haz clic en **Exchange**.
+3. Abre la pestaña **Wallets de retiro**.
+
+### Agregar una nueva wallet
+
+1. Haz clic en **Nueva wallet**.
+2. **Selecciona la red** para USDT (por ejemplo Ethereum ERC-20, Tron TRC-20, BSC, Polygon, Arbitrum, Optimism o Solana). El formato de la dirección debe coincidir con la red elegida.
+3. **Pega la dirección de la wallet** exactamente como aparece en tu wallet externa o exchange. El formulario valida el formato para la red seleccionada.
+4. Opcionalmente agrega una **Etiqueta**, por ejemplo “Binance personal”, para reconocer la wallet en las listas.
+5. Haz clic en **Continuar a firma**.
+
+### Firmar el documento de titularidad
+
+Después de crear la wallet, llegas a la página de firma:
+
+1. Espera a que cargue el formulario de firma incrustado.
+2. Completa el flujo de firma (revisa el documento y firma según las instrucciones). Puede pedirte usar el **mismo correo** que tu cuenta HG.cash; si el proveedor rechaza tu correo, debe intervenir soporte.
+3. Cuando termine la firma, deberías ver confirmación de que el documento se recibió y la wallet queda **pendiente de revisión** (**En revisión**).
+
+Si sales antes de firmar, puedes volver desde **Wallets de retiro** y usar **Firmar** en cualquier wallet en **Pendiente de firma**.
+
+### Qué sigue
+
+| Estado (UI) | Significado |
+| --- | --- |
+| Pendiente de firma | Aún debes completar la firma. |
+| En revisión | Firmada; el equipo revisa la wallet. |
+| Aprobada | Puedes seleccionar esta wallet al crear un retiro. |
+| Rechazada | No es usable; sigue las comunicaciones de soporte. |
+| Archivada | Ya no está disponible para nuevos retiros (archivar es irreversible desde la UI). |
+
+Cuando está disponible, **Documento** abre el enlace del documento firmado / auditoría. Después de la aprobación, la wallet aparece al elegir una **wallet de destino (aprobada)** para un retiro.

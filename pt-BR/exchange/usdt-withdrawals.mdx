@@ -1,0 +1,48 @@
+---
+title: "Retiradas USDT"
+description: "Crie retiradas USDT"
+icon: "recycle"
+---
+
+## Criar uma retirada USDT
+
+### Pré-requisitos
+
+- **Autenticação em dois fatores (2FA)** deve estar **ativada** na conta (app TOTP). O diálogo de retirada exige um **código 2FA** e outras verificações.
+- Pelo menos uma carteira de retirada com status **Aprobada** (veja [**Carteiras de retirada**](/pt-BR/settlement/withdrawals#withdrawal-wallets)).
+- Uma conta **USDT** com saldo suficiente para o valor solicitado.
+
+### Abrir o fluxo de retirada
+
+1. Na barra lateral, abra **Exchange** → aba **Retiros USDT**.
+2. Clique em **Nuevo retiro**.
+
+### Preencher o diálogo “Nuevo retiro USDT”
+
+Preencha os campos **na ordem** exigida pelo app:
+
+1. **Código de email (6 dígitos)**
+   - Clique em **Enviar código por email** para receber um código único.
+   - Digite o código de **6 dígitos** da caixa de entrada (verifique spam).
+2. **Código 2FA**
+   - Digite o código atual do app autenticador.
+3. **Contraseña (verificación)**
+   - Digite sua **senha de login** HG.cash para reautenticação antes do envio.
+4. **Cuenta USDT (origen)**
+   - Selecione a conta USDT a debitar. A lista mostra o **saldo disponível** por conta.
+5. **Monto USDT**
+   - Informe o valor a retirar (formato decimal aceito pelo formulário).
+6. **Wallet de destino (aprobada)**
+   - Escolha uma das suas carteiras de destino **aprovadas** (rede e endereço mascarado são exibidos).
+   - Se a lista estiver vazia, use **Agregar una wallet** para ir à aba de carteiras, ou conclua primeiro a aprovação.
+
+### Enviar
+
+Clique em **Confirmar retiro**. Em caso de sucesso, o pedido aparece em **Mis retiros** com status como **Pendiente revisión**. O time **revisa** antes de processar; os estados podem evoluir para **Aprobado**, **En proceso**, **Completado** ou **Rechazado** conforme operações.
+
+### Notas de segurança
+
+- Nunca compartilhe **códigos de e-mail**, **códigos 2FA** ou sua **senha** com terceiros.
+- Confirme sempre que a **rede** e o **endereço** de uma carteira **aprovada** correspondem ao destino pretendido; redes incorretas são causa frequente de perda on-chain.
+
+---

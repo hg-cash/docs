@@ -1,0 +1,62 @@
+---
+title: "Recibir webhooks de HG.Cash"
+description: "Callbacks para transacciones y solicitudes de transacción con verificación HMAC opcional"
+icon: "inbox-arrow-down"
+---
+
+## Qué se entrega
+
+HG.Cash encola un **`POST`** asíncrono hacia:
+
+1. La **URL de webhook predeterminada** de tu usuario (configurada en **Configuración** de HG.Cash junto al secreto de firma del webhook), **o**
+2. Un **`webhookUrl`** que indiques **por operación** donde la API o el formulario lo permitan — por ejemplo al crear una transacción de libro vía API REST (`POST /api/v1/transactions`) o una **solicitud de transacción** desde transferencias cuando ese campo exista.
+
+Los payloads tienen la misma forma sin importar la cola: **`Content-Type: application/json`** y el **cuerpo es un único objeto JSON plano** (no anidado bajo `{ "transaction": ... }`).
+
+La **forma del payload y ejemplos** están en la **referencia API** (pestaña **Referencia API**, sección **Webhooks**):
+
+- **Solicitudes de transacción** (pipeline cash-out; `type` es siempre **`"request"`**): [**Actualización de estado de solicitud de transacción**](/api-reference/webhooks/transaction-request-status-updated) — esquema **`TransactionRequestStatusWebhook`** con ejemplo completo.
+- **Movimientos de libro / cuenta** (dinero entrante o saliente de tus cuentas HG.Cash; `type` es el nombre del tipo de movimiento como `inbound` u `outbound`): [**Movimiento de cuenta**](/api-reference/webhooks/account-movement) — esquema **`AccountMovementWebhook`** con ejemplo completo.
+
+**Solicitudes de transacción (`type: "request"`)**
+
+Los callbacks se envían cuando HG.Cash **actualiza** el estado de una solicitud o cuando una solicitud se **cancela**. Es posible que **no** recibas webhook apenas se crea una solicitud si solo está **`PENDING`**; integra de forma defensiva ante **orden** y **duplicados**.
+
+**Transacciones de libro**
+
+Cuando una fila de **transacción** del libro se ingesta desde webhooks/API y aplica tu URL resuelta, HG.Cash puede notificar justo después de persistir; `type` es el **nombre del tipo de negocio**, no `"request"`.
+
+## Secreto de firma (`X-HG-Webhook-Signature`)
+
+Si tu perfil HG.Cash tiene un **secreto de firma de webhook** configurado, HG.Cash firma el **cuerpo JSON crudo exacto**:
+
+- Algoritmo: **`HMAC-SHA256`** sobre los bytes UTF-8 del string del cuerpo que HG.Cash enviará (equivalente a `JSON.stringify` del objeto payload).
+- Encabezado: **`X-HG-Webhook-Signature`**.
+- Formato: **`sha256=<hex>`** donde `<hex>` es hexadecimal en minúsculas (64 caracteres).
+
+Pasos de verificación en tu servidor:
+
+1. Lee el cuerpo crudo **tal como llega** — **no** vuelvas a serializar JSON parseado salvo que repliques exactamente orden/espaciado que usó HG.Cash.
+2. Calcula `hex = HMAC_SHA256(secret, rawBody_utf8)` y compara de forma segura con el valor del encabezado tras quitar el prefijo opcional **`sha256=`** (sin distinguir mayúsculas/minúsculas).
+3. Rechaza discrepancias (**`401`/`403`** en tu lado está bien).
+
+Si no hay secreto configurado en HG.Cash, el encabezado **`X-HG-Webhook-Signature`** se **omite** por completo.
+
+## Reintentos
+
+Las entregas fallidas (HTTP distinto de **`2xx`**, errores de red o timeouts) se **reintentan** automáticamente con esta política:
+
+| Parámetro | Valor |
+| --- | --- |
+| Intentos máximos | **4** (incluye el primer intento) |
+| Factor de backoff | **5** |
+| Espera mínima entre intentos | **500** ms |
+| Espera máxima entre intentos | **30** s |
+| Jitter | **Desactivado** (sin aleatoriedad) |
+
+Cada intento tiene hasta **30** segundos de tiempo total de ejecución antes de que el trabajo de entrega se considere fallido para ese intento.
+
+## Expectativas operativas
+
+- Responde con **`2xx`** rápido para que la entrega cuente como exitosa; si no, puedes recibir **`POST`** repetidos hasta agotar intentos o hasta que uno tenga éxito.
+- Prefiere manejadores **idempotentes** claveados por `id` de HG.Cash y transiciones de `status` que te importen — pueden existir reenvíos o emisiones duplicadas junto con particularidades de proveedores.

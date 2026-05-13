@@ -1,0 +1,1519 @@
+openapi: 3.1.0
+info:
+  title: HG.Cash API
+  description: '# 🚀 API de transações HG.Cash
+
+
+    API REST moderna para usuários criarem transações de saída a partir das suas contas.
+
+
+    ## 🧾 Como funciona
+
+
+    - Atribuímos contas ao seu usuário na HG.Cash
+
+    - Quando essas contas têm transações (entrada ou saída), a HG.Cash notifica seu backend usando a URL de webhook configurada
+    no painel HG.Cash
+
+    - **Assinatura de webhook (HMAC)**: Nas configurações da conta você pode gerar um segredo de assinatura. Quando configurado,
+    cada POST de webhook inclui o cabeçalho `X-HG-Webhook-Signature: sha256=<hex>` onde o valor é HMAC-SHA256 do corpo JSON
+    bruto usando seu segredo. Verifique no seu endpoint para garantir que a solicitação é autêntica.
+
+    - Para enviar fundos a partir das suas contas (saída / retirada), use **Criar solicitação de transação (saída)** (`POST /transactions`)
+
+
+    ## 📊 Primeiros passos
+
+
+    1. **Gere seu token de API** na página de configurações da conta
+
+    2. **Teste os endpoints** com a documentação interativa abaixo
+
+    3. **Implemente** nos seus serviços backend (nunca exponha tokens no frontend)
+
+    4. **Monitore** sua integração e trate erros de forma adequada
+
+
+    ## 🔐 Autenticação
+
+
+    Esta API usa autenticação **Bearer Token**. Inclua seu token de API de usuário no cabeçalho Authorization:
+
+
+    ```
+
+    Authorization: Bearer cash_your_token_here
+
+    ```
+
+
+    ## ⚠️ Notas importantes de segurança
+
+
+    - Nunca compartilhe ou exponha seu token de autenticação de API de usuário
+
+    - Armazene tokens apenas em servidores backend seguros
+
+    - Todas as chamadas à API devem ser feitas a partir de serviços backend seguros
+
+    - Entre em contato com administradores imediatamente se seu token for comprometido
+
+    '
+  version: 1.0.0
+  contact:
+    name: Suporte API HG.Cash
+    email: api-support@hg.cash
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://hg.cash/api/v1
+  description: Servidor de produção
+- url: http://dev.hg.cash/api/v1
+  description: Servidor de desenvolvimento
+security:
+- bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Token de autenticação de API de usuário no formato: `cash_<64-char-hex>`
+
+
+        Exemplo: `cash_16cdc3b6f83c72d9d2680adca4f430962981f6bf32613a129dded0aa060387d2`
+
+        '
+    webhookHmac:
+      type: apiKey
+      in: header
+      name: X-HG-Webhook-Signature
+      description: 'Assinatura HMAC-SHA256 do corpo JSON bruto. Formato: `sha256=<hex>`.
+
+        Quando você configura um segredo de assinatura de webhook na conta, a HG.Cash inclui
+
+        este cabeçalho em cada POST de webhook. Verifique a assinatura no seu endpoint para garantir que a solicitação é autêntica.
+
+        '
+  schemas:
+    Transaction:
+      type: object
+      description: Solicitação de criação de transação de saída pelo usuário
+      required:
+      - accountId
+      - amount
+      properties:
+        accountId:
+          type: string
+          format: uuid
+          description: ID da conta do usuário da qual enviar fundos
+          example: 550e8400-e29b-41d4-a716-446655440123
+        fromName:
+          type: string
+          description: Nome do remetente da transação
+          example: Juan Pérez
+          maxLength: 255
+        toName:
+          type: string
+          description: Nome do destinatário da transação
+          example: María García
+          maxLength: 255
+        fromCBU:
+          type: number
+          description: CBU (chave bancária uniforme) do remetente
+          example: 170001540000000000001
+        toCBU:
+          type: string
+          description: CBU do beneficiário (22 dígitos). Indique toCBU ou toCVU.
+          example: '1100015400000000000021'
+        toCVU:
+          type: string
+          description: CVU do beneficiário (22 dígitos). Indique toCBU ou toCVU.
+          example: 0000003100012345678901
+        amount:
+          type: number
+          format: decimal
+          description: Valor da transação (deve ser positivo)
+          example: 15000.5
+        fromCUIT:
+          type: number
+          description: CUIT/CUIL do remetente
+          example: 20123456789
+        toCUIT:
+          type: number
+          description: CUIT/CUIL do beneficiário
+          example: 27987654321
+        concept:
+          type: string
+          description: Conceito ou descrição da transação
+          example: Pagamento por serviços
+          maxLength: 500
+        externalDate:
+          type: string
+          format: date-time
+          description: Data da transação no seu sistema (formato ISO 8601)
+          example: '2024-06-19T10:30:00Z'
+        coelsaCode:
+          type: string
+          description: Código de transação Coelsa
+          example: COELSA123456
+          maxLength: 100
+        data:
+          type: object
+          description: Dados JSON adicionais para a transação
+          example:
+            reference: REF-001
+            category: services
+            metadata:
+              source: mobile_app
+              version: 1.2.3
+        webhookUrl:
+          type: string
+          format: uri
+          description: URL de webhook opcional para receber atualizações de status desta solicitação
+          example: https://client.example.com/webhooks/transaction-request
+    TransactionRequestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID interno da solicitação de transação
+          example: 789e0123-e89b-12d3-a456-426614174999
+        externalID:
+          type: string
+          example: REQ-2024-001234
+        createdAt:
+          type: string
+          format: date-time
+          example: '2024-06-19T10:30:00Z'
+        status:
+          type: string
+          enum:
+          - PENDING
+          - AWAITING_REVIEW
+          - PROCESSING
+          - DONE
+          - ERROR
+          - CANCELLED
+          example: PENDING
+    TransactionStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: pending
+        description:
+          type: string
+          example: A transação está pendente de processamento
+    TransactionType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        name:
+          type: string
+          example: transfer
+        description:
+          type: string
+          example: Transferência bancária
+    AliasLookupRequest:
+      type: object
+      required:
+      - alias
+      properties:
+        alias:
+          type: string
+          description: CVU (22 dígitos) o alias a consultar
+          example: miempresa.cbu
+    AliasLookupResponse:
+      type: object
+      properties:
+        alias:
+          type: string
+          nullable: true
+          description: Alias da conta
+        cuit:
+          type: string
+          nullable: true
+          description: CUIT/CUIL do titular da conta
+        cvu:
+          type: string
+          description: CVU (22 dígitos)
+        nombre:
+          type: string
+          nullable: true
+          description: Nome do titular da conta
+        tipoPersona:
+          type: string
+          nullable: true
+          description: Tipo de pessoa
+    ErrorResponse:
+      type: object
+      description: Payload de erro retornado pela API.
+      additionalProperties: true
+      required:
+      - error
+      properties:
+        error:
+          type: string
+          example: Requisição inválida
+        code:
+          type: string
+          description: Código de erro legível por máquina (quando disponível)
+          example: INSUFFICIENT_NET_BALANCE
+        message:
+          type: string
+          example: Os dados fornecidos são inválidos
+        details:
+          type: object
+          description: Detalhes adicionais do erro
+          example:
+            field: amount
+            code: INVALID_VALUE
+    TransactionRequestStatusWebhook:
+      type: object
+      description: 'Payload enviado ao seu endpoint de webhook quando muda o status de uma solicitação de transação.
+
+
+        **Cabeçalhos:** Quando você configura um segredo de assinatura de webhook na conta, a HG.Cash envia o cabeçalho `X-HG-Webhook-Signature:
+        sha256=<hex>` onde o valor é HMAC-SHA256 do corpo JSON bruto usando seu segredo. Verifique para garantir que a solicitação
+        é autêntica.
+
+
+        Notas:
+
+        - Os valores numéricos (como `amount`, CBU/CUIT) são enviados como strings para preservar precisão e formatação.
+
+        - `date` é data e hora local e deve ser interpretado usando `timezone`.
+
+        - Configure a URL de webhook na página de configurações da conta.
+
+        '
+      required:
+      - id
+      - externalID
+      - amount
+      - currency
+      - direction
+      - status
+      - type
+      - accountId
+      - date
+      - timezone
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID interno da transação
+          example: 789e0123-e89b-12d3-a456-426614174999
+        externalID:
+          type: string
+          description: ID externo informado ao criar a transação
+          example: TXN-2024-001234
+        amount:
+          type: string
+          description: Valor da transação como string decimal
+          example: '15000.50'
+        currency:
+          type: string
+          description: Código de moeda ISO 4217
+          pattern: ^[A-Z]{3}$
+          example: ARS
+        direction:
+          type: string
+          enum:
+          - Inbound
+          - Outbound
+          description: Direção da transação
+          example: Inbound
+        status:
+          type: string
+          description: Status atual da solicitação de transação
+          enum:
+          - PENDING
+          - AWAITING_REVIEW
+          - PROCESSING
+          - DONE
+          - ERROR
+          - CANCELLED
+          example: PENDING
+        type:
+          type: string
+          description: Tipo de notificação. Sempre "request" para solicitações de transação
+          example: request
+        accountId:
+          type: string
+          format: uuid
+          description: ID de conta HG.Cash associado à transação
+          example: 550e8400-e29b-41d4-a716-446655440123
+        date:
+          type: string
+          format: date-time
+          description: Data e hora local da transação no fuso horário indicado
+          example: '2024-06-19T10:30:00'
+        timezone:
+          type: string
+          description: Identificador de fuso horário IANA usado para interpretar `date`
+          example: America/Argentina/Buenos_Aires
+        error:
+          type: string
+          description: Mensagem de erro opcional quando o estado é ERROR
+          example: Fundos insuficientes na conta de destino
+        errorCode:
+          type: string
+          description: Código de erro legível por máquina quando o estado é ERROR
+          enum:
+          - INSUFFICIENT_BALANCE
+          - DESTINATION_ERROR
+          example: INSUFFICIENT_BALANCE
+        fromName:
+          type: string
+          description: Nome do remetente
+          example: Juan Pérez
+        toName:
+          type: string
+          description: Nome do beneficiário
+          example: María García
+        fromCBU:
+          type: string
+          description: CBU do remetente (22 dígitos). Enviado como string.
+          pattern: ^\d{22}$
+          example: '1700015400000000000010'
+        toCBU:
+          type: string
+          description: CBU do beneficiário (22 dígitos). Enviado como string.
+          pattern: ^\d{22}$
+          example: '1100015400000000000021'
+        toCVU:
+          type: string
+          description: CVU do beneficiário (22 dígitos). Enviado como string.
+          pattern: ^\d{22}$
+          example: 0000003100012345678901
+        fromCUIT:
+          type: string
+          description: CUIT/CUIL do remetente (11 dígitos). Enviado como string.
+          pattern: ^\d{11}$
+          example: '20123456789'
+        toCUIT:
+          type: string
+          description: CUIT/CUIL do beneficiário (11 dígitos). Enviado como string.
+          pattern: ^\d{11}$
+          example: '27987654321'
+        concept:
+          type: string
+          description: Conceito ou descrição da transação
+          example: Pagamento por serviços
+        coelsaCode:
+          type: string
+          description: Código de transação Coelsa
+          example: COELSA123456
+        data:
+          type: object
+          description: Metadados JSON opcionais da solicitação de transação
+        isSecurityFlagged:
+          type: boolean
+          description: Se for true, a solicitação ficou retida para revisão de segurança antes do processamento
+        securityFlagReason:
+          type: string
+          description: Motivo opcional legível por máquina quando há marca de segurança
+    AccountMovementWebhook:
+      type: object
+      description: 'Payload enviado ao seu endpoint de webhook quando o dinheiro entra ou sai de uma das suas contas HG.Cash.
+
+
+        **Cabeçalhos:** Quando você configura um segredo de assinatura de webhook na conta, a HG.Cash envia o cabeçalho `X-HG-Webhook-Signature:
+        sha256=<hex>` onde o valor é HMAC-SHA256 do corpo JSON bruto usando seu segredo. Verifique para garantir que a solicitação
+        é autêntica.
+
+
+        Notas:
+
+        - Os valores numéricos (como `amount`, CBU/CUIT) são enviados como strings para preservar precisão e formatação.
+
+        - `date` é data e hora local e deve ser interpretado usando `timezone`.
+
+        '
+      required:
+      - id
+      - externalID
+      - amount
+      - currency
+      - direction
+      - status
+      - type
+      - accountId
+      - date
+      - timezone
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID interno do movimento
+        externalID:
+          type: string
+          description: Identificador externo do provedor ou do banco para o movimento
+        amount:
+          type: string
+          description: Valor do movimento como string decimal
+        currency:
+          type: string
+          description: Código de moeda ISO 4217
+          pattern: ^[A-Z]{3}$
+        direction:
+          type: string
+          description: Direção do movimento em relação à sua conta
+          enum:
+          - Inbound
+          - Outbound
+        status:
+          type: string
+          description: Status atual do movimento
+        type:
+          type: string
+          description: Tipo de movimento (por exemplo `inbound` ou `outbound`)
+        accountId:
+          type: string
+          format: uuid
+          description: ID de conta HG.Cash associado ao movimento
+        date:
+          type: string
+          format: date-time
+          description: Data e hora local do movimento no fuso horário indicado
+        timezone:
+          type: string
+          description: Identificador de fuso horário IANA usado para interpretar `date`
+        fromName:
+          type: string
+          description: Nome do remetente
+        toName:
+          type: string
+          description: Nome do beneficiário
+        fromCBU:
+          type: string
+          description: CBU do remetente (22 dígitos). Enviado como string.
+          pattern: ^\d{22}$
+        toCBU:
+          type: string
+          description: CBU do beneficiário (22 dígitos). Enviado como string.
+          pattern: ^\d{22}$
+        fromCUIT:
+          type: string
+          description: CUIT/CUIL do remetente (11 dígitos). Enviado como string.
+          pattern: ^\d{11}$
+        toCUIT:
+          type: string
+          description: CUIT/CUIL do beneficiário (11 dígitos). Enviado como string.
+          pattern: ^\d{11}$
+        coelsaCode:
+          type: string
+          description: Código de transação Coelsa
+    InboundTransactionRequest:
+      type: object
+      description: Solicitação para criar uma transação de entrada (receber um pagamento) em contas Brasil (BRL)
+      required:
+      - accountId
+      - amount
+      - email
+      properties:
+        accountId:
+          type: string
+          format: uuid
+          description: ID da conta que receberá os fundos
+        amount:
+          type: number
+          format: decimal
+          description: Monto a recibir (positivo)
+        email:
+          type: string
+          format: email
+          description: E-mail do pagador para a cobrança
+        webhookUrl:
+          type: string
+          format: uri
+          description: URL opcional para recibir actualizaciones de estado
+    InboundTransactionResponse:
+      type: object
+      required:
+      - id
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID de transação HG.Cash
+        qrCode:
+          type: string
+          description: String de código QR para o pagador escanear (base64 ou string PIX)
+        pixCopiaECola:
+          type: string
+          description: String PIX copia e cola (alternativa ao código QR)
+        status:
+          type: string
+          enum:
+          - pending
+    OutboundTransactionRequest:
+      type: object
+      description: Solicitação para criar uma transação de saída (retirada) em contas Brasil (BRL)
+      required:
+      - accountId
+      - amount
+      - name
+      - keyType
+      - keyPix
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        name:
+          type: string
+          description: Nome do beneficiário
+        keyType:
+          type: string
+          enum:
+          - document
+          - email
+          - evp
+          - phone
+          - cnpj
+          description: Tipo de chave PIX (document=CPF, evp=chave aleatória)
+        keyPix:
+          type: string
+          description: Valor da chave PIX (email, CPF, CNPJ, telefone ou chave aleatória)
+        webhookUrl:
+          type: string
+          format: uri
+    OutboundTransactionResponse:
+      type: object
+      required:
+      - id
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID de transação HG.Cash
+        status:
+          type: string
+          enum:
+          - processing
+          - cancelled
+          description: '- `processing`: O provedor aceitou a retirada (HTTP 200). A transação está sendo processada.
+
+            - `cancelled`: O provedor recusou ou falhou (HTTP diferente de 200). A transação ficou marcada como cancelada.
+
+            '
+    DirectTransactionStatus:
+      type: object
+      description: Status de uma transação direta (entrada ou saída)
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalID:
+          type: string
+        status:
+          type: string
+          enum:
+          - pending
+          - done
+          - expired
+          - cancelled
+        direction:
+          type: string
+          enum:
+          - Inbound
+          - Outbound
+        amount:
+          type: string
+        currency:
+          type: string
+paths:
+  /transactions:
+    post:
+      summary: Criar solicitação de transação (saída)
+      description: 'Cria uma nova solicitação de transação a partir de uma das suas contas. Isso não executa uma transferência
+        bancária direta. Você pode informar um `webhookUrl` para receber atualizações de status.
+
+
+        ## 📝 Campos obrigatórios
+
+
+        - `accountId`: ID da sua conta a debitar
+
+        - `toCBU` ou `toCVU`: CBU/CVU do banco beneficiário (22 dígitos)
+
+        - `amount`: Número decimal positivo
+
+        - Opcional `webhookUrl`: URL para receber atualizações de status
+
+
+        ## 🔍 Regras de validação
+
+
+        - A conta deve pertencer ao usuário autenticado
+
+        - O CBU deve ser um número válido de 22 dígitos
+
+        - O `externalID` opcional deve ser único por conta se for enviado
+
+        '
+      operationId: createTransactionRequest
+      tags:
+      - Transações
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+            examples:
+              basic_request_cbu:
+                summary: Solicitação básica
+                description: Campos mínimos para uma solicitação de transferência de saída
+                value:
+                  accountId: 550e8400-e29b-41d4-a716-446655440123
+                  toCBU: '1100015400000000000021'
+                  amount: 15000.5
+              basic_request_cvu:
+                summary: Solicitação básica com CVU
+                description: Campos mínimos usando CVU como destino
+                value:
+                  accountId: 550e8400-e29b-41d4-a716-446655440123
+                  toCVU: 0000003100012345678901
+                  amount: 15000.5
+              complete_request:
+                summary: Solicitação completa com webhook
+                description: Transferência de saída com metadados opcionais e URL de webhook para atualizações de status
+                value:
+                  accountId: 550e8400-e29b-41d4-a716-446655440123
+                  toCBU: '1100015400000000000021'
+                  amount: 25000.0
+                  toName: María García
+                  toCUIT: 27987654321
+                  concept: Pagamento por serviços de consultoria
+                  externalDate: '2024-06-19T10:30:00Z'
+                  coelsaCode: COELSA123456
+                  data:
+                    reference: REF-001
+                    category: services
+                    client_id: CLIENT-789
+                  webhookUrl: https://client.example.com/webhooks/transaction-request
+      responses:
+        '201':
+          description: Solicitação de transação criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRequestResponse'
+              examples:
+                success:
+                  summary: Criação bem-sucedida
+                  value:
+                    id: 789e0123-e89b-12d3-a456-426614174999
+                    externalID: REQ-2024-001234
+                    createdAt: '2024-06-19T10:30:00Z'
+                    status: PENDING
+        '400':
+          description: Requisição inválida — dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Erro de validação
+                  value:
+                    error: Falha na validação
+                    message: Os dados fornecidos são inválidos
+                    details:
+                      amount: O valor deve ser positivo
+                      currency: A moeda deve ter 3 letras
+        '403':
+          description: Proibido — a conta não pertence ao usuário autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden_account:
+                  summary: Acesso à conta negado
+                  value:
+                    error: Você não tem acesso a esta conta
+        '409':
+          description: Conflito — não foi possível criar a solicitação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate_external_id:
+                  summary: ID externo duplicado
+                  value:
+                    error: Já existe uma solicitação de transação com este external ID para esta conta
+                    code: DUPLICATE_EXTERNAL_ID
+                    message: O externalID fornecido já existe para esta conta
+                insufficient_net_balance:
+                  summary: Saldo neto insuficiente
+                  description: Recusado porque o saldo líquido (saldo - taxas pendentes) é menor que o valor solicitado
+                  value:
+                    error: Saldo líquido insuficiente
+                    code: INSUFFICIENT_NET_BALANCE
+                    message: O saldo disponível líquido (saldo - taxas pendentes) não cobre o valor solicitado
+                    details:
+                      accountId: 550e8400-e29b-41d4-a716-446655440123
+                      currency: ARS
+                      amount: 15000.5
+                      balance: 12000
+                      pendingFees: 2000
+                      netBalance: 10000
+        '401':
+          description: Não autorizado — token inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_token:
+                  summary: Token ausente
+                  value:
+                    error: Autenticação necessária
+                    message: É necessário enviar o token Bearer
+                invalid_token:
+                  summary: Token inválido
+                  value:
+                    error: Token inválido
+                    message: O token fornecido é inválido ou expirou
+        '404':
+          description: Não encontrado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                server_error:
+                  summary: Erro do servidor
+                  value:
+                    error: Erro interno do servidor
+                    message: Ocorreu um erro inesperado
+  /transaction/{id}/status:
+    get:
+      summary: Obter status da solicitação de transação
+      description: 'Obtém o status de uma solicitação de transação criada via `/transactions`.
+
+        Exige o token Bearer do usuário que criou a solicitação.
+
+        '
+      operationId: getTransactionRequestStatus
+      tags:
+      - Transações
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID da solicitação de transação
+      responses:
+        '200':
+          description: Status obtido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  externalID:
+                    type: string
+                    nullable: true
+                  status:
+                    type: string
+                    enum:
+                    - PENDING
+                    - AWAITING_REVIEW
+                    - PROCESSING
+                    - DONE
+                    - ERROR
+                    - CANCELLED
+                  errorMessage:
+                    type: string
+                    nullable: true
+                  errorCode:
+                    type: string
+                    nullable: true
+                    enum:
+                    - INSUFFICIENT_BALANCE
+                    - DESTINATION_ERROR
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Não autorizado
+        '404':
+          description: Não encontrado
+        '500':
+          description: Erro interno do servidor
+  /br/transactions/inbound:
+    post:
+      summary: Criar transação de entrada (Brasil)
+      description: 'Cria uma transação de entrada para receber um pagamento. Retorna um código QR para o pagador escanear.
+
+        A conta deve ser Brasil (BRL). A transação começa em estado `pending` até o pagamento ser confirmado.
+
+        '
+      operationId: createBrInboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundTransactionRequest'
+      tags:
+      - Brasil
+      responses:
+        '201':
+          description: Transação criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundTransactionResponse'
+        '400':
+          description: Requisição inválida
+        '401':
+          description: Não autorizado
+        '403':
+          description: Proibido
+        '404':
+          description: Cuenta no encontrada
+        '502':
+          description: Erro do provedor
+  /br/transactions/outbound:
+    post:
+      summary: Criar transação de saída (Brasil)
+      description: 'Cria uma transação de saída (retirada) a partir de uma conta Brasil (BRL).
+
+        Exige saldo líquido suficiente. A transação começa em estado `processing`.
+
+        '
+      operationId: createBrOutboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutboundTransactionRequest'
+      tags:
+      - Brasil
+      responses:
+        '201':
+          description: 'Transação criada. Retorna `status: processing` quando o provedor aceitou a retirada (HTTP 200).
+
+            Retorna `status: cancelled` quando o provedor recusou ou falhou (HTTP diferente de 200); a transação é armazenada
+            e fica marcada como cancelada.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboundTransactionResponse'
+        '400':
+          description: Requisição inválida
+        '401':
+          description: Não autorizado
+        '403':
+          description: Proibido
+        '404':
+          description: Cuenta no encontrada
+        '409':
+          description: Saldo insuficiente
+  /br/transactions/{id}/status:
+    get:
+      summary: Obter status da transação (Brasil)
+      description: 'Obtém o status atual de uma transação direta (entrada ou saída).
+
+        É diferente de `GET /transaction/{id}/status`, que retorna o status da solicitação de transação (TransactionRequest).
+
+        '
+      operationId: getBrTransactionStatus
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID de transação
+      tags:
+      - Brasil
+      responses:
+        '200':
+          description: Status da transação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectTransactionStatus'
+        '401':
+          description: Não autorizado
+        '404':
+          description: Transação não encontrada
+        '502':
+          description: Erro do provedor
+  /transactions/{id}/receipt:
+    get:
+      summary: Obter comprovante de transação
+      description: 'Gera um comprovante PDF de uma transação e retorna uma URL assinada para baixá-lo.
+
+        O comprovante é armazenado no Supabase Storage e fica em cache para solicitações posteriores.
+
+        A URL assinada expira em uma hora.
+
+        '
+      operationId: getTransactionReceipt
+      tags:
+      - Transações
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID da transação (a operação bancária real, não a solicitação)
+      responses:
+        '200':
+          description: URL assinada para baixar o PDF do comprovante
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - signedUrl
+                properties:
+                  signedUrl:
+                    type: string
+                    format: uri
+                    description: URL assinada temporária para baixar o PDF do comprovante (expira em 1 hora)
+        '401':
+          description: Não autorizado
+        '404':
+          description: Transação não encontrada
+        '500':
+          description: Erro interno do servidor
+  /transaction-requests/{id}/transaction-id:
+    get:
+      summary: Obter ID de transação para uma solicitação
+      description: 'Obtém o ID de transação vinculado a uma solicitação de transação.
+
+        Retorna o ID da operação bancária real depois que a solicitação for processada (status DONE).
+
+        Retorna `null` se ainda não estiver vinculada (por exemplo PENDING ou PROCESSING).
+
+        '
+      operationId: getTransactionIdForRequest
+      tags:
+      - Transações
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID da solicitação de transação
+      responses:
+        '200':
+          description: ID de transação vinculado (ou null se ainda não estiver disponível)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - transactionId
+                properties:
+                  transactionId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                    description: ID de transação vinculado a esta solicitação, ou null se ainda não foi processada
+        '401':
+          description: Não autorizado
+        '404':
+          description: Solicitação de transação não encontrada
+        '500':
+          description: Erro interno do servidor
+  /alias-lookup:
+    post:
+      summary: Consultar CVU ou alias
+      description: 'Consulta informações do beneficiário por CVU (22 dígitos) ou alias.
+
+        Retorna alias, CUIT, CVU, nome e tipo de pessoa.
+
+
+        **Serviço pago**: Este endpoint é uma funcionalidade paga. O uso pode gerar cobranças. Consulte seu contador ou a
+        equipe de faturamento da HG.Cash para saber preços.
+
+        '
+      operationId: aliasLookup
+      tags:
+      - Dados de referência
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AliasLookupRequest'
+            examples:
+              by_alias:
+                summary: Consulta por alias
+                value:
+                  alias: miempresa.cbu
+              by_cvu:
+                summary: Consulta por CVU
+                value:
+                  alias: 0000003100012345678901
+      responses:
+        '200':
+          description: Informações do beneficiário encontradas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AliasLookupResponse'
+        '400':
+          description: Requisição inválida — entrada inválida ou não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  summary: Não encontrado
+                  value:
+                    error: Não encontrado
+                    message: Nenhuma informação encontrada para este CVU ou alias
+        '401':
+          description: Não autorizado — token inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Proibido — o usuário não tem acesso ao serviço de consulta de alias
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                service_not_enabled:
+                  summary: Serviço não habilitado
+                  value:
+                    error: Acesso negado
+                    code: ALIAS_LOOKUP_NOT_ENABLED
+                    message: Este usuário não tem acesso ao serviço de consulta de alias. Entre em contato com o administrador.
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /accounts:
+    get:
+      summary: Obter contas do usuário
+      description: 'Retorna as contas do usuário autenticado, incluindo saldo contábil, taxas pendentes,
+
+        saldo líquido disponível e status da conta.
+
+        '
+      operationId: getUserAccounts
+      tags:
+      - Contas
+      responses:
+        '200':
+          description: Lista de contas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        balance:
+                          type: number
+                          description: Saldo contábil da conta arredondado para 2 casas decimais
+                        pendingFees:
+                          type: number
+                          description: Taxas acumuladas ainda não cobradas, arredondadas para 2 casas decimais
+                        netBalance:
+                          type: number
+                          description: Saldo disponível após taxas pendentes (saldo menos taxas), arredondado para 2 casas
+                            decimais
+                        status:
+                          type: string
+                          description: Status do ciclo de vida da conta
+                          enum:
+                          - Operativa
+                          - Bloqueada
+                          - Cerrada
+                        currency:
+                          type: string
+                        number:
+                          type: string
+                        alias:
+                          type: string
+                          nullable: true
+                        platform:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+                        company:
+                          type: object
+                          nullable: true
+                          description: Empresa à qual a conta pertence (opcional)
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+                  count:
+                    type: integer
+        '401':
+          description: Não autorizado
+        '500':
+          description: Erro interno do servidor
+  /account/{id}/balance:
+    get:
+      summary: Obter saldo da conta
+      description: 'Retorna o saldo, taxas pendentes, saldo líquido disponível, moeda e status da conta
+
+        do usuário autenticado por ID.
+
+        '
+      operationId: getAccountBalance
+      tags:
+      - Contas
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID de cuenta
+      responses:
+        '200':
+          description: Saldo da conta
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  balance:
+                    type: number
+                    description: Saldo contábil da conta arredondado para 2 casas decimais
+                  currency:
+                    type: string
+                  pendingFees:
+                    type: number
+                    description: Taxas acumuladas ainda não cobradas, arredondadas para 2 casas decimais
+                  netBalance:
+                    type: number
+                    description: Saldo disponível após taxas pendentes (saldo menos taxas), arredondado para 2 casas decimais
+                  status:
+                    type: string
+                    description: Status do ciclo de vida da conta
+                    enum:
+                    - Operativa
+                    - Bloqueada
+                    - Cerrada
+        '401':
+          description: Não autorizado
+        '404':
+          description: Não encontrado
+        '500':
+          description: Erro interno do servidor
+  /transaction-statuses:
+    get:
+      summary: Obter status de transações
+      description: 'Obtém todos os status de transação disponíveis.
+
+
+        Use os IDs retornados apenas como referência informativa.
+
+
+        ## 📋 Status habituais
+
+
+        - **processing**: A transação está sendo processada
+
+        - **done**: A transação foi concluída com sucesso
+
+        - **failed**: Falhou o processamento da transação
+
+        '
+      operationId: getTransactionStatuses
+      tags:
+      - Dados de referência
+      responses:
+        '200':
+          description: Lista de status de transações
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionStatus'
+              examples:
+                statuses:
+                  summary: Status de transações
+                  value:
+                    success: true
+                    data:
+                    - id: 550e8400-e29b-41d4-a716-446655440000
+                      name: pending
+                      description: La transação está pendiente de procesamiento
+                    - id: 550e8400-e29b-41d4-a716-446655440001
+                      name: completed
+                      description: A transação foi concluída com sucesso
+                    - id: 550e8400-e29b-41d4-a716-446655440002
+                      name: failed
+                      description: Falhou o processamento da transação
+        '401':
+          description: Não autorizado — token inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_token:
+                  summary: Token ausente
+                  value:
+                    success: false
+                    error: Autenticação necessária
+                    message: É necessário enviar o token Bearer
+                invalid_token:
+                  summary: Token inválido
+                  value:
+                    success: false
+                    error: Token inválido
+                    message: O token fornecido é inválido ou expirou
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transaction-types:
+    get:
+      summary: Obter tipos de transação
+      description: 'Obtém todos os tipos de transação disponíveis.
+
+
+        Use os IDs retornados no campo `typeID` ao criar transações.
+
+
+        ## 📋 Tipos habituais
+
+
+        - **transfer**: Transferencia bancaria
+
+        - **payment**: Pago
+
+        - **deposit**: Depósito
+
+        - **withdrawal**: Retiro
+
+        '
+      operationId: getTransactionTypes
+      tags:
+      - Dados de referência
+      responses:
+        '200':
+          description: Lista de tipos de transação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionType'
+              examples:
+                types:
+                  summary: Tipos de transação
+                  value:
+                    success: true
+                    data:
+                    - id: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+                      name: transfer
+                      description: Transação de transferência bancária
+                    - id: 6ba7b810-9dad-11d1-80b4-00c04fd430c9
+                      name: payment
+                      description: Transação de pagamento
+                    - id: 6ba7b810-9dad-11d1-80b4-00c04fd430ca
+                      name: deposit
+                      description: Transação de depósito
+        '401':
+          description: Não autorizado — token inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_token:
+                  summary: Token ausente
+                  value:
+                    success: false
+                    error: Autenticação necessária
+                    message: É necessário enviar o token Bearer
+                invalid_token:
+                  summary: Token inválido
+                  value:
+                    success: false
+                    error: Token inválido
+                    message: O token fornecido é inválido ou expirou
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+webhooks:
+  transaction-request-status-updated:
+    post:
+      summary: Atualização de status da solicitação de transação
+      description: 'A HG.Cash enviará este webhook quando mudar o status de uma solicitação de transação. O corpo contém os
+        dados da solicitação e o status atual.
+
+        Você pode informar um `webhookUrl` na criação da solicitação ou configurar um padrão na conta.
+
+        '
+      operationId: transactionRequestStatusUpdatedWebhook
+      tags:
+      - Webhooks
+      security:
+      - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequestStatusWebhook'
+            examples:
+              example:
+                summary: Exemplo de payload
+                value:
+                  id: 789e0123-e89b-12d3-a456-426614174999
+                  externalID: REQ-2024-001234
+                  amount: '15000.50'
+                  currency: ARS
+                  direction: Inbound
+                  status: PENDING
+                  type: request
+                  accountId: 550e8400-e29b-41d4-a716-446655440123
+                  date: '2024-06-19T10:30:00'
+                  timezone: America/Argentina/Buenos_Aires
+                  fromName: Juan Pérez
+                  toName: María García
+                  fromCBU: '1700015400000000000010'
+                  toCBU: '1100015400000000000021'
+                  error: Fundos insuficientes na conta de destino
+                  fromCUIT: '20123456789'
+                  toCUIT: '27987654321'
+                  concept: Pagamento por serviços
+                  coelsaCode: COELSA123456
+  account-movement:
+    post:
+      summary: Movimento de conta
+      description: 'A HG.Cash enviará este webhook quando o dinheiro entrar ou sair de uma das suas contas. O corpo contém
+        os dados do movimento.
+
+
+        Use para manter seus saldos internos e livros alinhados com a HG.Cash.
+
+        '
+      operationId: accountMovementWebhook
+      tags:
+      - Webhooks
+      security:
+      - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountMovementWebhook'
+            examples:
+              example:
+                summary: Exemplo de payload de movimento de conta
+                value:
+                  id: 040eac5b-a998-4879-9d8a-05fd2a08c625
+                  externalID: E-67REZ8NPQDQ460QK94KVGO-2026-01-14 09:17:21
+                  amount: '12000'
+                  currency: ARS
+                  direction: Inbound
+                  status: hecha
+                  type: inbound
+                  date: '2026-01-14T09:17:21'
+                  timezone: America/Argentina/Buenos_Aires
+                  fromName: Jose Angel Gallucci
+                  toName: MUNDO OFERTA IMPORTACIONES S.A
+                  fromCBU: 0000003100117987328844
+                  toCBU: '0000151500037626120131'
+                  fromCUIT: '20125680667'
+                  toCUIT: '30718891813'
+                  coelsaCode: 67REZ8NPQDQ460QK94KVGO
+                  accountId: 843d9d8b-6db8-47a2-8c22-23b198e99c15
+tags:
+- name: Transações
+  description: Transações — Criar e administrar transações na HG.Cash. Todos os endpoints exigem autenticação.
+- name: Contas
+  description: Contas — Obter informações e saldos para o usuário autenticado. Todos os endpoints exigem autenticação.
+- name: Dados de referência
+  description: Dados de referência — Status e tipos de transação, entre outros. Exigem autenticação.
+- name: Webhooks
+  description: Webhooks — Notificações de eventos enviadas ao seu endpoint HTTP.
+- name: Brasil
+  description: Brasil — Criar e administrar transações PIX para operações no Brasil.
