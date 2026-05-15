@@ -506,6 +506,21 @@ components:
           type: string
           enum: [pending]
 
+    BrazilProviderError:
+      type: object
+      required: [error, code, type]
+      description: Safe provider-related error (no internal details or duplicate message fields)
+      properties:
+        error:
+          type: string
+          description: Human-readable message for clients
+        code:
+          type: string
+          description: Stable machine-readable code (e.g. BR_INBOUND_PROVIDER_MISSING_TXID)
+        type:
+          type: string
+          description: Error category (e.g. provider_error, provider_invalid_response)
+
     OutboundTransactionRequest:
       type: object
       description: Request to create an outbound transaction (withdraw) for Brazil BRL accounts
@@ -817,7 +832,11 @@ paths:
         '404':
           description: Account not found
         '502':
-          description: Provider error
+          description: Payment provider error or invalid provider response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazilProviderError'
 
   /br/transactions/outbound:
     post:
@@ -883,7 +902,11 @@ paths:
         '404':
           description: Transaction not found
         '502':
-          description: Provider error
+          description: Payment provider error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazilProviderError'
 
   /transactions/{id}/receipt:
     get:
@@ -1040,7 +1063,7 @@ paths:
       summary: Get User Accounts
       description: |
         Returns the authenticated user's accounts, including ledger balance, pending fees,
-        net available balance, and account status.
+        net available balance (balance minus pending fees), and account status.
       operationId: getUserAccounts
       tags:
         - Accounts
@@ -1162,7 +1185,7 @@ paths:
           description: Not Found
         '500':
           description: Internal Server Error
-    
+
   /transaction-statuses:
     get:
       summary: Get Transaction Statuses
