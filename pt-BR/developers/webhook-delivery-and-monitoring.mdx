@@ -1,0 +1,90 @@
+---
+title: "Histórico de entregas e monitoramento de saúde"
+description: "Logs de entrega no painel, desativação automática por falhas repetidas e alertas por e-mail"
+icon: "heart-pulse"
+---
+
+## Configurar seu endpoint
+
+No painel HG.Cash, abra **Configurações**:
+
+| Configuração | Finalidade |
+| --- | --- |
+| **URL do webhook** | Destino `POST` padrão para notificações de transações de ledger e solicitações de transação quando não houver `webhookUrl` por operação. |
+| **Segredo de assinatura do webhook** | Opcional. Quando definido, cada notificação de saída inclui `X-HG-Webhook-Signature`. Gere ou rotacione o segredo em Configurações; o valor em texto aparece **uma vez** após regenerar—armazene com segurança. |
+
+Se a **URL do webhook** estiver vazia, a HG.Cash não enfileira entregas de webhook ao cliente para movimentações que dependam da URL padrão.
+
+## Histórico de entregas no painel
+
+A HG.Cash registra **cada tentativa HTTP de entrega** (retentativas automáticas e manuais) nos logs de **entregas de webhook**.
+
+### Onde abrir
+
+| Tela | Como |
+| --- | --- |
+| **Transações** | Abra o detalhe de uma transação → clique em **Webhooks**. |
+| **Transferências** | Selecione uma solicitação de transação → clique em **Webhooks**. |
+
+O painel lateral lista cada tentativa (**Intento #N**) com status, data e detalhes HTTP quando disponíveis. Ao selecionar uma tentativa você vê:
+
+- Status da entrega (**Entregado**, **Fallido**, **Pendiente**, **Omitido**)
+- URL de destino
+- Resumo do erro (status, código HTTP e mensagem em falhas)
+- **Payload** JSON completo enviado
+
+A lista atualiza automaticamente a cada **30 segundos** com o painel aberto.
+
+### Retentativa manual
+
+Em uma tentativa com falha (ou qualquer outra), use **Reintentar entrega** para enfileirar uma **nova** execução com o **mesmo payload armazenado**. Seu endpoint precisa estar acessível e o webhook **habilitado** em Configurações.
+
+Retentativas manuais não alteram linhas anteriores; adicionam uma nova execução na fila.
+
+## Status de entrega
+
+| Status | Significado |
+| --- | --- |
+| **Pendiente** | Tentativa registrada; chamada HTTP em andamento ou ainda não finalizada no log. |
+| **Entregado** | Seu endpoint retornou **2xx**. |
+| **Fallido** | HTTP diferente de **2xx**, erro de rede ou timeout. Pode ser repetido automaticamente até esgotar tentativas. |
+| **Omitido** | A HG.Cash não chamou sua URL porque o webhook do usuário estava **desabilitado** (veja abaixo). |
+
+## Retentativas automáticas
+
+Entregas com falha seguem a política em **[Recebimento de webhooks](/pt-BR/developers/receiving-webhooks#tentativas-novamente)** (até **4** tentativas, backoff exponencial, **30 s** máx. por tentativa). Cada retentativa cria uma nova linha no histórico.
+
+## Monitoramento de saúde e desativação automática
+
+Um job agendado roda **diariamente** e analisa entregas recentes por usuário com URL de webhook configurada.
+
+| Parâmetro | Valor |
+| --- | --- |
+| Janela de análise | **24 horas** |
+| Tamanho da amostra | Até as **50** tentativas **com falha** ou **entregues** mais recentes |
+| Mínimo de amostras antes de agir | **5** |
+
+### E-mail de desempenho degradado
+
+Se pelo menos uma entrega falhou na amostra, mas a taxa de falha é **menor que 100%**, a HG.Cash envia um **e-mail de aviso** com a taxa de falhas e pede para revisar seu servidor e o histórico no painel.
+
+### Desativação automática e e-mail
+
+Se **100%** das tentativas na amostra da janela falharam:
+
+1. A HG.Cash marca seu webhook como **desabilitado** (sem novos `POST` até reabilitar).
+2. A HG.Cash envia um **e-mail de webhook desabilitado** (uma vez por ciclo de desativação).
+3. Novas tentativas são gravadas como **Omitido** até corrigir o endpoint e reabilitar.
+
+### Reabilitar
+
+Com o webhook desabilitado, **Configurações** exibe um aviso com falhas recentes e o botão **Volver a habilitar webhook**. Após corrigir o endpoint, clique para retomar as notificações.
+
+<Note>
+  Alertas por e-mail exigem alertas no email ativadas.
+</Note>
+
+## Guias relacionados
+
+- **[Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)** — Formatos de payload, verificação HMAC e tempos de retentativa.
+- **Referência da API → Webhooks** — Schemas OpenAPI e exemplos por tipo de evento.

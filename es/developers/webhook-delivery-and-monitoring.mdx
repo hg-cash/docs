@@ -1,0 +1,90 @@
+---
+title: "Historial de entregas y monitoreo de salud"
+description: "Registros de entrega en el panel, deshabilitación automática por fallos repetidos y alertas por email"
+icon: "heart-pulse"
+---
+
+## Configurar tu endpoint
+
+En el panel HG.Cash, abre **Configuración**:
+
+| Ajuste | Propósito |
+| --- | --- |
+| **URL de webhook** | Destino `POST` predeterminado para notificaciones de transacciones del libro y solicitudes de transacción cuando no indiques un `webhookUrl` por operación. |
+| **Secreto de firma del webhook** | Opcional. Si está configurado, cada notificación saliente incluye `X-HG-Webhook-Signature`. Generá o rotá el secreto en Configuración; el valor en claro se muestra **una vez** tras regenerar—guardalo de forma segura. |
+
+Si la **URL de webhook** está vacía, HG.Cash no encola entregas de webhook al cliente para movimientos que dependan de la URL predeterminada.
+
+## Historial de entregas en el panel
+
+HG.Cash registra **cada intento HTTP de entrega** (reintentos automáticos y manuales) en los logs de **entregas de webhook**.
+
+### Dónde abrirlo
+
+| Pantalla | Cómo |
+| --- | --- |
+| **Transacciones** | Abrí el detalle de una transacción → clic en **Webhooks**. |
+| **Transferencias** | Seleccioná una solicitud de transacción → clic en **Webhooks**. |
+
+El panel lateral lista cada intento (**Intento #N**) con estado, fecha y detalles HTTP cuando existan. Al seleccionar un intento ves:
+
+- Estado de la entrega (**Entregado**, **Fallido**, **Pendiente**, **Omitido**)
+- URL de destino
+- Resumen del error (estado, código HTTP y mensaje en fallos)
+- **Payload** JSON completo que se envió
+
+La lista se actualiza automáticamente cada **30 segundos** mientras el panel está abierto.
+
+### Reintento manual
+
+En un intento fallido (o cualquier otro), usá **Reintentar entrega** para encolar una **nueva** ejecución con el **mismo payload almacenado**. Tu endpoint debe estar accesible y el webhook debe estar **habilitado** en Configuración.
+
+Los reintentos manuales no modifican filas anteriores; agregan una nueva ejecución en la cola.
+
+## Estados de entrega
+
+| Estado | Significado |
+| --- | --- |
+| **Pendiente** | Intento registrado; llamada HTTP en curso o aún no finalizada en el log. |
+| **Entregado** | Tu endpoint respondió **2xx**. |
+| **Fallido** | HTTP distinto de **2xx**, error de red o timeout. Puede reintentarse automáticamente hasta agotar intentos. |
+| **Omitido** | HG.Cash no llamó tu URL porque el webhook del usuario estaba **deshabilitado** (ver abajo). |
+
+## Reintentos automáticos
+
+Las entregas fallidas se reintentan según la política en **[Recepción de webhooks](/es/developers/receiving-webhooks#reintentos)** (hasta **4** intentos, backoff exponencial, **30 s** máx. por intento). Cada reintento genera una fila nueva en el historial.
+
+## Monitoreo de salud y deshabilitación automática
+
+Un trabajo programado corre **diariamente** y analiza entregas recientes por usuario con URL de webhook configurada.
+
+| Parámetro | Valor |
+| --- | --- |
+| Ventana de análisis | **24 horas** |
+| Tamaño de muestra | Hasta los **50** intentos **fallidos** o **entregados** más recientes |
+| Mínimo de muestras antes de actuar | **5** |
+
+### Email de rendimiento degradado
+
+Si al menos una entrega falló en la muestra pero la tasa de fallo es **menor al 100%**, HG.Cash envía un **email de advertencia** con la tasa de fallos y te pide revisar tu servidor y el historial en el panel.
+
+### Deshabilitación automática y email
+
+Si el **100%** de los intentos muestreados en la ventana fallaron:
+
+1. HG.Cash marca tu webhook como **deshabilitado** (sin más `POST` hasta que lo habilites de nuevo).
+2. HG.Cash envía un **email de webhook deshabilitado** (una vez por ciclo de deshabilitación).
+3. Los nuevos intentos se guardan como **Omitido** hasta que corrijas el endpoint y vuelvas a habilitar.
+
+### Volver a habilitar
+
+Con el webhook deshabilitado, **Configuración** muestra un aviso con fallos recientes y el botón **Volver a habilitar webhook**. Tras corregir tu endpoint, hacé clic para reanudar las notificaciones.
+
+<Note>
+  Las alertas por email requieren notificaciones de email activas.
+</Note>
+
+## Guías relacionadas
+
+- **[Recepción de webhooks](/es/developers/receiving-webhooks)** — Formas de payload, verificación HMAC y tiempos de reintento.
+- **Referencia API → Webhooks** — Esquemas OpenAPI y ejemplos por tipo de evento.

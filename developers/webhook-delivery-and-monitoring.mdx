@@ -1,0 +1,90 @@
+---
+title: "Delivery history and health monitoring"
+description: "Dashboard delivery logs, automatic disable on repeated failures, and email alerts"
+icon: "heart-pulse"
+---
+
+## Configure your endpoint
+
+In the HG.Cash dashboard, open **Settings**:
+
+| Setting | Purpose |
+| --- | --- |
+| **Webhook URL** | Default `POST` target for ledger transaction and transaction-request notifications when no per-operation `webhookUrl` overrides it. |
+| **Webhook signing secret** | Optional. When set, every outbound notification includes `X-HG-Webhook-Signature`. Generate or rotate the secret in Settings; the plain value is shown **once** after regeneration—store it securely. |
+
+If **Webhook URL** is empty, HG.Cash does not enqueue customer webhook deliveries for movements that rely on the default URL.
+
+## Delivery history in the dashboard
+
+HG.Cash records **every HTTP delivery attempt** (including automatic retries and manual retries) in **Webhook delivery** logs.
+
+### Where to open it
+
+| Screen | How |
+| --- | --- |
+| **Transactions** | Open a transaction’s detail dialog → click **Webhooks**. |
+| **Transfers** | Select a transaction request → click **Webhooks**. |
+
+The side sheet lists each attempt (**Intento #N**) with status, timestamp, and HTTP details when available. Select an attempt to see:
+
+- Delivery status (**Entregado**, **Fallido**, **Pendiente**, **Omitido**)
+- Target URL
+- Error summary (status, HTTP code, and message for failures)
+- Full JSON **payload** that was posted
+
+The list refreshes automatically every **30 seconds** while the sheet is open.
+
+### Manual retry
+
+On a failed (or any) attempt, use **Reintentar entrega** to enqueue a **new** delivery run with the **same stored payload**. Your endpoint must still be reachable and your webhook must be **enabled** in Settings.
+
+Manual retries do not rewrite past attempt rows; they add a new delivery run in the queue.
+
+## Delivery statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Pendiente** | Attempt recorded; HTTP call in progress or not yet finalized in the log. |
+| **Entregado** | Your endpoint returned a **2xx** response. |
+| **Fallido** | Non-**2xx** HTTP status, network error, or timeout. May be retried automatically until attempts are exhausted. |
+| **Omitido** | HG.Cash did not call your URL because the user’s webhook was **disabled** (see below). |
+
+## Automatic retries
+
+Failed deliveries are retried by HG.Cash with the policy documented in **[Receiving webhooks](/developers/receiving-webhooks#retries)** (up to **4** attempts, exponential backoff, **30 s** max per attempt). Each retry creates a new row in the delivery history.
+
+## Health monitoring and auto-disable
+
+A daily job runs and analyzes recent delivery outcomes per user with a configured webhook URL.
+
+| Parameter | Value |
+| --- | --- |
+| Lookback window | **24 hours** |
+| Sample size | Up to the **50** most recent **failed** or **delivered** attempts |
+| Minimum samples before action | **5** |
+
+### Degraded performance email
+
+If at least one delivery failed in the sample but the failure rate is **below 100%**, HG.Cash sends a **warning email** describing the failure rate and asking you to check your server and the delivery history in the dashboard.
+
+### Auto-disable and disabled email
+
+If **100%** of sampled attempts in the window failed:
+
+1. HG.Cash sets your webhook to **disabled** (no further outbound `POST`s until you re-enable).
+2. HG.Cash sends a **webhook disabled** email (once per disable cycle).
+3. New delivery attempts are stored as **Omitido** until you fix the endpoint and re-enable.
+
+### Re-enable after auto-disable
+
+When your webhook is disabled, **Settings** shows a banner with recent failed attempts and a **Volver a habilitar webhook** button. After you fix your endpoint, click it to resume notifications.
+
+<Note>
+  Email alerts require email notifications enabled.
+</Note>
+
+## Related guides
+
+- **[Receiving webhooks](/developers/receiving-webhooks)** — Payload shapes, HMAC verification, and retry timing.
+- **API reference → Webhooks** — OpenAPI schemas and example bodies for each event type.

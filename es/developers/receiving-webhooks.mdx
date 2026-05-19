@@ -1,5 +1,5 @@
 ---
-title: "Recibir webhooks de HG.Cash"
+title: "Recibir webhooks"
 description: "Callbacks para transacciones y solicitudes de transacción con verificación HMAC opcional"
 icon: "inbox-arrow-down"
 ---
@@ -60,3 +60,7 @@ Cada intento tiene hasta **30** segundos de tiempo total de ejecución antes de 
 
 - Responde con **`2xx`** rápido para que la entrega cuente como exitosa; si no, puedes recibir **`POST`** repetidos hasta agotar intentos o hasta que uno tenga éxito.
 - Prefiere manejadores **idempotentes** claveados por `id` de HG.Cash y transiciones de `status` que te importen — pueden existir reenvíos o emisiones duplicadas junto con particularidades de proveedores.
+
+## Herramientas en el panel
+
+HG.Cash también registra cada intento de entrega en el panel (transacciones y transferencias → **Webhooks**) y puede **deshabilitar** tu webhook automáticamente si los fallos persisten. Consultá **[Historial de entregas y monitoreo de salud](/es/developers/webhook-delivery-and-monitoring)** para logs, reintento manual y alertas por email.
