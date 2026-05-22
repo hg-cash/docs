@@ -1,0 +1,27 @@
+---
+title: "Payouts"
+description: "Saques bancários de contas CLP no Chile"
+icon: "arrow-up-from-bracket"
+---
+
+## Visão geral
+
+Crie payouts bancários com `POST /api/v1/cl/transactions/outbound` em contas **CLP no Chile**.
+
+Exige **saldo líquido** suficiente. A transação inicia em `processing` e conclui em `done` quando o payout é liquidado com sucesso.
+
+## Campos obrigatórios (Chile)
+
+- Beneficiário: `beneficiaryFirstName`, `beneficiaryLastName`, `email`, `documentType`, `documentNumber`
+- `payoutBeneficiaryTypeCode`: `person` ou `company`
+- Banco: `bankName` (código de 3 caracteres), `accountNumber`, `payoutAccountTypeCode`
+- `amount` em CLP
+
+## Atualizações de status
+
+- Consulta: `GET /api/v1/cl/transactions/{id}/status`
+- `webhookUrl` opcional — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)
+
+## Ciclo do payout
+
+A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling ou seu webhook para reagir às mudanças.

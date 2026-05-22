@@ -1,0 +1,42 @@
+---
+title: "PIX payouts"
+description: "Send BRL via PIX from Brazil accounts"
+icon: "arrow-up-from-bracket"
+---
+
+## Overview
+
+Create outbound **PIX** transfers from **BRL** accounts via `POST /api/v1/br/transactions/outbound`.
+
+Requires sufficient **net balance**. The transaction starts in `processing` when accepted, or `cancelled` if the payout cannot be created.
+
+## Required fields
+
+- `accountId`, `amount`
+- `name` — recipient display name
+- `keyType` — `document`, `email`, `evp`, `phone`, or `cnpj`
+- `keyPix` — PIX key value matching `keyType`
+
+## Status updates
+
+- Poll: `GET /api/v1/br/transactions/{id}/status`
+- Optional `webhookUrl` on the request (see [Receiving webhooks](/developers/receiving-webhooks))
+
+## Example request
+
+```bash
+curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 500.00,
+    "name": "João Silva",
+    "keyType": "email",
+    "keyPix": "joao@example.com"
+  }'
+```
+
+## Payout lifecycle
+
+HG.Cash exposes normalized statuses (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling or your webhook handler to react to status changes.

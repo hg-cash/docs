@@ -1,0 +1,45 @@
+---
+title: "Cash-in"
+description: "Páginas de pago alojadas para cuentas CLP en Chile"
+icon: "arrow-down-to-bracket"
+---
+
+## Resumen
+
+El cash-in en Chile usa **checkout alojado**: listar métodos de pago, crear una transacción entrante y redirigir al cliente a `checkoutUrl`.
+
+La cuenta debe usar moneda **CLP** y país **CL**.
+
+## Requisitos
+
+- Token Bearer con acceso a la cuenta CLP
+- Cuenta CLP en Chile habilitada para cash-in (contacte a HG.Cash si aún no ve métodos de pago)
+
+## Flujo
+
+1. `GET /api/v1/cl/payment-methods`
+2. `POST /api/v1/cl/transactions/inbound` con `paymentMethodId`, `amount` y `customer` (incluye `personalId` chileno)
+3. Redirigir a `checkoutUrl`
+4. Opcional: `GET /api/v1/cl/transactions/{id}/status` o `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
+
+## Ejemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/cl/transactions/inbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "paymentMethodId": "PAYMENT_METHOD_UUID",
+    "amount": 10000,
+    "customer": {
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "email": "jane@example.com",
+      "personalId": "123456789",
+      "ip": "203.0.113.10"
+    }
+  }'
+```
+
+La transacción inicia en `pending` y pasa a `done` cuando se confirma el pago.

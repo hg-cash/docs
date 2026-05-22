@@ -1,0 +1,45 @@
+---
+title: "Cash-in"
+description: "Hosted payment pages for Chile CLP accounts"
+icon: "arrow-down-to-bracket"
+---
+
+## Overview
+
+Chile cash-in uses **hosted checkout**: list payment methods, create an inbound transaction, then redirect your customer to `checkoutUrl`.
+
+Accounts must use currency **CLP** and country **CL**.
+
+## Prerequisites
+
+- Bearer API token with access to the CLP account
+- Your Chile CLP account provisioned for cash-in (contact HG.Cash if payment methods are not yet available)
+
+## Flow
+
+1. `GET /api/v1/cl/payment-methods` — list methods (`id`, `country`, `type`, `name`)
+2. `POST /api/v1/cl/transactions/inbound` — pass `paymentMethodId` (HG id), `amount`, and `customer` (including Chile `personalId`)
+3. Redirect the payer to `checkoutUrl` from the response
+4. Optionally poll `GET /api/v1/cl/transactions/{id}/status` or use your [webhook URL](/developers/receiving-webhooks) on the request
+
+## Example request
+
+```bash
+curl -X POST https://hg.cash/api/v1/cl/transactions/inbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "paymentMethodId": "PAYMENT_METHOD_UUID",
+    "amount": 10000,
+    "customer": {
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "email": "jane@example.com",
+      "personalId": "123456789",
+      "ip": "203.0.113.10"
+    }
+  }'
+```
+
+The transaction starts in `pending` and moves to `done` when payment is confirmed.

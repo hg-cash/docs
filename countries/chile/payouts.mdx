@@ -1,0 +1,27 @@
+---
+title: "Payouts"
+description: "Bank payouts from Chile CLP accounts"
+icon: "arrow-up-from-bracket"
+---
+
+## Overview
+
+Create outbound bank payouts from **Chile CLP** accounts via `POST /api/v1/cl/transactions/outbound`.
+
+Requires sufficient **net balance** (same rules as other outbound APIs). The transaction starts in `processing` and completes when the payout is successfully settled (`done`).
+
+## Required fields (Chile)
+
+- Beneficiary: `beneficiaryFirstName`, `beneficiaryLastName`, `email`, `documentType`, `documentNumber`
+- `payoutBeneficiaryTypeCode`: `person` or `company`
+- Bank: `bankName` (3-character bank code), `accountNumber`, `payoutAccountTypeCode`
+- `amount` in CLP
+
+## Status updates
+
+- Poll: `GET /api/v1/cl/transactions/{id}/status`
+- Optional `webhookUrl` on the request for HG → your server notifications (see [Receiving webhooks](/developers/receiving-webhooks))
+
+## Payout lifecycle
+
+HG.Cash exposes normalized statuses (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling or your webhook handler to react to status changes.

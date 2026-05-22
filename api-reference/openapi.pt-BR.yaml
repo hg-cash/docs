@@ -510,7 +510,7 @@ components:
       type: object
       required: [error, code, type]
       description: |
-        Erro relacionado ao provedor de pagamentos (Brasil/PIX). O corpo é seguro para o cliente:
+        Erro relacionado à operação de pagamento PIX (Brasil). O corpo é seguro para o cliente:
         não expõe detalhes internos nem um segundo campo `message`. Use `code` e `type` na sua integração.
       properties:
         error:
@@ -524,8 +524,188 @@ components:
         type:
           type: string
           description: |
-            Categoria do erro. Exemplos: `provider_error` (falha ao criar ou consultar no provedor),
+            Categoria do erro. Exemplos: `provider_error` (falha ao criar ou consultar a operação),
             `provider_invalid_response` (HTTP 200 mas resposta incompleta, por exemplo sem identificador PIX).
+
+    ClPaymentMethod:
+      type: object
+      required: [id, country, type, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID do método de pagamento HG.Cash para a opção de cash-in selecionada
+        country:
+          type: string
+          example: CL
+        type:
+          type: string
+          enum: [BANK_TRANSFER, CASH, WALLET, CREDIT_CARD]
+        name:
+          type: string
+
+    ClPaymentMethodsResponse:
+      type: object
+      required: [paymentMethods]
+      properties:
+        paymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClPaymentMethod'
+
+    ClInboundCustomer:
+      type: object
+      required: [firstName, lastName, email, personalId, ip]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        personalId:
+          type: string
+          description: Documento de identidade chileno (cédula)
+        ip:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        zip:
+          type: string
+        phone:
+          type: string
+
+    ClInboundTransactionRequest:
+      type: object
+      description: Criar transação de entrada (checkout hospedado) para contas CLP no Chile
+      required: [accountId, paymentMethodId, amount, customer]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        paymentMethodId:
+          type: string
+          format: uuid
+          description: ID retornado por GET /cl/payment-methods
+        amount:
+          oneOf:
+            - type: number
+              format: decimal
+            - type: string
+          description: Valor em CLP (ex. 100.50)
+        description:
+          type: string
+        webhookUrl:
+          type: string
+          format: uri
+        returnUrl:
+          type: string
+          format: uri
+        language:
+          type: string
+          enum: [EN, ES, PT]
+        customer:
+          $ref: '#/components/schemas/ClInboundCustomer'
+
+    ClInboundTransactionResponse:
+      type: object
+      required: [id, checkoutUrl, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        checkoutUrl:
+          type: string
+          format: uri
+          description: URL de checkout hospedado para redirecionar o pagador
+        status:
+          type: string
+          enum: [pending]
+
+    ClOutboundTransactionRequest:
+      type: object
+      description: Criar payout bancário para contas CLP no Chile
+      required:
+        - accountId
+        - amount
+        - beneficiaryFirstName
+        - beneficiaryLastName
+        - email
+        - documentType
+        - documentNumber
+        - payoutBeneficiaryTypeCode
+        - bankName
+        - accountNumber
+        - payoutAccountTypeCode
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        amount:
+          oneOf:
+            - type: number
+              format: decimal
+            - type: string
+        beneficiaryFirstName:
+          type: string
+        beneficiaryLastName:
+          type: string
+        email:
+          type: string
+          format: email
+        documentType:
+          type: string
+        documentNumber:
+          type: string
+        payoutBeneficiaryTypeCode:
+          type: string
+          enum: [person, company]
+        bankName:
+          type: string
+          description: Código do banco (3 caracteres no Chile)
+        accountNumber:
+          type: string
+        payoutAccountTypeCode:
+          type: string
+        webhookUrl:
+          type: string
+          format: uri
+        phone:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        gender:
+          type: string
+        paymentReason:
+          type: string
+
+    ClOutboundTransactionResponse:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [processing, cancelled]
+
+    ChileProviderError:
+      type: object
+      required: [error, code, type]
+      description: Erro ao concluir uma operação de pagamento no Chile (sem detalhes internos)
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        type:
+          type: string
 
     OutboundTransactionRequest:
       type: object
@@ -839,7 +1019,7 @@ paths:
           description: Account not found
         '502':
           description: |
-            Erro do provedor de pagamentos ou resposta inválida/incompleta (por exemplo, sem `txid`).
+            Não foi possível concluir a operação de pagamento ou a resposta foi inválida/incompleta (por exemplo, sem `txid`).
             Corpo: `error`, `code`, `type` (veja `BrazilProviderError`).
           content:
             application/json:
@@ -885,7 +1065,7 @@ paths:
     get:
       summary: Consultar status da transação (Brasil)
       description: |
-        Obtém o status atual de uma transação direta (entrada ou saída) no provedor PIX.
+        Obtém o status atual de uma transação direta PIX (entrada ou saída) no Brasil.
         Diferente de `GET /transaction/{id}/status`, que retorna o status de uma **solicitação** de transação.
       operationId: getBrTransactionStatus
       parameters:
@@ -911,19 +1091,162 @@ paths:
           description: Transaction not found
         '502':
           description: |
-            Erro ao consultar o status no provedor de pagamentos.
+            Não foi possível consultar o status da transação.
             Corpo: `error`, `code`, `type` (veja `BrazilProviderError`).
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BrazilProviderError'
 
+  /cl/payment-methods:
+    get:
+      summary: Listar métodos de pagamento (Chile)
+      description: |
+        Retorna métodos de pagamento ativos para cash-in no Chile (CLP).
+        Disponíveis quando sua conta CLP no Chile está habilitada para checkout hospedado.
+      operationId: listClPaymentMethods
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [BANK_TRANSFER, CASH, WALLET, CREDIT_CARD]
+      tags:
+        - Chile
+      responses:
+        '200':
+          description: Métodos de pagamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClPaymentMethodsResponse'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+
+  /cl/transactions/inbound:
+    post:
+      summary: Criar transação de entrada (Chile)
+      description: |
+        Cria uma transação de entrada e retorna uma URL de checkout hospedado.
+        A conta deve ser CLP no Chile. Inicia em `pending` até a confirmação do pagamento.
+      operationId: createClInboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClInboundTransactionRequest'
+      tags:
+        - Chile
+      responses:
+        '201':
+          description: Transação criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClInboundTransactionResponse'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Conta ou método de pagamento não encontrado
+        '502':
+          description: Não foi possível concluir a operação de pagamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChileProviderError'
+
+  /cl/transactions/outbound:
+    post:
+      summary: Criar transação de saída (Chile)
+      description: |
+        Cria um payout bancário a partir de uma conta CLP no Chile. Exige saldo líquido suficiente.
+        A transação inicia em `processing`.
+      operationId: createClOutboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClOutboundTransactionRequest'
+      tags:
+        - Chile
+      responses:
+        '201':
+          description: Transação criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClOutboundTransactionResponse'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Conta não encontrada
+        '409':
+          description: Saldo insuficiente
+        '502':
+          description: Não foi possível concluir a operação de pagamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChileProviderError'
+
+  /cl/transactions/{id}/status:
+    get:
+      summary: Consultar status da transação (Chile)
+      description: |
+        Obtém o status mais recente de uma transação direta no Chile (entrada ou saída)
+        e atualiza a HG.Cash quando houver mudança.
+      operationId: getClTransactionStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - Chile
+      responses:
+        '200':
+          description: Status da transação
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/DirectTransactionStatus'
+                  - type: object
+                    properties:
+                      providerStatus:
+                        type: string
+                        description: Detalhe de status complementar na consulta (opcional)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Transação não encontrada
+        '502':
+          description: Não foi possível concluir a operação de pagamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChileProviderError'
+
   /transactions/{id}/receipt:
     get:
       summary: Get Transaction Receipt
       description: |
         Generate a PDF receipt for a transaction and return a signed URL to download it.
-        The receipt is stored in Supabase storage and cached for subsequent requests.
+        The receipt is generated and cached for subsequent requests.
         The signed URL expires after 1 hour.
       operationId: getTransactionReceipt
       tags:
@@ -1433,4 +1756,6 @@ tags:
   - name: Webhooks
     description: "Webhooks - Event notifications sent to your HTTP endpoint."
   - name: Brazil
-    description: "Brasil — Criar e consultar transações PIX (BRL) com o provedor de pagamentos."
+    description: "Brasil — Criar e consultar transações PIX (BRL)."
+  - name: Chile
+    description: "Chile — Checkout hospedado e payouts bancários (CLP)."

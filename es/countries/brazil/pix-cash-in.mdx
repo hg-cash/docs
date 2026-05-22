@@ -1,0 +1,37 @@
+---
+title: "Cash-in PIX"
+description: "Recibir pagos en BRL vía QR o copia y cola PIX"
+icon: "arrow-down-to-bracket"
+---
+
+## Resumen
+
+El cash-in en Brasil crea un **cobro PIX** en una cuenta **BRL**. La API devuelve **QR** y/o **copia y cola PIX**. La transacción permanece en `pending` hasta confirmar el pago.
+
+La cuenta debe ser **BRL** y país **BR**.
+
+## Requisitos
+
+- Token Bearer con acceso a la cuenta BRL
+- `email` del pagador (obligatorio en la API)
+
+## Flujo
+
+1. `POST /api/v1/br/transactions/inbound` — `accountId`, `amount`, `email`
+2. Mostrar `qrCode` o `pixCopiaECola` al pagador
+3. Opcional: `GET /api/v1/br/transactions/{id}/status` o `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
+
+## Ejemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/br/transactions/inbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 250.00,
+    "email": "payer@example.com"
+  }'
+```
+
+La transacción inicia en `pending` y pasa a `done` al confirmarse el PIX.

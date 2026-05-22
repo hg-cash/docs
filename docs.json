@@ -50,6 +50,24 @@
             ]
           },
           {
+            "tab": "Countries",
+            "pages": [
+              "countries/introduction",
+              {
+                "group": "Argentina",
+                "pages": ["countries/argentina/bank-transfers"]
+              },
+              {
+                "group": "Chile",
+                "pages": ["countries/chile/cash-in", "countries/chile/payouts"]
+              },
+              {
+                "group": "Brazil",
+                "pages": ["countries/brazil/pix-cash-in", "countries/brazil/pix-payouts"]
+              }
+            ]
+          },
+          {
             "tab": "API reference",
             "groups": [
               {
@@ -100,6 +118,24 @@
             ]
           },
           {
+            "tab": "Países",
+            "pages": [
+              "es/countries/introduction",
+              {
+                "group": "Argentina",
+                "pages": ["es/countries/argentina/bank-transfers"]
+              },
+              {
+                "group": "Chile",
+                "pages": ["es/countries/chile/cash-in", "es/countries/chile/payouts"]
+              },
+              {
+                "group": "Brasil",
+                "pages": ["es/countries/brazil/pix-cash-in", "es/countries/brazil/pix-payouts"]
+              }
+            ]
+          },
+          {
             "tab": "Referencia API",
             "groups": [
               {
@@ -146,6 +182,24 @@
                   "pt-BR/developers/receiving-webhooks",
                   "pt-BR/developers/webhook-delivery-and-monitoring"
                 ]
+              }
+            ]
+          },
+          {
+            "tab": "Países",
+            "pages": [
+              "pt-BR/countries/introduction",
+              {
+                "group": "Argentina",
+                "pages": ["pt-BR/countries/argentina/bank-transfers"]
+              },
+              {
+                "group": "Chile",
+                "pages": ["pt-BR/countries/chile/cash-in", "pt-BR/countries/chile/payouts"]
+              },
+              {
+                "group": "Brasil",
+                "pages": ["pt-BR/countries/brazil/pix-cash-in", "pt-BR/countries/brazil/pix-payouts"]
               }
             ]
           },

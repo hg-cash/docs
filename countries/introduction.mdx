@@ -1,0 +1,29 @@
+---
+title: "Countries"
+description: "Payment rails and APIs by country where HG.Cash operates"
+icon: "globe"
+---
+
+## Overview
+
+HG.Cash operates in several countries. Each market uses its own **currency**, **payment rails**, and **API paths**. Use the guides below for the country where your accounts are provisioned.
+
+Shared concepts—authentication, accounts, balances, and [webhooks](/developers/receiving-webhooks)—work the same everywhere. Country guides focus on **cash-in** (receive funds) and **payouts** (send funds) for that market.
+
+## Where we operate
+
+<CardGroup cols={1}>
+  <Card title="Argentina" icon="building-columns" href="/countries/argentina/bank-transfers">
+    **ARS** — Assigned banking accounts; cash-ins and cash-outs notified by webhook; instant API cash-outs.
+  </Card>
+  <Card title="Chile" icon="flag" href="/countries/chile/cash-in">
+    **CLP** — Hosted checkout for cash-in and bank payouts for withdrawals.
+  </Card>
+  <Card title="Brazil" icon="flag" href="/countries/brazil/pix-cash-in">
+    **BRL** — PIX QR / copy-paste for cash-in and PIX key payouts.
+  </Card>
+</CardGroup>
+
+## API reference
+
+Country-specific endpoints are grouped in the [API reference](/api-reference) tab (**Transactions** for Argentina, **Brazil**, and **Chile**). Start from the guide for your country, then use the interactive reference for request and response schemas.

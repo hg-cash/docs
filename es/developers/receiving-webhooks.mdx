@@ -59,7 +59,7 @@ Cada intento tiene hasta **30** segundos de tiempo total de ejecución antes de 
 ## Expectativas operativas
 
 - Responde con **`2xx`** rápido para que la entrega cuente como exitosa; si no, puedes recibir **`POST`** repetidos hasta agotar intentos o hasta que uno tenga éxito.
-- Prefiere manejadores **idempotentes** claveados por `id` de HG.Cash y transiciones de `status` que te importen — pueden existir reenvíos o emisiones duplicadas junto con particularidades de proveedores.
+- Prefiere manejadores **idempotentes** claveados por `id` de HG.Cash y transiciones de `status` que te importen — pueden existir reenvíos o emisiones duplicadas.
 
 ## Herramientas en el panel
 

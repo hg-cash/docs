@@ -1,0 +1,57 @@
+---
+title: "Transferências bancárias"
+description: "Contas ARS, notificações por webhook e cash-outs instantâneos"
+icon: "building-columns"
+---
+
+## Visão geral
+
+A Argentina é o mercado principal da HG.Cash para **transferências bancárias** em **ARS**. A HG.Cash **atribui contas bancárias** aos seus usuários na plataforma. Quando há movimentação nessas contas—**cash-in** (entrada) ou **cash-out** (saída)—a HG.Cash notifica seu backend na **URL de webhook** configurada nas definições da conta.
+
+Para **cash-outs**, você inicia **transferências bancárias instantâneas** pela API. Para **cash-ins**, não cria recebimentos pela API; a HG.Cash detecta movimentos nas contas atribuídas e os envia ao seu webhook.
+
+## Como funciona
+
+1. **Contas** — A HG.Cash provisiona contas ARS (CBU/CVU) vinculadas ao seu usuário. Use `GET /api/v1/accounts` e `GET /api/v1/account/{id}/balance` para saldos e status.
+2. **Cash-in** — Transferências recebidas são registradas e enviadas ao seu [webhook](/pt-BR/developers/receiving-webhooks) (movimentos de conta / ledger).
+3. **Cash-out** — Chame `POST /api/v1/transactions` para solicitar um **cash-out bancário instantâneo** para CBU ou CVU do beneficiário. Atualizações de status chegam por webhook (e opcionalmente `webhookUrl` por solicitação).
+
+Configure a URL de webhook e o segredo de assinatura em **Configurações da HG.Cash**. Veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks) para payloads, HMAC e tentativas.
+
+## Cash-outs (transferências instantâneas)
+
+Pagamentos de saída são **solicitações de transação** para **CBU** ou **CVU** do beneficiário. A HG.Cash processa solicitações elegíveis como **cash-outs bancários instantâneos** quando a conta e os limites permitem.
+
+### Pré-requisitos
+
+- Token Bearer com acesso à conta ARS
+- **CBU** ou **CVU** do beneficiário (22 dígitos)
+- **Saldo líquido** suficiente na conta de origem
+
+### Fluxo
+
+1. Opcional: confirme saldo com `GET /api/v1/accounts` ou `GET /api/v1/account/{id}/balance`
+2. `POST /api/v1/transactions` — `accountId`, `amount`, `toCBU` ou `toCVU`
+3. Acompanhe com `GET /api/v1/transaction/{id}/status`, webhook do painel ou `webhookUrl` na solicitação
+
+### Exemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/transactions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "toCBU": "1100015400000000000021",
+    "amount": 15000.50,
+    "toName": "María García",
+    "concept": "Pagamento de serviços"
+  }'
+```
+
+A resposta inclui `id` e `status` inicial (por exemplo `PENDING`). Use webhooks ou polling até um estado terminal.
+
+## Endpoints relacionados
+
+- `GET /api/v1/alias-lookup` — resolver alias para CBU/CVU (se habilitado)
+- `GET /api/v1/transaction-statuses` e `GET /api/v1/transaction-types` — dados de referência (sem autenticação)
