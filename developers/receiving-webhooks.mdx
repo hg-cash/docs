@@ -17,6 +17,7 @@ Payloads are identical in shape regardless of queue: **`Content-Type: applicatio
 
 - **Transaction requests** (cash-out pipeline, `type` is always **`"request"`**): [**Transaction Request Status Updated**](/api-reference/webhooks/transaction-request-status-updated) — schema **`TransactionRequestStatusWebhook`** with a full example payload.
 - **Ledger / account movements** (money in or out of your HG.Cash accounts; `type` is your movement / transaction type name such as `inbound` or `outbound`): [**Account movement**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** with a full example payload.
+- **Hosted checkouts** (`event` such as `checkout.completed`): [**Checkout events**](/api-reference/webhooks/checkout-completed) — schema **`WebhookCheckoutPayload`**. See **[Hosted checkout](/developers/checkout)** for flows by country.
 
 **Transaction requests (`type: "request"`)**
 

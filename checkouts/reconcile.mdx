@@ -1,0 +1,39 @@
+---
+title: "Reconcile checkouts"
+description: "Link inbound bank movements to pending checkouts"
+icon: "link"
+---
+
+## When to reconcile
+
+Use **Reconcile** when:
+
+- A payer transferred funds but **auto-match did not run** (wrong amount, DNI mismatch, timing, or webhook delay)
+- You prefer to **manually tie** an existing inbound **transaction** to a pending checkout instead of relying on receipt validation
+
+This is common for **Argentina** bank transfers. Brazil and Chile usually complete via provider webhooks; reconcile remains available when a pending checkout exists on the same account.
+
+## Open reconcile
+
+1. Go to **Checkouts** (`/app/checkouts`).
+2. Click **Reconcile** (top right), or open `/app/checkouts/reconcile`.
+
+## Steps
+
+1. **Select checkout** — Choose a pending (or awaiting review) checkout from the dropdown. Reference shows checkout ID, amount, and payer document if set.
+2. **Review inbound movements** — HG.Cash lists inbound transactions on that account from the **last 7 days**. Columns include amount, payer name, DNI derived from CUIL, and hints (**amount match**, **DNI match** / mismatch).
+3. **Link** — Click **Link** on the correct row to complete the checkout with that transaction.
+
+Completion uses source **`manual_approval`** (same family as validate approve). Webhook **`checkout.completed`** is sent when linking succeeds.
+
+## Tips
+
+- Prefer movements that match **amount** and **DNI** when the payer registered DNI on the checkout.
+- If multiple checkouts could match, create flows that pass explicit **`accountId`** and payer **document** on create to reduce ambiguity.
+- After linking, the checkout leaves the reconcile list; stats on the overview update on refresh.
+
+## Related
+
+- [Validate payments](/checkouts/validate) — Receipt upload path (“Ya realicé el pago”)
+- [Create checkouts](/checkouts/create)
+- [Introduction](/checkouts/introduction)

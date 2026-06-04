@@ -1,0 +1,51 @@
+---
+title: "Validate payments"
+description: "Approve or reject checkouts awaiting manual review"
+icon: "circle-check"
+---
+
+## When validation is needed
+
+For **Argentina**, if an inbound transfer is not detected automatically within about 30 seconds, the payer can tap **“I already paid”** and **upload a receipt** (JPEG, PNG, WebP, or PDF, max 10 MB). The checkout moves to **`awaiting_manual_review`**.
+
+You receive a **`checkout.awaiting_manual_review`** webhook. A badge on **Validate** in the dashboard shows how many sessions need attention.
+
+## Open the validate view
+
+1. Go to **Checkouts** (`/app/checkouts`).
+2. Click **Validate** (top right), or open `/app/checkouts/validate`.
+
+You see a table of checkouts in **`awaiting_manual_review`** with date, account, amount, payer, and a link to the **receipt**.
+
+## Approve a payment
+
+1. Click **Review** on a row.
+2. Confirm amount, payer, and receipt image.
+3. Click **Approve**.
+
+HG.Cash tries to link a matching **inbound transaction** on the same account (amount, DNI from CUIL when available, time window). If exactly one candidate exists, it is linked automatically. You can also supply a transaction ID via API integrations.
+
+On success the checkout becomes **`completed`** and **`checkout.completed`** webhook fires.
+
+## Reject a payment
+
+1. Open **Review**, then **Reject**.
+2. Enter a **reason** (required).
+3. Confirm rejection.
+
+Status becomes **`rejected`**; payer may see rejection on the hosted page if they return. Webhook: **`checkout.rejected`**.
+
+## Receipt download (API)
+
+**`GET /api/v1/checkouts/{id}/receipt`** returns a short-lived signed URL for the uploaded file (merchant token with access to the checkout).
+
+## Permissions
+
+- **Merchants (`USER`)** can validate their own checkouts.
+- **Admins** need **validate checkouts** permission (or super admin).
+
+## Related
+
+- [Create checkouts](/checkouts/create)
+- [Reconcile checkouts](/checkouts/reconcile) — When no receipt was uploaded but money arrived
+- [Introduction](/checkouts/introduction) — Status reference

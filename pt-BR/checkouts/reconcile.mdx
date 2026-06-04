@@ -1,0 +1,39 @@
+---
+title: "Conciliar checkouts"
+description: "Vincular movimentações bancárias de entrada a checkouts pendentes"
+icon: "link"
+---
+
+## Quando conciliar
+
+Use **Conciliar** quando:
+
+- O pagador transferiu fundos mas o **match automático não rodou** (valor errado, DNI diferente, timing ou atraso do webhook)
+- Você prefere **vincular manualmente** uma **transação** de entrada existente a um checkout pendente em vez de validar por comprovante
+
+É comum em transferências **Argentina**. Brasil e Chile costumam concluir por webhooks do provedor; a conciliação continua disponível se houver checkout pendente na mesma conta.
+
+## Abrir conciliação
+
+1. Acesse **Checkouts** (`/app/checkouts`).
+2. Clique em **Conciliar** (canto superior direito) ou abra `/app/checkouts/reconcile`.
+
+## Passos
+
+1. **Selecionar checkout** — Escolha um checkout pendente (ou em revisão) no menu. A referência mostra ID, valor e documento do pagador, se houver.
+2. **Revisar movimentações de entrada** — A HG.Cash lista transações de entrada dessa conta dos **últimos 7 dias**. Colunas: valor, nome do pagador, DNI do CUIL e indicadores (**valor coincide**, **DNI coincide** / não coincide).
+3. **Vincular** — Clique em **Vincular** na linha correta para concluir o checkout com essa transação.
+
+A conclusão usa origem **`manual_approval`** (mesma família da aprovação em validar). Ao vincular com sucesso, o webhook **`checkout.completed`** é enviado.
+
+## Dicas
+
+- Prefira movimentações que coincidam **valor** e **DNI** quando o pagador registrou DNI no checkout.
+- Se vários checkouts puderem coincidir, informe **`accountId`** e documento do pagador explicitamente na criação.
+- Após vincular, o checkout sai da lista de conciliação; as estatísticas do resumo atualizam ao atualizar a página.
+
+## Relacionado
+
+- [Validar pagamentos](/pt-BR/checkouts/validate) — Fluxo com comprovante
+- [Criar checkouts](/pt-BR/checkouts/create)
+- [Introdução](/pt-BR/checkouts/introduction)

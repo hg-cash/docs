@@ -1,0 +1,56 @@
+---
+title: "Introduction"
+description: "Hosted payment pages for Argentina, Brazil, and Chile"
+icon: "cart-shopping"
+---
+
+## What you'll accomplish
+
+**Checkouts** let you collect payments through a **hosted payment page** without building your own transfer or PIX UI. You create a session, share a **`checkoutUrl`** with the payer, and HG.Cash confirms payment automatically—or flags it for **manual review** when needed.
+
+In the HG.cash dashboard (**Checkouts** in the sidebar), you can:
+
+- See **stats** (created, completed, conversion, money collected) and recent sessions
+- **Create** new checkouts and copy the payer link
+- **Validate** receipts when auto-match did not complete (Argentina)
+- **Reconcile** inbound bank movements to a pending checkout when matching failed
+
+You can also integrate entirely via the **REST API** (`POST /api/v1/checkouts` and related endpoints). Interactive schemas live under **API reference → Checkouts**.
+
+## Overview by country
+
+| Country | Payment rail | How completion works |
+| --- | --- | --- |
+| **AR** | Bank transfer to your CVU/alias | Match **amount** + payer **8-digit DNI** on the inbound transfer |
+| **BR** | PIX QR / copia-e-cola | Provider inbound transaction + webhook; payer sees QR on hosted page |
+| **CL** | PayRetailers hosted iframe | Provider checkout URL; completion via provider webhook |
+
+Payers **do not log in** to HG.cash on the public page. Your backend (or dashboard) uses the same **Bearer API token** as other v1 endpoints.
+
+## Checkout statuses
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | Waiting for payment or payer details (AR). |
+| `awaiting_manual_review` | Payer uploaded a receipt; merchant must approve or reject. |
+| `completed` | Payment confirmed (auto-match, provider, manual approval, or reconcile). |
+| `rejected` | Manual review rejected. |
+| `cancelled` | Merchant cancelled while still `pending`. |
+| `expired` | Past `expiresAt`. |
+
+## Webhooks
+
+When a checkout changes state, HG.Cash can send a **`CHECKOUT`** webhook (`checkout.completed`, `checkout.awaiting_manual_review`, or `checkout.rejected`). Configure a per-checkout **`webhookUrl`** on create or your user default URL. See [Receiving webhooks](/developers/receiving-webhooks) for HMAC signing.
+
+## Guides in this section
+
+- **[Create checkouts](/checkouts/create)** — Dashboard form and API, country-specific fields
+- **[Validate payments](/checkouts/validate)** — Approve or reject uploaded receipts
+- **[Reconcile checkouts](/checkouts/reconcile)** — Link an inbound movement when auto-match did not run
+
+## Before you begin
+
+- **Access** to **Checkouts** in the dashboard (enabled per user; contact HG.cash if you do not see it)
+- An **operative** receiving account for the country (ARS + Urbana for AR, BRL PIX platform for BR, CL PayRetailers for CL)
+- **`successUrl`** on every create — where the payer is redirected after success
+- Optional **webhook signing secret** in account settings

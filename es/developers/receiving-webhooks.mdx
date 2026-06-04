@@ -17,6 +17,7 @@ La **forma del payload y ejemplos** están en la **referencia API** (pestaña **
 
 - **Solicitudes de transacción** (pipeline cash-out; `type` es siempre **`"request"`**): [**Actualización de estado de solicitud de transacción**](/api-reference/webhooks/transaction-request-status-updated) — esquema **`TransactionRequestStatusWebhook`** con ejemplo completo.
 - **Movimientos de libro / cuenta** (dinero entrante o saliente de tus cuentas HG.Cash; `type` es el nombre del tipo de movimiento como `inbound` u `outbound`): [**Movimiento de cuenta**](/api-reference/webhooks/account-movement) — esquema **`AccountMovementWebhook`** con ejemplo completo.
+- **Checkouts hospedados** (`event` como `checkout.completed`): [**Eventos de checkout**](/api-reference/webhooks/checkout-completed) — esquema **`WebhookCheckoutPayload`**. Ver **[Checkout hospedado](/es/developers/checkout)**.
 
 **Solicitudes de transacción (`type: "request"`)**
 

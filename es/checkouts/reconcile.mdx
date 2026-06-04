@@ -1,0 +1,39 @@
+---
+title: "Conciliar checkouts"
+description: "Vincular movimientos bancarios entrantes con checkouts pendientes"
+icon: "link"
+---
+
+## Cuándo conciliar
+
+Usá **Conciliar** cuando:
+
+- El pagador transfirió fondos pero **no corrió el match automático** (monto incorrecto, DNI distinto, timing o demora del webhook)
+- Preferís **vincular manualmente** una **transacción** entrante existente a un checkout pendiente en lugar de validar por comprobante
+
+Es habitual en transferencias **Argentina**. Brasil y Chile suelen completarse por webhooks del proveedor; la conciliación sigue disponible si hay un checkout pendiente en la misma cuenta.
+
+## Abrir conciliación
+
+1. Entrá a **Checkouts** (`/app/checkouts`).
+2. Clic en **Conciliar** (arriba a la derecha) o abrí `/app/checkouts/reconcile`.
+
+## Pasos
+
+1. **Seleccionar checkout** — Elegí un checkout pendiente (o en revisión) del desplegable. La referencia muestra ID, monto y documento del pagador si existe.
+2. **Revisar movimientos entrantes** — HG.Cash lista transacciones entrantes de esa cuenta de los **últimos 7 días**. Columnas: monto, nombre del pagador, DNI del CUIL e indicadores (**coincide monto**, **coincide DNI** / no coincide).
+3. **Vincular** — Clic en **Vincular** en la fila correcta para completar el checkout con esa transacción.
+
+La completación usa origen **`manual_approval`** (misma familia que aprobar en validar). Al vincular con éxito se envía el webhook **`checkout.completed`**.
+
+## Consejos
+
+- Preferí movimientos que coincidan **monto** y **DNI** cuando el pagador registró DNI en el checkout.
+- Si varios checkouts podrían coincidir, pasá **`accountId`** y documento del pagador explícitos al crear.
+- Tras vincular, el checkout sale de la lista de conciliación; las estadísticas del resumen se actualizan al refrescar.
+
+## Relacionado
+
+- [Validar pagos](/es/checkouts/validate) — Flujo con comprobante (“Ya realicé el pago”)
+- [Crear checkouts](/es/checkouts/create)
+- [Introducción](/es/checkouts/introduction)

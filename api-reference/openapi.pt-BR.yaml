@@ -22,11 +22,7 @@ info:
 
     ## 🔐 Autenticação
     
-    Esta API usa autenticação **Bearer Token**. Inclua o token de API do usuário no cabeçalho Authorization:
-    
-    ```
-    Authorization: Bearer cash_your_token_here
-    ```
+    Esta API usa autenticação **Bearer Token**. Inclua o token de API do usuário no cabeçalho Authorization, por exemplo `Authorization: Bearer cash_your_token_here`.
     
     ## ⚠️ Segurança
     
@@ -58,10 +54,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: |
-        User API authentication token with format: `cash_<64-char-hex>`
-        
-        Example: `cash_16cdc3b6f83c72d9d2680adca4f430962981f6bf32613a129dded0aa060387d2`
+      description: >
+        User API authentication token with format `cash_<64-char-hex>`.
+        Sample value `cash_16cdc3b6f83c72d9d2680adca4f430962981f6bf32613a129dded0aa060387d2`.
     webhookHmac:
       type: apiKey
       in: header
@@ -462,6 +457,112 @@ components:
         coelsaCode:
           type: string
           description: Coelsa transaction code
+
+    WebhookCheckoutPayload:
+      type: object
+      description: Payload sent when a hosted checkout session changes state
+      required:
+        - id
+        - status
+        - event
+        - amount
+        - currency
+        - country
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Checkout session ID
+        status:
+          type: string
+          description: Checkout status after the event
+        event:
+          type: string
+          enum:
+            - checkout.completed
+            - checkout.awaiting_manual_review
+            - checkout.rejected
+        amount:
+          type: string
+          description: Decimal amount as string
+        currency:
+          type: string
+          description: ISO 4217 currency code
+        country:
+          type: string
+          enum: [AR, BR, CL]
+        transactionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Linked inbound transaction when available
+        metadata:
+          type: object
+          description: Opaque metadata from checkout create
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateCheckoutRequest:
+      type: object
+      required: [country, amount, successUrl]
+      properties:
+        country:
+          type: string
+          enum: [AR, BR, CL]
+        amount:
+          type: string
+          description: Decimal amount as string
+        accountId:
+          type: string
+          format: uuid
+        successUrl:
+          type: string
+          format: uri
+        cancelUrl:
+          type: string
+          format: uri
+        webhookUrl:
+          type: string
+          format: uri
+        expiresInSeconds:
+          type: integer
+        idempotencyKey:
+          type: string
+        locale:
+          type: string
+          enum: [es, en]
+        metadata:
+          type: object
+        payer:
+          type: object
+          properties:
+            name: { type: string }
+            document: { type: string, description: "AR 8-digit DNI or BR CPF/CNPJ digits" }
+            email: { type: string, format: email }
+        paymentMethodId:
+          type: string
+          format: uuid
+          description: Required for CL
+        customer:
+          type: object
+          description: Required for CL (see ClInboundTransactionRequest customer fields)
+
+    CreateCheckoutResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        publicToken: { type: string }
+        checkoutUrl: { type: string, format: uri }
+        status: { type: string }
+        expiresAt: { type: string, format: date-time }
+        accountDisplay:
+          type: object
+          description: Present for AR (CVU, alias, holder)
+        qrCode: { type: string }
+        pixCopiaECola: { type: string }
+        checkoutUrlProvider: { type: string, format: uri }
 
     InboundTransactionRequest:
       type: object
@@ -986,6 +1087,117 @@ paths:
           description: Not Found
         '500':
           description: Internal Server Error
+
+  /checkouts:
+    post:
+      summary: Create checkout session
+      description: |
+        Creates a hosted checkout for AR (transfer + DNI match), BR (PIX QR), or CL (provider iframe).
+        Returns `checkoutUrl` for the payer and optional provider fields (QR, iframe URL).
+      operationId: createCheckout
+      tags: [Checkouts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCheckoutResponse'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    get:
+      summary: List checkouts
+      operationId: listCheckouts
+      tags: [Checkouts]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: country
+          in: query
+          schema:
+            type: string
+            enum: [AR, BR, CL]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+
+  /checkouts/{id}:
+    get:
+      summary: Get checkout
+      operationId: getCheckout
+      tags: [Checkouts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Not Found
+
+  /checkouts/{id}/cancel:
+    post:
+      summary: Cancel pending checkout
+      operationId: cancelCheckout
+      tags: [Checkouts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+
+  /checkouts/{id}/receipt:
+    get:
+      summary: Get checkout receipt download URL
+      operationId: getCheckoutReceipt
+      tags: [Checkouts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Signed URL for uploaded receipt
+        '404':
+          description: Not Found
 
   /br/transactions/inbound:
     post:
@@ -1746,6 +1958,36 @@ webhooks:
                   toCUIT: "30718891813"
                   coelsaCode: "67REZ8NPQDQ460QK94KVGO"
                   accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+  checkout-completed:
+    post:
+      summary: Checkout event
+      description: |
+        HG.Cash sends this webhook when a hosted checkout session completes, needs manual review, or is rejected.
+        Configure `webhookUrl` on create or use your default webhook URL in Settings.
+      operationId: checkoutEventWebhook
+      tags:
+        - Webhooks
+      security:
+        - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookCheckoutPayload'
+            examples:
+              completed:
+                summary: Checkout completed
+                value:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  status: "completed"
+                  event: "checkout.completed"
+                  amount: "1500.00"
+                  currency: "ARS"
+                  country: "AR"
+                  transactionId: "789e0123-e89b-12d3-a456-426614174999"
+                  metadata: { orderId: "ORD-42" }
+                  completedAt: "2026-06-05T12:00:00.000Z"
 tags:
   - name: Transactions
     description: "Transaction Management - Create and manage transactions in the HG.Cash system. All transaction endpoints require authentication."
@@ -1759,3 +2001,5 @@ tags:
     description: "Brasil — Criar e consultar transações PIX (BRL)."
   - name: Chile
     description: "Chile — Checkout hospedado e payouts bancários (CLP)."
+  - name: Checkouts
+    description: "Hosted checkout sessions for AR, BR, and CL"

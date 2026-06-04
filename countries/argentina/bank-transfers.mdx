@@ -10,6 +10,8 @@ Argentina is HG.Cash’s primary market for **bank transfers** in **ARS**. HG.Ca
 
 For **cash-outs**, you initiate **instant banking transfers** with the API. For **cash-ins**, you do not create inbound payments through the API; HG.Cash detects movements on your assigned accounts and delivers them to your webhook.
 
+For a **hosted payment page** where the payer transfers to your CVU/alias and enters an 8-digit DNI, use **[Hosted checkout](/developers/checkout)** (`country: AR`) instead of webhook-only detection alone.
+
 ## How it works
 
 1. **Accounts** — HG.Cash provisions ARS accounts (CBU/CVU) linked to your user. Use `GET /api/v1/accounts` and `GET /api/v1/account/{id}/balance` to list balances and status.

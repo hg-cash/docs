@@ -1,0 +1,51 @@
+---
+title: "Validar pagos"
+description: "Aprobar o rechazar checkouts en revisión manual"
+icon: "circle-check"
+---
+
+## Cuándo hace falta validar
+
+En **Argentina**, si no se detecta la transferencia entrante automáticamente en unos 30 segundos, el pagador puede tocar **“Ya realicé el pago”** y **subir un comprobante** (JPEG, PNG, WebP o PDF, máx. 10 MB). El checkout pasa a **`awaiting_manual_review`**.
+
+Recibís el webhook **`checkout.awaiting_manual_review`**. Un badge en **Validar** del panel muestra cuántas sesiones requieren atención.
+
+## Abrir la vista de validación
+
+1. Entrá a **Checkouts** (`/app/checkouts`).
+2. Hacé clic en **Validar** (arriba a la derecha) o abrí `/app/checkouts/validate`.
+
+Ves una tabla de checkouts en **`awaiting_manual_review`** con fecha, cuenta, monto, pagador y enlace al **comprobante**.
+
+## Aprobar un pago
+
+1. Clic en **Revisar** en una fila.
+2. Confirmá monto, pagador e imagen del comprobante.
+3. Clic en **Aprobar**.
+
+HG.Cash intenta vincular una **transacción entrante** en la misma cuenta (monto, DNI del CUIL cuando exista, ventana de tiempo). Si hay exactamente un candidato, se vincula automáticamente. También podés indicar un ID de transacción vía integraciones API.
+
+Al aprobar, el checkout queda **`completed`** y se envía el webhook **`checkout.completed`**.
+
+## Rechazar un pago
+
+1. Abrí **Revisar**, luego **Rechazar**.
+2. Ingresá un **motivo** (obligatorio).
+3. Confirmá el rechazo.
+
+El estado pasa a **`rejected`**; el pagador puede ver el rechazo en la página hospedada si vuelve. Webhook: **`checkout.rejected`**.
+
+## Descarga del comprobante (API)
+
+**`GET /api/v1/checkouts/{id}/receipt`** devuelve una URL firmada de corta duración (token del comercio con acceso al checkout).
+
+## Permisos
+
+- **Comercios (`USER`)** pueden validar sus propios checkouts.
+- **Admins** necesitan permiso **validar checkouts** (o super admin).
+
+## Relacionado
+
+- [Crear checkouts](/es/checkouts/create)
+- [Conciliar checkouts](/es/checkouts/reconcile) — Cuando no hubo comprobante pero llegó el dinero
+- [Introducción](/es/checkouts/introduction) — Referencia de estados

@@ -40,6 +40,21 @@
                 ]
               },
               {
+                "group": "Checkouts",
+                "pages": [
+                  "checkouts/introduction",
+                  "checkouts/create",
+                  "checkouts/validate",
+                  "checkouts/reconcile"
+                ]
+              },
+              {
+                "group": "Claims",
+                "pages": [
+                  "claims/introduction"
+                ]
+              },
+              {
                 "group": "Developers",
                 "pages": [
                   "developers/introduction",
@@ -108,6 +123,21 @@
                 ]
               },
               {
+                "group": "Checkouts",
+                "pages": [
+                  "es/checkouts/introduction",
+                  "es/checkouts/create",
+                  "es/checkouts/validate",
+                  "es/checkouts/reconcile"
+                ]
+              },
+              {
+                "group": "Reclamos",
+                "pages": [
+                  "es/claims/introduction"
+                ]
+              },
+              {
                 "group": "Desarrolladores",
                 "pages": [
                   "es/developers/introduction",
@@ -173,6 +203,21 @@
                   "pt-BR/settlement/withdrawals",
                   "pt-BR/settlement/spot",
                   "pt-BR/exchange/usdt-withdrawals"
+                ]
+              },
+              {
+                "group": "Checkouts",
+                "pages": [
+                  "pt-BR/checkouts/introduction",
+                  "pt-BR/checkouts/create",
+                  "pt-BR/checkouts/validate",
+                  "pt-BR/checkouts/reconcile"
+                ]
+              },
+              {
+                "group": "Reclamações",
+                "pages": [
+                  "pt-BR/claims/introduction"
                 ]
               },
               {

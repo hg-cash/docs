@@ -1,0 +1,51 @@
+---
+title: "Validar pagamentos"
+description: "Aprovar ou rejeitar checkouts em revisão manual"
+icon: "circle-check"
+---
+
+## Quando validar
+
+Na **Argentina**, se a transferência de entrada não for detectada automaticamente em cerca de 30 segundos, o pagador pode tocar **“Já realizei o pagamento”** e **enviar um comprovante** (JPEG, PNG, WebP ou PDF, máx. 10 MB). O checkout passa para **`awaiting_manual_review`**.
+
+Você recebe o webhook **`checkout.awaiting_manual_review`**. Um badge em **Validar** no painel mostra quantas sessões precisam de atenção.
+
+## Abrir a validação
+
+1. Acesse **Checkouts** (`/app/checkouts`).
+2. Clique em **Validar** (canto superior direito) ou abra `/app/checkouts/validate`.
+
+Você vê uma tabela de checkouts em **`awaiting_manual_review`** com data, conta, valor, pagador e link do **comprovante**.
+
+## Aprovar um pagamento
+
+1. Clique em **Revisar** na linha.
+2. Confirme valor, pagador e imagem do comprovante.
+3. Clique em **Aprovar**.
+
+A HG.Cash tenta vincular uma **transação de entrada** na mesma conta (valor, DNI do CUIL quando disponível, janela de tempo). Se houver exatamente um candidato, vincula automaticamente. Também é possível informar ID de transação via integrações API.
+
+Ao aprovar, o checkout fica **`completed`** e o webhook **`checkout.completed`** é enviado.
+
+## Rejeitar um pagamento
+
+1. Abra **Revisar**, depois **Rejeitar**.
+2. Informe um **motivo** (obrigatório).
+3. Confirme a rejeição.
+
+O status vira **`rejected`**; o pagador pode ver a rejeição na página hospedada se voltar. Webhook: **`checkout.rejected`**.
+
+## Download do comprovante (API)
+
+**`GET /api/v1/checkouts/{id}/receipt`** retorna URL assinada de curta duração (token do comerciante com acesso ao checkout).
+
+## Permissões
+
+- **Comerciantes (`USER`)** podem validar os próprios checkouts.
+- **Admins** precisam da permissão **validar checkouts** (ou super admin).
+
+## Relacionado
+
+- [Criar checkouts](/pt-BR/checkouts/create)
+- [Conciliar checkouts](/pt-BR/checkouts/reconcile) — Quando não houve comprovante mas o dinheiro chegou
+- [Introdução](/pt-BR/checkouts/introduction) — Referência de status

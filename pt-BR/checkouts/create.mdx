@@ -1,0 +1,76 @@
+---
+title: "Criar checkouts"
+description: "Criar sessões de pagamento hospedadas pelo painel ou API"
+icon: "plus"
+---
+
+## Painel
+
+1. Abra **Checkouts** na barra lateral (`/app/checkouts`).
+2. Revise a linha de **estatísticas** e as sessões recentes no resumo.
+3. Em **Criar checkout**, escolha **país**, **conta** (opcional — a HG.Cash escolhe uma conta operativa elegível se omitida), **valor** e **URL de sucesso**.
+4. Clique em **Criar checkout**. Copie o **link do checkout** no painel de sucesso e envie ao pagador.
+
+Use **Validar** ou **Conciliar** (canto superior direito) quando precisar desses fluxos.
+
+### Notas por país (painel)
+
+| País | Campos extras na criação |
+| --- | --- |
+| **AR** | Nome e DNI do pagador opcionais; também pode informar na página hospedada |
+| **BR** | **E-mail do pagador** obrigatório |
+| **CL** | Por enquanto só via **API** (método de pagamento + dados do cliente) |
+
+## API
+
+**`POST /api/v1/checkouts`** com token Bearer. Corpo mínimo:
+
+```json
+{
+  "country": "AR",
+  "amount": "1500.00",
+  "successUrl": "https://merchant.example/success"
+}
+```
+
+Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, `locale` e `payer` (conforme o país).
+
+### Argentina (`AR`)
+
+- A resposta inclui **`accountDisplay`** (alias, CVU/CBU, titular).
+- O pagador preenche **nome**, **valor** e **DNI de 8 dígitos** na página hospedada.
+- Conclusão quando uma transferência de entrada coincide valor + DNI na conta atribuída.
+
+### Brasil (`BR`)
+
+- **`payer.email`** obrigatório na criação.
+- A resposta pode incluir **`qrCode`** e **`pixCopiaECola`**.
+
+### Chile (`CL`)
+
+- **`paymentMethodId`** e **`customer`** obrigatórios — veja [Cash-in Chile](/pt-BR/countries/chile/cash-in) para listar métodos de pagamento.
+
+## Exemplo (Argentina)
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "AR",
+    "amount": "1500.00",
+    "successUrl": "https://merchant.example/success",
+    "cancelUrl": "https://merchant.example/cancel",
+    "webhookUrl": "https://merchant.example/hooks/checkout",
+    "metadata": { "orderId": "ORD-42" }
+  }'
+```
+
+A resposta inclui **`checkoutUrl`** — envie essa URL ao pagador.
+
+## Relacionado
+
+- [Introdução](/pt-BR/checkouts/introduction) — Status e webhooks
+- [Validar pagamentos](/pt-BR/checkouts/validate)
+- [Conciliar checkouts](/pt-BR/checkouts/reconcile)
+- Referência da API → **Checkouts** → **Create checkout session**

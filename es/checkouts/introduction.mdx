@@ -1,0 +1,56 @@
+---
+title: "Introducción"
+description: "Páginas de pago hospedadas para Argentina, Brasil y Chile"
+icon: "cart-shopping"
+---
+
+## Lo que vas a lograr
+
+**Checkouts** te permiten cobrar pagos con una **página de pago hospedada** sin construir tu propia UI de transferencia o PIX. Creás una sesión, compartís un **`checkoutUrl`** con el pagador y HG.Cash confirma el pago automáticamente — o lo marca para **revisión manual** cuando hace falta.
+
+En el panel de HG.Cash (**Checkouts** en la barra lateral) podés:
+
+- Ver **estadísticas** (creados, completados, conversión, dinero cobrado) y sesiones recientes
+- **Crear** nuevos checkouts y copiar el enlace para el pagador
+- **Validar** comprobantes cuando el match automático no completó (Argentina)
+- **Conciliar** movimientos entrantes con un checkout pendiente cuando el match falló
+
+También podés integrar solo con la **API REST** (`POST /api/v1/checkouts` y endpoints relacionados). Los esquemas interactivos están en **Referencia API → Checkouts**.
+
+## Resumen por país
+
+| País | Medio de pago | Cómo se completa |
+| --- | --- | --- |
+| **AR** | Transferencia al CVU/alias | Match de **monto** + **DNI de 8 dígitos** del pagador en la transferencia entrante |
+| **BR** | PIX QR / copia-e-cola | Transacción entrante del proveedor + webhook; el pagador ve el QR en la página hospedada |
+| **CL** | Iframe PayRetailers | URL del proveedor; completado vía webhook del proveedor |
+
+Los pagadores **no inician sesión** en HG.Cash en la página pública. Tu backend (o el panel) usa el mismo **token Bearer API** que el resto de v1.
+
+## Estados del checkout
+
+| Estado | Significado |
+| --- | --- |
+| `pending` | Esperando pago o datos del pagador (AR). |
+| `awaiting_manual_review` | El pagador subió un comprobante; el comercio debe aprobar o rechazar. |
+| `completed` | Pago confirmado (match automático, proveedor, aprobación manual o conciliación). |
+| `rejected` | Revisión manual rechazada. |
+| `cancelled` | Cancelado por el comercio mientras estaba `pending`. |
+| `expired` | Pasó `expiresAt`. |
+
+## Webhooks
+
+Cuando un checkout cambia de estado, HG.Cash puede enviar un webhook **`CHECKOUT`** (`checkout.completed`, `checkout.awaiting_manual_review` o `checkout.rejected`). Configurá **`webhookUrl`** por checkout al crear o la URL por defecto del usuario. Ver [Recibir webhooks](/es/developers/receiving-webhooks) para la firma HMAC.
+
+## Guías en esta sección
+
+- **[Crear checkouts](/es/checkouts/create)** — Formulario del panel y API, campos por país
+- **[Validar pagos](/es/checkouts/validate)** — Aprobar o rechazar comprobantes subidos
+- **[Conciliar checkouts](/es/checkouts/reconcile)** — Vincular un movimiento entrante cuando no hubo match automático
+
+## Antes de empezar
+
+- **Acceso** a **Checkouts** en el panel (habilitado por usuario; contactá a HG.Cash si no lo ves)
+- Una cuenta receptora **operativa** para el país (ARS + Urbana en AR, plataforma PIX BRL en BR, PayRetailers CL en CL)
+- **`successUrl`** en cada creación — destino tras el éxito
+- Secreto de firma de webhook opcional en Configuración

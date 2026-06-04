@@ -10,6 +10,8 @@ Argentina es el mercado principal de HG.Cash para **transferencias bancarias** e
 
 Para **cash-outs**, usted inicia **transferencias bancarias instantáneas** con la API. Para **cash-ins**, no crea pagos entrantes por API; HG.Cash detecta los movimientos en las cuentas asignadas y los envía a su webhook.
 
+Para una **página de pago hospedada** donde el pagador transfiere a su CVU/alias e ingresa un DNI de 8 dígitos, use **[Checkout hospedado](/es/developers/checkout)** (`country: AR`).
+
 ## Cómo funciona
 
 1. **Cuentas** — HG.Cash provisiona cuentas ARS (CBU/CVU) vinculadas a su usuario. Use `GET /api/v1/accounts` y `GET /api/v1/account/{id}/balance` para saldos y estado.
