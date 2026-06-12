@@ -11,17 +11,30 @@ HG.Cash encola un **`POST`** asíncrono hacia:
 1. La **URL de webhook predeterminada** de tu usuario (configurada en **Configuración** de HG.Cash junto al secreto de firma del webhook), **o**
 2. Un **`webhookUrl`** que indiques **por operación** donde la API o el formulario lo permitan — por ejemplo al crear una transacción de libro vía API REST (`POST /api/v1/transactions`) o una **solicitud de transacción** desde transferencias cuando ese campo exista.
 
-Los payloads tienen la misma forma sin importar la cola: **`Content-Type: application/json`** y el **cuerpo es un único objeto JSON plano** (no anidado bajo `{ "transaction": ... }`).
+Los payloads tienen la misma forma sin importar la cola: **`Content-Type: application/json`** y el **cuerpo es un único objeto JSON plano** (no anidado bajo `{ "transaction": ... }`). Cada payload incluye **`topic`** y **`eventType`** en el nivel superior para enrutamiento.
+
+## Topic y eventType
+
+| `topic` | `eventType` | Cuándo |
+| --- | --- | --- |
+| `TRANSACTION_REQUEST` | `status_change` | Actualización de estado de solicitud de transacción |
+| `TRANSACTION_REQUEST` | `transaction_associated` | Solicitud saliente vinculada a transacción de libro (`transactionId` presente) |
+| `TRANSACTION` | `created` | Nuevo movimiento de cuenta persistido |
+| `TRANSACTION` | `status_change` | Actualización de estado de movimiento existente |
+| `CHECKOUT` | `checkout.completed`, `checkout.awaiting_manual_review`, `checkout.rejected` | Ciclo de checkout hospedado |
+
+Las solicitudes de transacción usan siempre **`topic` `TRANSACTION_REQUEST`**. Cuando un cash-out se vincula al movimiento bancario, busque **`eventType` `transaction_associated`** (no un topic separado).
 
 La **forma del payload y ejemplos** están en la **referencia API** (pestaña **Referencia API**, sección **Webhooks**):
 
 - **Solicitudes de transacción** (pipeline cash-out; `type` es siempre **`"request"`**): [**Actualización de estado de solicitud de transacción**](/api-reference/webhooks/transaction-request-status-updated) — esquema **`TransactionRequestStatusWebhook`** con ejemplo completo.
+- **Solicitud vinculada a la transacción de libro** (después de asociar el cash-out con el movimiento bancario): [**Solicitud de transacción asociada**](/api-reference/webhooks/transaction-request-associated) — mismo esquema con **`transactionId`** obligatorio, **`topic` `TRANSACTION_REQUEST`** y **`eventType` `transaction_associated`**.
 - **Movimientos de libro / cuenta** (dinero entrante o saliente de tus cuentas HG.Cash; `type` es el nombre del tipo de movimiento como `inbound` u `outbound`): [**Movimiento de cuenta**](/api-reference/webhooks/account-movement) — esquema **`AccountMovementWebhook`** con ejemplo completo.
 - **Checkouts hospedados** (`event` como `checkout.completed`): [**Eventos de checkout**](/api-reference/webhooks/checkout-completed) — esquema **`WebhookCheckoutPayload`**. Ver **[Checkout hospedado](/es/developers/checkout)**.
 
 **Solicitudes de transacción (`type: "request"`)**
 
-Los callbacks se envían cuando HG.Cash **actualiza** el estado de una solicitud o cuando una solicitud se **cancela**. Es posible que **no** recibas webhook apenas se crea una solicitud si solo está **`PENDING`**; integra de forma defensiva ante **orden** y **duplicados**.
+Los callbacks se envían cuando HG.Cash **actualiza** el estado de una solicitud o cuando una solicitud se **cancela**. Cuando una solicitud saliente se **vincula** a su transacción de libro, HG.Cash puede enviar [**Solicitud de transacción asociada**](/api-reference/webhooks/transaction-request-associated) con **`topic` `TRANSACTION_REQUEST`**, **`eventType` `transaction_associated`** y el **`transactionId`** del movimiento bancario. Es posible que **no** recibas webhook apenas se crea una solicitud si solo está **`PENDING`**; integra de forma defensiva ante **orden** y **duplicados**.
 
 **Transacciones de libro**
 

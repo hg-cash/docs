@@ -35,6 +35,7 @@ Los pagos salientes son **solicitudes de transacción** a un **CBU** o **CVU** d
 1. Opcional: confirme saldo con `GET /api/v1/accounts` o `GET /api/v1/account/{id}/balance`
 2. `POST /api/v1/transactions` — `accountId`, `amount`, `toCBU` o `toCVU`
 3. Seguimiento con `GET /api/v1/transaction/{id}/status`, webhook del panel o `webhookUrl` en la solicitud
+4. Cuando termine el procesamiento, obtenga la fila de libro con `GET /api/v1/transaction-requests/{id}/transaction-id` (`{ "transactionId": "<uuid>" }` o `null` si aún no está vinculada) o espere el webhook [**Solicitud de transacción asociada**](/api-reference/webhooks/transaction-request-associated) (`topic` `TRANSACTION_REQUEST`, `eventType` `transaction_associated`)
 
 ### Ejemplo
 
@@ -55,5 +56,6 @@ La respuesta incluye `id` y `status` inicial (por ejemplo `PENDING`). Use webhoo
 
 ## Endpoints relacionados
 
+- `GET /api/v1/transaction-requests/{id}/transaction-id` — ID de transacción de libro vinculada (`null` mientras procesa)
 - `GET /api/v1/alias-lookup` — resolver alias a CBU/CVU (si está habilitado)
 - `GET /api/v1/transaction-statuses` y `GET /api/v1/transaction-types` — datos de referencia (sin autenticación)
