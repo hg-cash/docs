@@ -33,6 +33,7 @@ Pagamentos de saída são **solicitações de transação** para **CBU** ou **CV
 1. Opcional: confirme saldo com `GET /api/v1/accounts` ou `GET /api/v1/account/{id}/balance`
 2. `POST /api/v1/transactions` — `accountId`, `amount`, `toCBU` ou `toCVU`
 3. Acompanhe com `GET /api/v1/transaction/{id}/status`, webhook do painel ou `webhookUrl` na solicitação
+4. Quando o processamento terminar, resolva a linha de ledger com `GET /api/v1/transaction-requests/{id}/transaction-id` (`{ "transactionId": "<uuid>" }` ou `null` enquanto não vinculada) ou aguarde o webhook [**Solicitação de transação associada**](/api-reference/webhooks/transaction-request-associated) (`topic` `TRANSACTION_REQUEST`, `eventType` `transaction_associated`)
 
 ### Exemplo
 
@@ -53,5 +54,6 @@ A resposta inclui `id` e `status` inicial (por exemplo `PENDING`). Use webhooks 
 
 ## Endpoints relacionados
 
+- `GET /api/v1/transaction-requests/{id}/transaction-id` — ID da transação de ledger vinculada (`null` enquanto processa)
 - `GET /api/v1/alias-lookup` — resolver alias para CBU/CVU (se habilitado)
 - `GET /api/v1/transaction-statuses` e `GET /api/v1/transaction-types` — dados de referência (sem autenticação)

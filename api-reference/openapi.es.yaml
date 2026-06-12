@@ -269,7 +269,19 @@ components:
         - accountId
         - date
         - timezone
+        - topic
+        - eventType
       properties:
+        topic:
+          type: string
+          description: Webhook topic for routing (always `TRANSACTION_REQUEST` for transaction request webhooks)
+          enum: [TRANSACTION_REQUEST]
+          example: "TRANSACTION_REQUEST"
+        eventType:
+          type: string
+          description: Event kind within the topic
+          enum: [status_change, transaction_associated]
+          example: "status_change"
         id:
           type: string
           format: uuid
@@ -375,6 +387,10 @@ components:
         securityFlagReason:
           type: string
           description: Optional machine-readable reason when flagged for security review
+        transactionId:
+          type: string
+          format: uuid
+          description: Linked ledger transaction ID (included on transaction_associated webhooks)
     AccountMovementWebhook:
       type: object
       description: |
@@ -396,7 +412,19 @@ components:
         - accountId
         - date
         - timezone
+        - topic
+        - eventType
       properties:
+        topic:
+          type: string
+          description: Webhook topic for routing
+          enum: [TRANSACTION]
+          example: "TRANSACTION"
+        eventType:
+          type: string
+          description: Event kind within the topic
+          enum: [created, status_change]
+          example: "created"
         id:
           type: string
           format: uuid
@@ -468,7 +496,22 @@ components:
         - amount
         - currency
         - country
+        - topic
+        - eventType
       properties:
+        topic:
+          type: string
+          description: Webhook topic for routing
+          enum: [CHECKOUT]
+          example: "CHECKOUT"
+        eventType:
+          type: string
+          description: Event kind (matches `event`)
+          enum:
+            - checkout.completed
+            - checkout.awaiting_manual_review
+            - checkout.rejected
+          example: "checkout.completed"
         id:
           type: string
           format: uuid
@@ -1890,6 +1933,8 @@ webhooks:
               example:
                 summary: Example payload
                 value:
+                  topic: "TRANSACTION_REQUEST"
+                  eventType: "status_change"
                   id: "789e0123-e89b-12d3-a456-426614174999"
                   externalID: "REQ-2024-001234"
                   amount: "15000.50"
@@ -1908,6 +1953,51 @@ webhooks:
                   fromCUIT: "20123456789"
                   toCUIT: "27987654321"
                   concept: "Payment for services"
+                  coelsaCode: "COELSA123456"
+  transaction-request-associated:
+    post:
+      summary: Transaction Request Associated With Transaction
+      description: |
+        HG.Cash sends this webhook when an outbound transaction request is linked to its
+        corresponding ledger transaction (after Urbana processing). The body matches
+        `TransactionRequestStatusWebhook`, uses `topic` `TRANSACTION_REQUEST`, `eventType`
+        `transaction_associated`, and includes `transactionId`.
+      operationId: transactionRequestAssociatedWebhook
+      tags:
+        - Webhooks
+      security:
+        - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TransactionRequestStatusWebhook'
+                - type: object
+                  required:
+                    - transactionId
+                  properties:
+                    transactionId:
+                      type: string
+                      format: uuid
+            examples:
+              example:
+                summary: Request linked to ledger transaction
+                value:
+                  topic: "TRANSACTION_REQUEST"
+                  eventType: "transaction_associated"
+                  id: "789e0123-e89b-12d3-a456-426614174999"
+                  externalID: "REQ-2024-001234"
+                  amount: "15000.50"
+                  currency: "ARS"
+                  direction: "Outbound"
+                  status: "DONE"
+                  type: "request"
+                  accountId: "550e8400-e29b-41d4-a716-446655440123"
+                  transactionId: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  date: "2024-06-19T10:30:00"
+                  timezone: "America/Argentina/Buenos_Aires"
                   coelsaCode: "COELSA123456"
   account-movement:
     post:
@@ -1931,6 +2021,8 @@ webhooks:
               example:
                 summary: Account movement example payload
                 value:
+                  topic: "TRANSACTION"
+                  eventType: "created"
                   id: "040eac5b-a998-4879-9d8a-05fd2a08c625"
                   externalID: "E-67REZ8NPQDQ460QK94KVGO-2026-01-14 09:17:21"
                   amount: "12000"
@@ -1969,6 +2061,8 @@ webhooks:
               completed:
                 summary: Checkout completed
                 value:
+                  topic: "CHECKOUT"
+                  eventType: "checkout.completed"
                   id: "550e8400-e29b-41d4-a716-446655440000"
                   status: "completed"
                   event: "checkout.completed"

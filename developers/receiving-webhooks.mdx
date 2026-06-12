@@ -11,17 +11,30 @@ HG.Cash enqueues an asynchronous **`POST`** to:
 1. Your user’s **default webhook URL** (configured in HG.Cash **Settings** alongside the webhook signing secret), **or**
 2. A **`webhookUrl`** you pass **per operation** where the API or form allows it — for example creating a ledger transaction via the REST API (`POST /api/v1/transactions`) or a **transaction request** from the transfers flow when that field is available.
 
-Payloads are identical in shape regardless of queue: **`Content-Type: application/json`** and the **request body is a single flat JSON object** (not nested under `{ "transaction": ... }`).
+Payloads are identical in shape regardless of queue: **`Content-Type: application/json`** and the **request body is a single flat JSON object** (not nested under `{ "transaction": ... }`). Every payload includes **`topic`** and **`eventType`** at the top level for routing.
+
+## Topic and eventType
+
+| `topic` | `eventType` | When |
+| --- | --- | --- |
+| `TRANSACTION_REQUEST` | `status_change` | Transaction request status update |
+| `TRANSACTION_REQUEST` | `transaction_associated` | Outbound request linked to a ledger transaction (`transactionId` present) |
+| `TRANSACTION` | `created` | New account movement persisted |
+| `TRANSACTION` | `status_change` | Existing movement status updated |
+| `CHECKOUT` | `checkout.completed`, `checkout.awaiting_manual_review`, `checkout.rejected` | Hosted checkout lifecycle |
+
+Transaction request webhooks always use **`topic` `TRANSACTION_REQUEST`**. When a cash-out is linked to its bank movement, look for **`eventType` `transaction_associated`** (not a separate topic).
 
 **Payload shape and examples** live in the **API reference** (open the **API reference** tab, then **Webhooks**):
 
 - **Transaction requests** (cash-out pipeline, `type` is always **`"request"`**): [**Transaction Request Status Updated**](/api-reference/webhooks/transaction-request-status-updated) — schema **`TransactionRequestStatusWebhook`** with a full example payload.
+- **Transaction request linked to ledger row** (after Urbana associates the cash-out with the bank movement): [**Transaction request associated**](/api-reference/webhooks/transaction-request-associated) — same schema with required **`transactionId`**, **`topic` `TRANSACTION_REQUEST`**, and **`eventType` `transaction_associated`**. You may receive this in addition to a status update when the link is established.
 - **Ledger / account movements** (money in or out of your HG.Cash accounts; `type` is your movement / transaction type name such as `inbound` or `outbound`): [**Account movement**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** with a full example payload.
 - **Hosted checkouts** (`event` such as `checkout.completed`): [**Checkout events**](/api-reference/webhooks/checkout-completed) — schema **`WebhookCheckoutPayload`**. See **[Hosted checkout](/developers/checkout)** for flows by country.
 
 **Transaction requests (`type: "request"`)**
 
-Callbacks are sent when HG.Cash **updates** a transaction request’s status or when a request is **cancelled**. You may **not** receive a webhook as soon as a request is created while it is only **`PENDING`**; integrate defensively against **ordering** and **duplicates**.
+Callbacks are sent when HG.Cash **updates** a transaction request’s status or when a request is **cancelled**. When an outbound request is **linked** to its ledger transaction, HG.Cash may send [**Transaction request associated**](/api-reference/webhooks/transaction-request-associated) with **`topic` `TRANSACTION_REQUEST`**, **`eventType` `transaction_associated`**, and the **`transactionId`** of the bank movement row. You may **not** receive a webhook as soon as a request is created while it is only **`PENDING`**; integrate defensively against **ordering** and **duplicates**.
 
 **Ledger transactions**
 
