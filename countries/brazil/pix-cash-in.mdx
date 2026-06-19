@@ -13,11 +13,15 @@ Accounts must use currency **BRL** and country **BR**.
 ## Prerequisites
 
 - Bearer API token with access to the BRL account
-- Payer `email` on the charge (required by the API)
+
+## Required fields
+
+- `accountId`, `amount`, `email`
+- `document` — payer CPF or CNPJ (digits only, or formatted with punctuation)
 
 ## Flow
 
-1. `POST /api/v1/br/transactions/inbound` — pass `accountId`, `amount`, and `email`
+1. `POST /api/v1/br/transactions/inbound` — pass `accountId`, `amount`, `email`, and `document`
 2. Present `qrCode` or `pixCopiaECola` to the payer
 3. Optionally poll `GET /api/v1/br/transactions/{id}/status` or set `webhookUrl` (see [Receiving webhooks](/developers/receiving-webhooks))
 
@@ -31,6 +35,7 @@ curl -X POST https://hg.cash/api/v1/br/transactions/inbound \
     "accountId": "YOUR_ACCOUNT_UUID",
     "amount": 250.00,
     "email": "payer@example.com",
+    "document": "12345678901",
     "webhookUrl": "https://your.app/webhooks/hg"
   }'
 ```

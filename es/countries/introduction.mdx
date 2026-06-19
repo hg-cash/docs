@@ -10,7 +10,7 @@ HG.Cash opera en varios países. Cada mercado tiene su **moneda**, **rails de pa
 
 Los conceptos compartidos—autenticación, cuentas, saldos y [webhooks](/es/developers/receiving-webhooks)—son los mismos en todos los mercados. Las guías por país cubren **cash-in** (recibir fondos) y **payouts** (enviar fondos).
 
-Para una **página de pago hospedada** unificada en Argentina, Brasil y Chile, use **[Checkout hospedado](/es/developers/checkout)** (`POST /api/v1/checkouts`).
+Para una **página de pago hospedada** unificada en Argentina, Brasil, Chile y Bolivia, use **[Checkout hospedado](/es/checkouts/introduction)** (`POST /api/v1/checkouts`).
 
 ## Dónde operamos
 
@@ -24,8 +24,11 @@ Para una **página de pago hospedada** unificada en Argentina, Brasil y Chile, u
   <Card title="Brasil" icon="flag" href="/es/countries/brazil/pix-cash-in">
     **BRL** — PIX con QR / copia y cola para cash-in y payouts por clave PIX.
   </Card>
+  <Card title="Bolivia" icon="flag" href="/es/countries/bolivia/qr-cash-in">
+    **BOB** — Cash-in con QR y payouts bancarios ACH.
+  </Card>
 </CardGroup>
 
 ## Referencia API
 
-Los endpoints por país están en la pestaña [Referencia API](/api-reference) (**Transactions** para Argentina, **Brazil** y **Chile**).
+Los endpoints por país están en la pestaña [Referencia API](/api-reference) (**Transactions** para Argentina; **Brazil**, **Chile** y **Bolivia** para cash-in y payouts directos).

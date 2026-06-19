@@ -20,6 +20,7 @@ Use **Validar** ou **Conciliar** (canto superior direito) quando precisar desses
 | **AR** | Nome e DNI do pagador opcionais; também pode informar na página hospedada |
 | **BR** | **E-mail do pagador** obrigatório |
 | **CL** | Por enquanto só via **API** (método de pagamento + dados do cliente) |
+| **BO** | `description` opcional; pagador escaneia o QR na página hospedada |
 
 ## API
 
@@ -49,6 +50,11 @@ Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, 
 ### Chile (`CL`)
 
 - **`paymentMethodId`** e **`customer`** obrigatórios — veja [Cash-in Chile](/pt-BR/countries/chile/cash-in) para listar métodos de pagamento.
+
+### Bolívia (`BO`)
+
+- A resposta pode incluir **`qrCode`** (imagem base64) para o pagador escanear na página hospedada.
+- **`description`** opcional na criação (máx. 60 caracteres).
 
 ## Exemplo (Argentina)
 

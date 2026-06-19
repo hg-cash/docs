@@ -79,6 +79,10 @@
               {
                 "group": "Brazil",
                 "pages": ["countries/brazil/pix-cash-in", "countries/brazil/pix-payouts"]
+              },
+              {
+                "group": "Bolivia",
+                "pages": ["countries/bolivia/qr-cash-in", "countries/bolivia/payouts"]
               }
             ]
           },
@@ -162,6 +166,10 @@
               {
                 "group": "Brasil",
                 "pages": ["es/countries/brazil/pix-cash-in", "es/countries/brazil/pix-payouts"]
+              },
+              {
+                "group": "Bolivia",
+                "pages": ["es/countries/bolivia/qr-cash-in", "es/countries/bolivia/payouts"]
               }
             ]
           },
@@ -245,6 +253,10 @@
               {
                 "group": "Brasil",
                 "pages": ["pt-BR/countries/brazil/pix-cash-in", "pt-BR/countries/brazil/pix-payouts"]
+              },
+              {
+                "group": "Bolívia",
+                "pages": ["pt-BR/countries/bolivia/qr-cash-in", "pt-BR/countries/bolivia/payouts"]
               }
             ]
           },

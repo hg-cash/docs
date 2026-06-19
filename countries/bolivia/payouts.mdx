@@ -1,0 +1,53 @@
+---
+title: "Payouts"
+description: "ACH bank payouts from Bolivia BOB accounts"
+icon: "arrow-up-from-bracket"
+---
+
+## Overview
+
+Create outbound **ACH bank transfers** from **Bolivia BOB** accounts via `POST /api/v1/bo/transactions/outbound`.
+
+Requires sufficient **net balance** (amount plus outbound fee). The transaction starts in `processing` and completes when the payout is settled (`done`).
+
+## Banks
+
+List available banks with `GET /api/v1/bo/banks`. Use the returned `code` as `bankCode` on outbound requests.
+
+## Required fields
+
+- `accountId`, `amount`
+- Beneficiary: `firstName`, `lastName`, `documentType`, `documentNumber`
+- `entityType`: `individual` or `company`
+- `bankCode` — from the banks list
+- `destinationAccount` — beneficiary bank account number
+
+`documentType` is one of: `national_id`, `tax_id`, `passport`, `foreign_id`.
+
+## Status updates
+
+- Poll: `GET /api/v1/bo/transactions/{id}/status`
+- Optional `webhookUrl` on the request (see [Receiving webhooks](/developers/receiving-webhooks))
+
+## Example request
+
+```bash
+curl -X POST https://hg.cash/api/v1/bo/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 500.00,
+    "firstName": "María",
+    "lastName": "García",
+    "documentType": "national_id",
+    "documentNumber": "12345678",
+    "entityType": "individual",
+    "bankCode": "001",
+    "destinationAccount": "1234567890"
+  }'
+```
+
+## Payout lifecycle
+
+HG.Cash exposes normalized statuses (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling or your webhook handler to react to status changes.

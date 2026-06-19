@@ -20,6 +20,7 @@ Use **Validate** or **Reconcile** (top right) when you need those flows.
 | **AR** | Optional payer name and DNI; payer can also enter them on the hosted page |
 | **BR** | **Payer email** required |
 | **CL** | Create via **API only** for now (payment method + customer payload) |
+| **BO** | Optional `description`; payer scans QR on hosted page |
 
 ## API
 
@@ -49,6 +50,11 @@ Optional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, 
 ### Chile (`CL`)
 
 - **`paymentMethodId`** and **`customer`** required — see [Chile cash-in](/countries/chile/cash-in) for payment method listing.
+
+### Bolivia (`BO`)
+
+- Response may include **`qrCode`** (base64 image) for the payer to scan on the hosted page.
+- Optional **`description`** on create (max 60 characters).
 
 ## Example (Argentina)
 

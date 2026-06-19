@@ -1,0 +1,34 @@
+---
+title: "Pagamentos"
+description: "Pagamentos bancários ACH a partir de contas BOB na Bolívia"
+icon: "arrow-up-from-bracket"
+---
+
+## Visão geral
+
+Crie transferências bancárias **ACH** de saída a partir de contas **BOB** na Bolívia via `POST /api/v1/bo/transactions/outbound`.
+
+Exige **saldo líquido** suficiente (valor mais taxa de saída). A transação inicia em `processing` e conclui quando o pagamento é liquidado (`done`).
+
+## Bancos
+
+Liste bancos disponíveis com `GET /api/v1/bo/banks`. Use o `code` retornado como `bankCode` na solicitação de saída.
+
+## Campos obrigatórios
+
+- `accountId`, `amount`
+- Beneficiário: `firstName`, `lastName`, `documentType`, `documentNumber`
+- `entityType`: `individual` ou `company`
+- `bankCode` — da lista de bancos
+- `destinationAccount` — número da conta do beneficiário
+
+`documentType`: `national_id`, `tax_id`, `passport` ou `foreign_id`.
+
+## Atualizações de status
+
+- Consulta: `GET /api/v1/bo/transactions/{id}/status`
+- `webhookUrl` opcional na solicitação — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)
+
+## Ciclo de vida
+
+A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling ou seu webhook para reagir às mudanças.

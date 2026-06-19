@@ -13,11 +13,15 @@ A conta deve ser **BRL** e país **BR**.
 ## Pré-requisitos
 
 - Token Bearer com acesso à conta BRL
-- `email` do pagador (obrigatório na API)
+
+## Campos obrigatórios
+
+- `accountId`, `amount`, `email`
+- `document` — CPF ou CNPJ do pagador (somente dígitos, ou formatado com pontuação)
 
 ## Fluxo
 
-1. `POST /api/v1/br/transactions/inbound` — `accountId`, `amount`, `email`
+1. `POST /api/v1/br/transactions/inbound` — `accountId`, `amount`, `email` e `document`
 2. Exibir `qrCode` ou `pixCopiaECola` ao pagador
 3. Opcional: `GET /api/v1/br/transactions/{id}/status` ou `webhookUrl` — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)
 
@@ -30,7 +34,8 @@ curl -X POST https://hg.cash/api/v1/br/transactions/inbound \
   -d '{
     "accountId": "YOUR_ACCOUNT_UUID",
     "amount": 250.00,
-    "email": "payer@example.com"
+    "email": "payer@example.com",
+    "document": "12345678901"
   }'
 ```
 

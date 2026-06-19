@@ -1,0 +1,36 @@
+---
+title: "Cash-in QR"
+description: "Recibir pagos en BOB vía código QR"
+icon: "arrow-down-to-bracket"
+---
+
+## Resumen
+
+El cash-in en Bolivia crea un **cobro QR** en una cuenta **BOB**. La API devuelve un **código QR** (imagen base64) para que el pagador lo escanee. La transacción permanece en `pending` hasta confirmar el pago.
+
+La cuenta debe ser **BOB** y país **BO**.
+
+## Requisitos
+
+- Token Bearer con acceso a la cuenta BOB
+
+## Flujo
+
+1. `POST /api/v1/bo/transactions/inbound` — `accountId` y `amount`
+2. Mostrar `qrCode` al pagador
+3. Opcional: `GET /api/v1/bo/transactions/{id}/status` o `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
+
+## Ejemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/bo/transactions/inbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 250.00,
+    "description": "Pedido 42"
+  }'
+```
+
+La transacción inicia en `pending` y pasa a `done` al confirmarse el pago.

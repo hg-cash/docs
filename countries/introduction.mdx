@@ -10,7 +10,7 @@ HG.Cash operates in several countries. Each market uses its own **currency**, **
 
 Shared concepts—authentication, accounts, balances, and [webhooks](/developers/receiving-webhooks)—work the same everywhere. Country guides focus on **cash-in** (receive funds) and **payouts** (send funds) for that market.
 
-For a **single hosted payment page** across Argentina, Brazil, and Chile, use **[Hosted checkout](/developers/checkout)** (`POST /api/v1/checkouts`) instead of country-specific inbound APIs where that fits your product.
+For a **single hosted payment page** across Argentina, Brazil, Chile, and Bolivia, use **[Hosted checkout](/checkouts/introduction)** (`POST /api/v1/checkouts`) instead of country-specific inbound APIs where that fits your product.
 
 ## Where we operate
 
@@ -24,8 +24,11 @@ For a **single hosted payment page** across Argentina, Brazil, and Chile, use **
   <Card title="Brazil" icon="flag" href="/countries/brazil/pix-cash-in">
     **BRL** — PIX QR / copy-paste for cash-in and PIX key payouts.
   </Card>
+  <Card title="Bolivia" icon="flag" href="/countries/bolivia/qr-cash-in">
+    **BOB** — QR cash-in and ACH bank payouts.
+  </Card>
 </CardGroup>
 
 ## API reference
 
-Country-specific endpoints are grouped in the [API reference](/api-reference) tab (**Transactions** for Argentina, **Brazil**, and **Chile**). Start from the guide for your country, then use the interactive reference for request and response schemas.
+Country-specific endpoints are grouped in the [API reference](/api-reference) tab (**Transactions** for Argentina; **Brazil**, **Chile**, and **Bolivia** for direct cash-in and payouts). Start from the guide for your country, then use the interactive reference for request and response schemas.
