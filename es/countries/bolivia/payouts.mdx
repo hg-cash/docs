@@ -1,0 +1,60 @@
+---
+title: "Payouts"
+description: "Transferencias bancarias ACH desde cuentas BOB en Bolivia"
+icon: "arrow-up-from-bracket"
+---
+
+## Resumen
+
+Cree **transferencias bancarias ACH** salientes desde cuentas **BOB** con `POST /api/v1/bo/transactions/outbound`.
+
+Requiere **saldo neto** suficiente para el monto más la comisión de salida. La transacción inicia en `processing` cuando se acepta.
+
+## Requisitos
+
+- Token Bearer con acceso a la cuenta BOB
+- Datos bancarios del beneficiario — use `GET /api/v1/bo/banks` para obtener valores válidos de `bankCode`
+
+## Campos obligatorios
+
+- `accountId`, `amount`
+- `firstName`, `lastName` — nombre del beneficiario
+- `documentType` — `national_id`, `tax_id`, `passport` o `foreign_id`
+- `documentNumber` — solo dígitos (5–20 caracteres)
+- `entityType` — `individual` o `company`
+- `bankCode` — de la lista de bancos
+- `destinationAccount` — número de cuenta del beneficiario
+
+Opcional: `description` (máx. 200 caracteres), `webhookUrl`.
+
+## Flujo
+
+1. `GET /api/v1/bo/banks` — listar bancos (`code`, `name`)
+2. `POST /api/v1/bo/transactions/outbound` — enviar el payout
+3. Consultar `GET /api/v1/bo/transactions/{id}/status` o usar `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
+
+## Ejemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/bo/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 500.00,
+    "firstName": "María",
+    "lastName": "García",
+    "documentType": "national_id",
+    "documentNumber": "12345678",
+    "entityType": "individual",
+    "bankCode": "1018",
+    "destinationAccount": "1234567890",
+    "description": "Pago a proveedor"
+  }'
+```
+
+## Ciclo del payout
+
+HG.Cash expone estados normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling o su webhook para reaccionar a los cambios.
+
+Si la cuenta no cubre monto y comisión, la API responde `409` con código `INSUFFICIENT_NET_BALANCE`.

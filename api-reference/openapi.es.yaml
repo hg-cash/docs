@@ -533,7 +533,7 @@ components:
           description: ISO 4217 currency code
         country:
           type: string
-          enum: [AR, BR, CL]
+          enum: [AR, BR, CL, BO]
         transactionId:
           type: string
           format: uuid
@@ -553,7 +553,7 @@ components:
       properties:
         country:
           type: string
-          enum: [AR, BR, CL]
+          enum: [AR, BR, CL, BO]
         amount:
           type: string
           description: Decimal amount as string
@@ -582,8 +582,9 @@ components:
           type: object
           properties:
             name: { type: string }
-            document: { type: string, description: "AR 8-digit DNI or BR CPF/CNPJ digits" }
+            document: { type: string, description: "AR DNI de 8 dígitos; BO CI/documento del pagador" }
             email: { type: string, format: email }
+          description: "BR exige email; BO exige name, document y email"
         paymentMethodId:
           type: string
           format: uuid
@@ -664,6 +665,19 @@ components:
         type:
           type: string
           description: Error category (e.g. provider_error, provider_invalid_response)
+
+    BoliviaProviderError:
+      type: object
+      required: [error, code, type]
+      description: Error seguro del proveedor de pagos (sin detalles internos)
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          description: Código estable (p. ej. BO_INBOUND_PROVIDER_MISSING_TXID)
+        type:
+          type: string
 
     ClPaymentMethod:
       type: object
@@ -1129,8 +1143,8 @@ paths:
     post:
       summary: Create checkout session
       description: |
-        Creates a hosted checkout for AR (transfer + DNI match), BR (PIX QR), or CL (provider iframe).
-        Returns `checkoutUrl` for the payer and optional provider fields (QR, iframe URL).
+        Crea un checkout hospedado para AR (transferencia + DNI), BR (QR PIX), CL (iframe del proveedor) o BO (pago QR).
+        Devuelve `checkoutUrl` para el pagador y campos opcionales del proveedor (QR, URL iframe).
       operationId: createCheckout
       tags: [Checkouts]
       requestBody:
@@ -1167,7 +1181,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [AR, BR, CL]
+            enum: [AR, BR, CL, BO]
         - name: limit
           in: query
           schema:
@@ -1485,6 +1499,163 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChileProviderError'
+
+  /bo/banks:
+    get:
+      summary: Listar bancos (ACH Bolivia)
+      description: Devuelve los bancos disponibles para payouts ACH salientes en Bolivia.
+      operationId: listBoBanks
+      parameters:
+        - in: query
+          name: country
+          schema:
+            type: string
+            default: BO
+      tags:
+        - Bolivia
+      responses:
+        '200':
+          description: Lista de bancos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  banks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: { type: string }
+                        name: { type: string }
+        '401':
+          description: No autorizado
+        '500':
+          description: Error interno del servidor
+
+  /bo/transactions/inbound:
+    post:
+      summary: Crear transacción entrante (Bolivia)
+      description: |
+        Crea una transacción entrante en BOB y devuelve un código QR (imagen base64) para el pagador.
+        La cuenta debe usar moneda BOB y país BO.
+      operationId: createBoInboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId, amount]
+              properties:
+                accountId: { type: string, format: uuid }
+                amount: { type: number }
+                description: { type: string, maxLength: 60 }
+                webhookUrl: { type: string, format: uri }
+      tags:
+        - Bolivia
+      responses:
+        '201':
+          description: Transacción creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  qrCode: { type: string, description: Imagen QR en base64 }
+                  status: { type: string }
+        '502':
+          description: Error del proveedor de pagos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoliviaProviderError'
+
+  /bo/transactions/outbound:
+    post:
+      summary: Crear transacción saliente (ACH Bolivia)
+      description: |
+        Crea una transferencia bancaria saliente en BOB desde una cuenta BOB.
+        Requiere saldo suficiente para el monto más la comisión de salida.
+      operationId: createBoOutboundTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accountId
+                - amount
+                - firstName
+                - lastName
+                - documentType
+                - documentNumber
+                - entityType
+                - bankCode
+                - destinationAccount
+              properties:
+                accountId: { type: string, format: uuid }
+                amount: { type: number }
+                firstName: { type: string }
+                lastName: { type: string }
+                documentType:
+                  type: string
+                  enum: [national_id, tax_id, passport, foreign_id]
+                documentNumber: { type: string }
+                entityType:
+                  type: string
+                  enum: [individual, company]
+                bankCode: { type: string }
+                destinationAccount: { type: string }
+                description: { type: string, maxLength: 200 }
+                webhookUrl: { type: string, format: uri }
+      tags:
+        - Bolivia
+      responses:
+        '201':
+          description: Transacción encolada para procesamiento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  status: { type: string }
+        '409':
+          description: Saldo insuficiente
+
+  /bo/transactions/{id}/status:
+    get:
+      summary: Consultar estado de transacción (Bolivia)
+      operationId: getBoTransactionStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - Bolivia
+      responses:
+        '200':
+          description: Estado de la transacción
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/DirectTransactionStatus'
+                  - type: object
+                    properties:
+                      providerStatus: { type: string }
+        '502':
+          description: Error del proveedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoliviaProviderError'
 
   /transactions/{id}/receipt:
     get:
@@ -2084,6 +2255,8 @@ tags:
   - name: Brazil
     description: "Transaction management - Create and manage transactions in Pix system for Brazil operations"
   - name: Chile
-    description: "Hosted checkout and bank payouts for Chile (CLP)"
+    description: "Checkout hospedado y payouts bancarios para Chile (CLP)"
+  - name: Bolivia
+    description: "Cash-in con QR y payouts ACH para Bolivia (BOB)"
   - name: Checkouts
-    description: "Hosted checkout sessions for AR, BR, and CL"
+    description: "Sesiones de checkout hospedado para AR, BR, CL y BO"

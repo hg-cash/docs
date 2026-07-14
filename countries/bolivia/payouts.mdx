@@ -1,0 +1,60 @@
+---
+title: "Payouts"
+description: "ACH bank payouts from Bolivia BOB accounts"
+icon: "arrow-up-from-bracket"
+---
+
+## Overview
+
+Create outbound **ACH bank transfers** from **BOB** accounts via `POST /api/v1/bo/transactions/outbound`.
+
+Requires sufficient **net balance** for the transfer amount plus the outbound fee. The transaction starts in `processing` when accepted.
+
+## Prerequisites
+
+- Bearer API token with access to the BOB account
+- Beneficiary bank details — use `GET /api/v1/bo/banks` to list valid `bankCode` values
+
+## Required fields
+
+- `accountId`, `amount`
+- `firstName`, `lastName` — beneficiary name
+- `documentType` — `national_id`, `tax_id`, `passport`, or `foreign_id`
+- `documentNumber` — digits only (5–20 characters)
+- `entityType` — `individual` or `company`
+- `bankCode` — from the banks list
+- `destinationAccount` — beneficiary account number
+
+Optional: `description` (max 200 characters), `webhookUrl`.
+
+## Flow
+
+1. `GET /api/v1/bo/banks` — list available banks (`code`, `name`)
+2. `POST /api/v1/bo/transactions/outbound` — submit the payout
+3. Poll `GET /api/v1/bo/transactions/{id}/status` or use `webhookUrl` (see [Receiving webhooks](/developers/receiving-webhooks))
+
+## Example request
+
+```bash
+curl -X POST https://hg.cash/api/v1/bo/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 500.00,
+    "firstName": "María",
+    "lastName": "García",
+    "documentType": "national_id",
+    "documentNumber": "12345678",
+    "entityType": "individual",
+    "bankCode": "1018",
+    "destinationAccount": "1234567890",
+    "description": "Supplier payment"
+  }'
+```
+
+## Payout lifecycle
+
+HG.Cash exposes normalized statuses (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling or your webhook handler to react to status changes.
+
+If the account cannot cover the amount and fee, the API returns `409` with code `INSUFFICIENT_NET_BALANCE`.

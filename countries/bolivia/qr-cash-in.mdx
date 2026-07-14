@@ -1,0 +1,39 @@
+---
+title: "QR cash-in"
+description: "Receive BOB payments via QR code"
+icon: "arrow-down-to-bracket"
+---
+
+## Overview
+
+Bolivia cash-in creates a **QR charge** for a **BOB** account. The API returns a **base64 QR image** for the payer to scan. The transaction stays `pending` until payment is confirmed.
+
+Accounts must use currency **BOB** and country **BO**.
+
+You can also collect BOB payments with **[Hosted checkout](/developers/checkout)** (`POST /api/v1/checkouts` with `country: "BO"`). That flow requires `payer.name`, `payer.document`, and `payer.email` at create time and returns `qrCode` in the response.
+
+## Prerequisites
+
+- Bearer API token with access to the BOB account
+
+## Flow
+
+1. `POST /api/v1/bo/transactions/inbound` — pass `accountId` and `amount`
+2. Present `qrCode` to the payer (base64 image)
+3. Optionally poll `GET /api/v1/bo/transactions/{id}/status` or set `webhookUrl` (see [Receiving webhooks](/developers/receiving-webhooks))
+
+## Example request
+
+```bash
+curl -X POST https://hg.cash/api/v1/bo/transactions/inbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 150.00,
+    "description": "Order 42",
+    "webhookUrl": "https://your.app/webhooks/hg"
+  }'
+```
+
+The transaction starts in `pending` and moves to `done` when the QR payment is confirmed.

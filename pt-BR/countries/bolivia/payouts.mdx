@@ -1,0 +1,60 @@
+---
+title: "Payouts"
+description: "Transferências bancárias ACH a partir de contas BOB na Bolívia"
+icon: "arrow-up-from-bracket"
+---
+
+## Visão geral
+
+Crie **transferências bancárias ACH** de saída a partir de contas **BOB** via `POST /api/v1/bo/transactions/outbound`.
+
+Exige **saldo líquido** suficiente para o valor mais a taxa de saída. A transação começa em `processing` quando aceita.
+
+## Pré-requisitos
+
+- Token Bearer com acesso à conta BOB
+- Dados bancários do beneficiário — use `GET /api/v1/bo/banks` para obter valores válidos de `bankCode`
+
+## Campos obrigatórios
+
+- `accountId`, `amount`
+- `firstName`, `lastName` — nome do beneficiário
+- `documentType` — `national_id`, `tax_id`, `passport` ou `foreign_id`
+- `documentNumber` — apenas dígitos (5–20 caracteres)
+- `entityType` — `individual` ou `company`
+- `bankCode` — da lista de bancos
+- `destinationAccount` — número da conta do beneficiário
+
+Opcional: `description` (máx. 200 caracteres), `webhookUrl`.
+
+## Fluxo
+
+1. `GET /api/v1/bo/banks` — listar bancos (`code`, `name`)
+2. `POST /api/v1/bo/transactions/outbound` — enviar o payout
+3. Consultar `GET /api/v1/bo/transactions/{id}/status` ou usar `webhookUrl` — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)
+
+## Exemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/bo/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 500.00,
+    "firstName": "María",
+    "lastName": "García",
+    "documentType": "national_id",
+    "documentNumber": "12345678",
+    "entityType": "individual",
+    "bankCode": "1018",
+    "destinationAccount": "1234567890",
+    "description": "Pagamento a fornecedor"
+  }'
+```
+
+## Ciclo do payout
+
+A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling ou seu webhook para reagir às mudanças.
+
+Se a conta não cobrir valor e taxa, a API retorna `409` com código `INSUFFICIENT_NET_BALANCE`.
