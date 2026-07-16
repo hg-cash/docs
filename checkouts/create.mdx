@@ -18,7 +18,7 @@ Use **Validate** or **Reconcile** (top right) when you need those flows.
 | Country | Extra fields on create |
 | --- | --- |
 | **AR** | Optional payer name and DNI; payer can also enter them on the hosted page |
-| **BR** | **Payer email** required |
+| **BR** | **Payer name**, **CPF/CNPJ (`document`)**, and **email** required |
 | **CL** | Create via **API only** for now (payment method + customer payload) |
 
 ## API
@@ -43,12 +43,32 @@ Optional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, 
 
 ### Brazil (`BR`)
 
-- **`payer.email`** required on create.
+- **`payer.name`**, **`payer.document`** (CPF or CNPJ — digits only or formatted), and **`payer.email`** required on create.
 - Response may include **`qrCode`** and **`pixCopiaECola`**.
 
 ### Chile (`CL`)
 
 - **`paymentMethodId`** and **`customer`** required — see [Chile cash-in](/countries/chile/cash-in) for payment method listing.
+
+## Example (Brazil)
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "BR",
+    "amount": "100.50",
+    "successUrl": "https://merchant.example/success",
+    "payer": {
+      "name": "Federico Autuori",
+      "document": "957.937.532-14",
+      "email": "fautuori@gmail.com"
+    }
+  }'
+```
+
+Response includes **`checkoutUrl`** — send that URL to the payer. PIX fields (`qrCode`, `pixCopiaECola`) may also be returned on create.
 
 ## Example (Argentina)
 

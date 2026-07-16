@@ -581,10 +581,10 @@ components:
         payer:
           type: object
           properties:
-            name: { type: string }
-            document: { type: string, description: "AR 8-digit DNI; BO payer CI/document" }
+            name: { type: string, description: "Payer full name (required for BR and BO)" }
+            document: { type: string, description: "AR 8-digit DNI; BR payer CPF/CNPJ; BO payer CI/document" }
             email: { type: string, format: email }
-          description: "BR requires email; BO requires name, document, and email"
+          description: "BR requires name, document, and email; BO requires name, document, and email"
         paymentMethodId:
           type: string
           format: uuid
@@ -615,6 +615,7 @@ components:
         - accountId
         - amount
         - email
+        - document
       properties:
         accountId:
           type: string
@@ -628,6 +629,9 @@ components:
           type: string
           format: email
           description: Payer email for the charge
+        document:
+          type: string
+          description: Payer CPF or CNPJ (digits only, or formatted with punctuation)
         webhookUrl:
           type: string
           format: uri

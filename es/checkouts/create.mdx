@@ -18,7 +18,7 @@ Usá **Validar** o **Conciliar** (arriba a la derecha) cuando necesites esos flu
 | País | Campos extra al crear |
 | --- | --- |
 | **AR** | Nombre y DNI del pagador opcionales; también puede ingresarlos en la página hospedada |
-| **BR** | **Email del pagador** obligatorio |
+| **BR** | **Nombre del pagador**, **CPF/CNPJ (`document`)** y **email** obligatorios |
 | **CL** | Por ahora solo vía **API** (método de pago + datos del cliente) |
 
 ## API
@@ -43,12 +43,32 @@ Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, 
 
 ### Brasil (`BR`)
 
-- **`payer.email`** obligatorio al crear.
+- **`payer.name`**, **`payer.document`** (CPF o CNPJ — solo dígitos o con puntuación) y **`payer.email`** obligatorios al crear.
 - La respuesta puede incluir **`qrCode`** y **`pixCopiaECola`**.
 
 ### Chile (`CL`)
 
 - **`paymentMethodId`** y **`customer`** obligatorios — ver [Cash-in Chile](/es/countries/chile/cash-in) para listar métodos de pago.
+
+## Ejemplo (Brasil)
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "BR",
+    "amount": "100.50",
+    "successUrl": "https://merchant.example/success",
+    "payer": {
+      "name": "Federico Autuori",
+      "document": "957.937.532-14",
+      "email": "fautuori@gmail.com"
+    }
+  }'
+```
+
+La respuesta incluye **`checkoutUrl`** — enviá esa URL al pagador. Los campos PIX (`qrCode`, `pixCopiaECola`) también pueden devolverse al crear.
 
 ## Ejemplo (Argentina)
 

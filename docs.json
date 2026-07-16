@@ -12,13 +12,8 @@
     "languages": [
       {
         "language": "en",
+        "default": true,
         "navbar": {
-          "links": [
-            {
-              "label": "Support",
-              "href": "mailto:support@hg.cash"
-            }
-          ],
           "primary": {
             "type": "button",
             "label": "Dashboard",
@@ -91,7 +86,10 @@
             "groups": [
               {
                 "group": "API documentation",
-                "openapi": "api-reference/openapi.yaml"
+                "openapi": {
+                  "source": "api-reference/openapi.yaml",
+                  "directory": "api-reference"
+                }
               }
             ]
           }
@@ -100,12 +98,6 @@
       {
         "language": "es",
         "navbar": {
-          "links": [
-            {
-              "label": "Soporte",
-              "href": "mailto:support@hg.cash"
-            }
-          ],
           "primary": {
             "type": "button",
             "label": "Ir al panel",
@@ -178,7 +170,10 @@
             "groups": [
               {
                 "group": "Documentación API",
-                "openapi": "api-reference/openapi.es.yaml"
+                "openapi": {
+                  "source": "api-reference/openapi.es.yaml",
+                  "directory": "es/api-reference"
+                }
               }
             ]
           }
@@ -187,12 +182,6 @@
       {
         "language": "pt-BR",
         "navbar": {
-          "links": [
-            {
-              "label": "Suporte",
-              "href": "mailto:support@hg.cash"
-            }
-          ],
           "primary": {
             "type": "button",
             "label": "Abrir painel",
@@ -265,7 +254,10 @@
             "groups": [
               {
                 "group": "Documentação da API",
-                "openapi": "api-reference/openapi.pt-BR.yaml"
+                "openapi": {
+                  "source": "api-reference/openapi.pt-BR.yaml",
+                  "directory": "pt-BR/api-reference"
+                }
               }
             ]
           }
