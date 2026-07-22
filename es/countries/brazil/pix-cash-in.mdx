@@ -37,3 +37,7 @@ curl -X POST https://hg.cash/api/v1/br/transactions/inbound \
 ```
 
 La transacción inicia en `pending` y pasa a `done` al confirmarse el PIX.
+
+## Estado de la cuenta
+
+La cuenta origen debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`.

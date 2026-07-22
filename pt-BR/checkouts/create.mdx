@@ -35,6 +35,8 @@ Use **Validar** ou **Conciliar** (canto superior direito) quando precisar desses
 
 Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, `locale` e `payer` (conforme o país).
 
+Para **BR**, **CL** e **BO**, se você informar um `accountId` explícito que esteja **`Bloqueada`** ou **`Cerrada`**, a API retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`. Se omitir `accountId`, a HG.Cash seleciona uma conta **`Operativa`** elegível.
+
 ### Argentina (`AR`)
 
 - A resposta inclui **`accountDisplay`** (alias, CVU/CBU, titular).

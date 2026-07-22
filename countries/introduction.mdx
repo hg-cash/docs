@@ -10,6 +10,12 @@ HG.Cash operates in several countries. Each market uses its own **currency**, **
 
 Shared concepts—authentication, accounts, balances, and [webhooks](/developers/receiving-webhooks)—work the same everywhere. Country guides focus on **cash-in** (receive funds) and **payouts** (send funds) for that market.
 
+## Account status (Brazil, Chile, Bolivia)
+
+Accounts have lifecycle status `Operativa`, `Bloqueada`, or `Cerrada`. For **Brazil**, **Chile**, and **Bolivia** direct inbound/outbound APIs and **hosted checkouts** (`POST /api/v1/checkouts`), only **`Operativa`** accounts can receive or send funds. Blocked or closed accounts return HTTP `403` with `code: ACCOUNT_NOT_OPERATIVE`.
+
+Use `GET /api/v1/accounts` or `GET /api/v1/account/{id}/balance` to check status before creating a transaction or checkout.
+
 For a **single hosted payment page** across Argentina, Brazil, Chile, and Bolivia, use **[Hosted checkout](/developers/checkout)** (`POST /api/v1/checkouts`) instead of country-specific inbound APIs where that fits your product.
 
 ## Where we operate

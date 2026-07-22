@@ -66,6 +66,20 @@ components:
         Quando você configura um segredo de assinatura de webhook nas configurações da conta, a HG.Cash inclui
         este cabeçalho em cada POST de webhook. Verifique a assinatura no seu endpoint para garantir que a requisição é autêntica.
 
+  responses:
+    AccountNotOperative:
+      description: Proibido — a conta não está operativa (`Bloqueada` ou `Cerrada`) ou o solicitante não tem acesso
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            account_not_operative:
+              summary: A conta não está operativa
+              value:
+                error: Account is not operative
+                code: ACCOUNT_NOT_OPERATIVE
+
   schemas:
     Transaction:
       type: object
@@ -1184,7 +1198,7 @@ paths:
         '401':
           description: Não autorizado
         '403':
-          description: Proibido
+          $ref: '#/components/responses/AccountNotOperative'
         '500':
           description: Erro interno do servidor
     get:
@@ -1296,7 +1310,7 @@ paths:
         '401':
           description: Não autorizado
         '403':
-          description: Proibido
+          $ref: '#/components/responses/AccountNotOperative'
         '404':
           description: Conta não encontrada
         '502':
@@ -1337,7 +1351,7 @@ paths:
         '401':
           description: Não autorizado
         '403':
-          description: Proibido
+          $ref: '#/components/responses/AccountNotOperative'
         '404':
           description: Conta não encontrada
         '409':
@@ -1434,7 +1448,7 @@ paths:
         '401':
           description: Não autorizado
         '403':
-          description: Proibido
+          $ref: '#/components/responses/AccountNotOperative'
         '404':
           description: Conta ou método de pagamento não encontrado
         '502':
@@ -1471,7 +1485,7 @@ paths:
         '401':
           description: Não autorizado
         '403':
-          description: Proibido
+          $ref: '#/components/responses/AccountNotOperative'
         '404':
           description: Conta não encontrada
         '409':
@@ -1588,6 +1602,10 @@ paths:
                   id: { type: string, format: uuid }
                   qrCode: { type: string, description: Imagem QR em base64 }
                   status: { type: string }
+        '403':
+          $ref: '#/components/responses/AccountNotOperative'
+        '404':
+          description: Conta não encontrada
         '502':
           description: Erro do provedor de pagamento
           content:
@@ -1646,6 +1664,10 @@ paths:
                 properties:
                   id: { type: string, format: uuid }
                   status: { type: string }
+        '403':
+          $ref: '#/components/responses/AccountNotOperative'
+        '404':
+          description: Conta não encontrada
         '409':
           description: Saldo insuficiente
 

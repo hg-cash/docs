@@ -58,3 +58,5 @@ curl -X POST https://hg.cash/api/v1/bo/transactions/outbound \
 A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling ou seu webhook para reagir às mudanças.
 
 Se a conta não cobrir valor e taxa, a API retorna `409` com código `INSUFFICIENT_NET_BALANCE`.
+
+Se a conta estiver **`Bloqueada`** ou **`Cerrada`**, a API retorna `403` com código `ACCOUNT_NOT_OPERATIVE`. Apenas contas **`Operativa`** podem enviar payouts.

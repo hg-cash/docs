@@ -25,3 +25,7 @@ Requires sufficient **net balance** (same rules as other outbound APIs). The tra
 ## Payout lifecycle
 
 HG.Cash exposes normalized statuses (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling or your webhook handler to react to status changes.
+
+## Account status
+
+The source account must be **`Operativa`**. Requests against **`Bloqueada`** or **`Cerrada`** accounts return `403` with `code: ACCOUNT_NOT_OPERATIVE`.
