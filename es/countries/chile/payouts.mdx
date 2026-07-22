@@ -25,3 +25,7 @@ Requiere **saldo neto** suficiente. La transacción inicia en `processing` y fin
 ## Ciclo del payout
 
 HG.Cash expone estados normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling o su webhook para reaccionar a los cambios.
+
+## Estado de la cuenta
+
+La cuenta origen debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`.

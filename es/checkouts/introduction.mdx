@@ -51,6 +51,6 @@ Cuando un checkout cambia de estado, HG.Cash puede enviar un webhook **`CHECKOUT
 ## Antes de empezar
 
 - **Acceso** a **Checkouts** en el panel (habilitado por usuario; contactá a HG.Cash si no lo ves)
-- Una cuenta receptora **operativa** para el país (ARS + Urbana en AR, plataforma PIX BRL en BR, PayRetailers CL en CL)
+- Una cuenta receptora **operativa** para el país (ARS + Urbana en AR, plataforma PIX BRL en BR, PayRetailers CL en CL, BOB en BO). Las cuentas **`Bloqueada`** o **`Cerrada`** no pueden usarse para checkouts BR, CL o BO y devuelven `403` con `ACCOUNT_NOT_OPERATIVE`.
 - **`successUrl`** en cada creación — destino tras el éxito
 - Secreto de firma de webhook opcional en Configuración

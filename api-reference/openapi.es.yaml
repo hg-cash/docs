@@ -1169,7 +1169,7 @@ paths:
         '401':
           description: No autorizado
         '403':
-          description: Prohibido
+          description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`) o el solicitante no tiene acceso
         '500':
           description: Error interno del servidor
     get:
@@ -1281,7 +1281,7 @@ paths:
         '401':
           description: No autorizado
         '403':
-          description: Prohibido
+          description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`) o el solicitante no tiene acceso
         '404':
           description: Cuenta no encontrada
         '502':
@@ -1320,7 +1320,7 @@ paths:
         '401':
           description: No autorizado
         '403':
-          description: Prohibido
+          description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`) o el solicitante no tiene acceso
         '404':
           description: Cuenta no encontrada
         '409':
@@ -1415,7 +1415,7 @@ paths:
         '401':
           description: No autorizado
         '403':
-          description: Prohibido
+          description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`) o el solicitante no tiene acceso
         '404':
           description: Cuenta o método de pago no encontrado
         '502':
@@ -1452,7 +1452,7 @@ paths:
         '401':
           description: No autorizado
         '403':
-          description: Prohibido
+          description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`) o el solicitante no tiene acceso
         '404':
           description: Cuenta no encontrada
         '409':
@@ -1569,6 +1569,10 @@ paths:
                   id: { type: string, format: uuid }
                   qrCode: { type: string, description: Imagen QR en base64 }
                   status: { type: string }
+        '403':
+          description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`) o el solicitante no tiene acceso
+        '404':
+          description: Cuenta no encontrada
         '502':
           description: Error del proveedor de pagos
           content:
@@ -1627,6 +1631,10 @@ paths:
                 properties:
                   id: { type: string, format: uuid }
                   status: { type: string }
+        '403':
+          description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`) o el solicitante no tiene acceso
+        '404':
+          description: Cuenta no encontrada
         '409':
           description: Saldo insuficiente
 

@@ -35,6 +35,8 @@ Use **Validate** or **Reconcile** (top right) when you need those flows.
 
 Optional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, `locale`, and `payer` (country-specific).
 
+For **BR**, **CL**, and **BO**, if you pass an explicit `accountId` that is **`Bloqueada`** or **`Cerrada`**, the API returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. When `accountId` is omitted, HG.Cash selects an eligible **`Operativa`** account.
+
 ### Argentina (`AR`)
 
 - Response includes **`accountDisplay`** (alias, CVU/CBU, holder).

@@ -40,3 +40,7 @@ curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
 ## Ciclo do payout
 
 A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling ou seu webhook para reagir às mudanças.
+
+## Status da conta
+
+A conta de origem deve estar **`Operativa`**. Requisições contra contas **`Bloqueada`** ou **`Cerrada`** retornam `403` com `code: ACCOUNT_NOT_OPERATIVE`.

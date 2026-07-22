@@ -1169,7 +1169,7 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`) or caller lacks access
         '500':
           description: Internal Server Error
     get:
@@ -1281,7 +1281,7 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`) or caller lacks access
         '404':
           description: Account not found
         '502':
@@ -1320,7 +1320,7 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`) or caller lacks access
         '404':
           description: Account not found
         '409':
@@ -1415,7 +1415,7 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`) or caller lacks access
         '404':
           description: Account or payment method not found
         '502':
@@ -1452,7 +1452,7 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`) or caller lacks access
         '404':
           description: Account not found
         '409':
@@ -1569,6 +1569,10 @@ paths:
                   id: { type: string, format: uuid }
                   qrCode: { type: string, description: Base64 QR image }
                   status: { type: string }
+        '403':
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`) or caller lacks access
+        '404':
+          description: Account not found
         '502':
           description: Payment provider error
           content:
@@ -1627,6 +1631,10 @@ paths:
                 properties:
                   id: { type: string, format: uuid }
                   status: { type: string }
+        '403':
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`) or caller lacks access
+        '404':
+          description: Account not found
         '409':
           description: Insufficient balance
 
