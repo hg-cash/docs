@@ -1,6 +1,6 @@
 ---
 title: "Introduction"
-description: "Hosted payment pages for Argentina, Brazil, and Chile"
+description: "Hosted payment pages for Argentina, Brazil, Chile, and Bolivia"
 icon: "cart-shopping"
 ---
 
@@ -24,6 +24,7 @@ You can also integrate entirely via the **REST API** (`POST /api/v1/checkouts` a
 | **AR** | Bank transfer to your CVU/alias | Match **amount** + payer **8-digit DNI** on the inbound transfer |
 | **BR** | PIX QR / copia-e-cola | Provider inbound transaction + webhook; payer sees QR on hosted page |
 | **CL** | PayRetailers hosted iframe | Provider checkout URL; completion via provider webhook |
+| **BO** | QR payment | Provider inbound transaction + webhook; payer sees QR on hosted page |
 
 Payers **do not log in** to HG.cash on the public page. Your backend (or dashboard) uses the same **Bearer API token** as other v1 endpoints.
 
