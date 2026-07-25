@@ -20,6 +20,7 @@ Use **Validar** ou **Conciliar** (canto superior direito) quando precisar desses
 | **AR** | Nome e DNI do pagador opcionais; também pode informar na página hospedada |
 | **BR** | **Nome do pagador**, **CPF/CNPJ (`document`)** e **e-mail** obrigatórios |
 | **CL** | Por enquanto só via **API** (método de pagamento + dados do cliente) |
+| **BO** | **Nome do pagador**, **CI/documento (`document`)** e **e-mail** obrigatórios |
 
 ## API
 
@@ -52,6 +53,11 @@ Para **BR**, **CL** e **BO**, se você informar um `accountId` explícito que es
 
 - **`paymentMethodId`** e **`customer`** obrigatórios — veja [Cash-in Chile](/pt-BR/countries/chile/cash-in) para listar métodos de pagamento.
 
+### Bolívia (`BO`)
+
+- **`payer.name`**, **`payer.document`** (CI ou documento do pagador) e **`payer.email`** obrigatórios na criação.
+- A resposta pode incluir **`qrCode`** para o pagador escanear.
+
 ## Exemplo (Brasil)
 
 ```bash
@@ -71,6 +77,26 @@ curl -X POST https://hg.cash/api/v1/checkouts \
 ```
 
 A resposta inclui **`checkoutUrl`** — envie essa URL ao pagador. Os campos PIX (`qrCode`, `pixCopiaECola`) também podem ser retornados na criação.
+
+## Exemplo (Bolívia)
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "BO",
+    "amount": "150.00",
+    "successUrl": "https://merchant.example/success",
+    "payer": {
+      "name": "Juan Pérez",
+      "document": "12345678",
+      "email": "payer@example.com"
+    }
+  }'
+```
+
+A resposta inclui **`checkoutUrl`** — envie essa URL ao pagador. Um **`qrCode`** (imagem base64) também pode ser retornado na criação.
 
 ## Exemplo (Argentina)
 
