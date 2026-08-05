@@ -961,7 +961,7 @@ paths:
         - La cuenta debe pertenecer al usuario autenticado
         - El CBU debe ser un número válido de 22 dígitos
         - `externalID` opcional debe ser único por cuenta si se proporciona
-        
+        - **El saldo neto debe cubrir el monto solicitado más la comisión de salida** — HG.Cash calcula la comisión de la solicitud y rechaza montos donde `amount + outboundFee` supera `netBalance` (`balance - pendingFees`). Por ejemplo, con `netBalance` de `1000000` y una comisión de salida del `1%`, el monto máximo retirable es `990000`, no el saldo completo.
       operationId: createTransactionRequest
       tags:
         - Transacciones
@@ -1059,18 +1059,21 @@ paths:
                     message: "The provided externalID already exists for this account"
                 insufficient_net_balance:
                   summary: Saldo neto insuficiente
-                  description: Rechazado porque el saldo neto (saldo - comisiones pendientes) es inferior al monto solicitado
+                  description: Rechazado porque el saldo neto no alcanza para cubrir el monto solicitado más la comisión de salida
                   value:
                     error: "Insufficient net balance"
                     code: "INSUFFICIENT_NET_BALANCE"
-                    message: "Net available balance (balance - pending fees) is not enough to cover the requested amount"
+                    message: "Net available balance is not enough to cover the requested amount plus the outbound fee"
                     details:
                       accountId: "550e8400-e29b-41d4-a716-446655440123"
                       currency: "ARS"
-                      amount: 15000.5
-                      balance: 12000
-                      pendingFees: 2000
-                      netBalance: 10000
+                      amount: 1000000
+                      outboundFee: 10000
+                      requiredTotal: 1010000
+                      balance: 1000000
+                      pendingFees: 0
+                      netBalance: 1000000
+                      maxWithdrawableAmount: 990000
         '401':
           description: No autorizado - Token inválido o ausente
           content:

@@ -976,7 +976,7 @@ paths:
         - A conta deve pertencer ao usuário autenticado
         - O CBU deve ser um número válido de 22 dígitos
         - O `externalID` opcional deve ser único por conta, se informado
-        
+        - **O saldo líquido deve cobrir o valor solicitado mais a taxa de saída** — A HG.Cash calcula a taxa da solicitação e rejeita valores em que `amount + outboundFee` excede `netBalance` (`balance - pendingFees`). Por exemplo, com `netBalance` de `1000000` e taxa de saída de `1%`, o valor máximo sacável é `990000`, não o saldo integral.
       operationId: createTransactionRequest
       tags:
         - Transações
@@ -1074,18 +1074,21 @@ paths:
                     message: "The provided externalID already exists for this account"
                 insufficient_net_balance:
                   summary: Saldo líquido insuficiente
-                  description: Rejeitado porque o saldo líquido (saldo - taxas pendentes) é menor que o valor solicitado
+                  description: Rejeitado porque o saldo líquido não cobre o valor solicitado mais a taxa de saída
                   value:
                     error: "Insufficient net balance"
                     code: "INSUFFICIENT_NET_BALANCE"
-                    message: "Net available balance (balance - pending fees) is not enough to cover the requested amount"
+                    message: "Net available balance is not enough to cover the requested amount plus the outbound fee"
                     details:
                       accountId: "550e8400-e29b-41d4-a716-446655440123"
                       currency: "ARS"
-                      amount: 15000.5
-                      balance: 12000
-                      pendingFees: 2000
-                      netBalance: 10000
+                      amount: 1000000
+                      outboundFee: 10000
+                      requiredTotal: 1010000
+                      balance: 1000000
+                      pendingFees: 0
+                      netBalance: 1000000
+                      maxWithdrawableAmount: 990000
         '401':
           description: Não autorizado — token inválido ou ausente
           content:

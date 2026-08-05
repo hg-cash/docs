@@ -28,7 +28,13 @@ Outbound payments are **transaction requests** to a recipient **CBU** or **CVU**
 
 - Bearer API token with access to the ARS account
 - Recipient **CBU** or **CVU** (22 digits)
-- Sufficient **net balance** on the source account
+- Sufficient **net balance** on the source account for the transfer **amount plus the outbound fee**
+
+HG.Cash calculates the outbound fee when you create a transaction request (dashboard or `POST /api/v1/transactions`). The request is rejected if `amount + outboundFee` exceeds `netBalance` (`balance - pendingFees` from `GET /api/v1/account/{id}/balance`).
+
+For example, with `netBalance` of **1,000,000** ARS and a **1%** outbound fee, the maximum you can withdraw in one request is **990,000** ARS — not the full balance.
+
+If the account cannot cover the amount and fee, the API returns **`409`** with `code: INSUFFICIENT_NET_BALANCE` and a `details` object that includes `outboundFee`, `requiredTotal`, `netBalance`, and `maxWithdrawableAmount`.
 
 ### Flow
 
@@ -55,6 +61,31 @@ curl -X POST https://hg.cash/api/v1/transactions \
 ```
 
 The response includes a request `id` and initial `status` (for example `PENDING`). Use webhooks or polling until the request reaches a terminal state (`DONE`, `ERROR`, `CANCELLED`, and others in the API reference).
+
+### Insufficient balance error
+
+When the requested amount plus the outbound fee exceeds `netBalance`, HG.Cash returns **`409`**:
+
+```json
+{
+  "error": "Insufficient net balance",
+  "code": "INSUFFICIENT_NET_BALANCE",
+  "message": "Net available balance is not enough to cover the requested amount plus the outbound fee",
+  "details": {
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "currency": "ARS",
+    "amount": 1000000,
+    "outboundFee": 10000,
+    "requiredTotal": 1010000,
+    "balance": 1000000,
+    "pendingFees": 0,
+    "netBalance": 1000000,
+    "maxWithdrawableAmount": 990000
+  }
+}
+```
+
+Use `maxWithdrawableAmount` from the error (or pre-check with the balance endpoint) before retrying with a lower `amount`.
 
 ## Related endpoints
 
