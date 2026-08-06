@@ -26,7 +26,13 @@ Pagamentos de saída são **solicitações de transação** para **CBU** ou **CV
 
 - Token Bearer com acesso à conta ARS
 - **CBU** ou **CVU** do beneficiário (22 dígitos)
-- **Saldo líquido** suficiente na conta de origem
+- **Saldo líquido** suficiente na conta de origem para o valor da transferência **mais a taxa de saída**
+
+A HG.Cash calcula a taxa de saída ao criar uma solicitação de transação (painel ou `POST /api/v1/transactions`). A solicitação é rejeitada se `amount + outboundFee` exceder `netBalance` (`balance - pendingFees` de `GET /api/v1/account/{id}/balance`).
+
+Por exemplo, com `netBalance` de **1.000.000** ARS e taxa de saída de **1%**, o máximo que você pode sacar em uma solicitação é **990.000** ARS — não o saldo integral.
+
+Se a conta não cobrir valor e taxa, a API retorna **`409`** com `code: INSUFFICIENT_NET_BALANCE` e um objeto `details` com `outboundFee`, `requiredTotal`, `netBalance` e `maxWithdrawableAmount`.
 
 ### Fluxo
 
@@ -51,6 +57,31 @@ curl -X POST https://hg.cash/api/v1/transactions \
 ```
 
 A resposta inclui `id` e `status` inicial (por exemplo `PENDING`). Use webhooks ou polling até um estado terminal.
+
+### Erro de saldo insuficiente
+
+Quando o valor solicitado mais a taxa de saída excede `netBalance`, a HG.Cash retorna **`409`**:
+
+```json
+{
+  "error": "Insufficient net balance",
+  "code": "INSUFFICIENT_NET_BALANCE",
+  "message": "Net available balance is not enough to cover the requested amount plus the outbound fee",
+  "details": {
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "currency": "ARS",
+    "amount": 1000000,
+    "outboundFee": 10000,
+    "requiredTotal": 1010000,
+    "balance": 1000000,
+    "pendingFees": 0,
+    "netBalance": 1000000,
+    "maxWithdrawableAmount": 990000
+  }
+}
+```
+
+Use `maxWithdrawableAmount` do erro (ou consulte o endpoint de saldo antes) para tentar novamente com um `amount` menor.
 
 ## Endpoints relacionados
 

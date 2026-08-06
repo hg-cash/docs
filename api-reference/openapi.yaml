@@ -961,6 +961,7 @@ paths:
         - Account must belong to the authenticated user
         - CBU must be a valid 22-digit number
         - Optional `externalID` must be unique per account if provided
+        - **Net balance must cover the requested amount plus the outbound fee** — HG.Cash calculates the fee for the request and rejects amounts where `amount + outboundFee` exceeds `netBalance` (`balance - pendingFees`). For example, with `netBalance` of `1000000` and a `1%` outbound fee, the maximum withdrawable amount is `990000`, not the full balance.
         
       operationId: createTransactionRequest
       tags:
@@ -1059,18 +1060,21 @@ paths:
                     message: "The provided externalID already exists for this account"
                 insufficient_net_balance:
                   summary: Insufficient Net Balance
-                  description: Rejected because net balance (balance - pending fees) is lower than the requested amount
+                  description: Rejected because net balance is not enough to cover the requested amount plus the outbound fee
                   value:
                     error: "Insufficient net balance"
                     code: "INSUFFICIENT_NET_BALANCE"
-                    message: "Net available balance (balance - pending fees) is not enough to cover the requested amount"
+                    message: "Net available balance is not enough to cover the requested amount plus the outbound fee"
                     details:
                       accountId: "550e8400-e29b-41d4-a716-446655440123"
                       currency: "ARS"
-                      amount: 15000.5
-                      balance: 12000
-                      pendingFees: 2000
-                      netBalance: 10000
+                      amount: 1000000
+                      outboundFee: 10000
+                      requiredTotal: 1010000
+                      balance: 1000000
+                      pendingFees: 0
+                      netBalance: 1000000
+                      maxWithdrawableAmount: 990000
         '401':
           description: Unauthorized - Invalid or missing token
           content:
