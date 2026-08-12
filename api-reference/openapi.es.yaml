@@ -622,6 +622,140 @@ components:
         pixCopiaECola: { type: string }
         checkoutUrlProvider: { type: string, format: uri }
 
+    CreateClaimRequest:
+      type: object
+      description: >
+        Datos para crear un reclamo con el comprobante de transferencia adjunto.
+        Todos los metadatos se envían de forma explícita; la API no analiza ni extrae datos del archivo.
+      required:
+        - from
+        - to
+        - operationNumber
+        - coelsaCode
+        - amount
+        - currency
+        - file
+      properties:
+        accountId:
+          type: string
+          format: uuid
+          description: Obligatorio para llamadas ADMIN; opcional para USER (asocia el reclamo solo a tu propia cuenta).
+          example: "550e8400-e29b-41d4-a716-446655440123"
+        from:
+          type: string
+          description: Cuenta de origen o nombre del pagador según el comprobante.
+          example: "Juan Pérez"
+        to:
+          type: string
+          description: Nombre de la cuenta de destino según el comprobante.
+          example: "Mi cuenta HG"
+        operationNumber:
+          type: string
+          description: Número de operación bancaria del comprobante.
+          example: "987654321"
+        coelsaCode:
+          type: string
+          pattern: '^[A-Z0-9]{22}$'
+          description: Código de identificación COELSA (exactamente 22 caracteres alfanuméricos en mayúsculas).
+          example: "67REZ8NPQDQ460QK94KVGO"
+        amount:
+          oneOf:
+            - type: number
+            - type: string
+          description: Monto positivo con como máximo 2 decimales.
+          example: 1500.00
+        currency:
+          type: string
+          enum: [ARS, USD, USDT]
+          example: "ARS"
+        file:
+          type: object
+          required: [contentBase64, mimeType, filename]
+          properties:
+            contentBase64:
+              type: string
+              description: Bytes de PDF o JPEG codificados en base64 (máx. 10 MB decodificado). Se elimina automáticamente un prefijo `data:`.
+              example: "<bytes de PDF o imagen en base64>"
+            mimeType:
+              type: string
+              enum: [application/pdf, image/jpeg, image/jpg]
+              example: "application/pdf"
+            filename:
+              type: string
+              description: Nombre de archivo original; la extensión debe coincidir con `mimeType`.
+              example: "comprobante.pdf"
+
+    CreateClaimResponse:
+      type: object
+      required:
+        - id
+        - status
+        - operationNumber
+        - coelsaCode
+        - amount
+        - currency
+        - extractedData
+        - originalFilename
+        - mimeType
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [OPEN, UNDER_REVIEW, RESOLVED, REJECTED]
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
+        operationNumber:
+          type: string
+        coelsaCode:
+          type: string
+        amount:
+          type: string
+          description: Monto decimal con 2 decimales.
+          example: "1500.00"
+        currency:
+          type: string
+          enum: [ARS, USD, USDT]
+        extractedData:
+          type: object
+          properties:
+            from:
+              type: string
+              nullable: true
+            to:
+              type: string
+              nullable: true
+        originalFilename:
+          type: string
+        mimeType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ClaimResponse:
+      allOf:
+        - $ref: '#/components/schemas/CreateClaimResponse'
+        - type: object
+          properties:
+            transactionId:
+              type: string
+              format: uuid
+              nullable: true
+              description: ID de la transacción vinculada cuando la conciliación encontró un match.
+            fileUrl:
+              type: string
+              format: uri
+              nullable: true
+              description: URL firmada de duración limitada (~7 días) para descargar el comprobante.
+            updatedAt:
+              type: string
+              format: date-time
+
     InboundTransactionRequest:
       type: object
       description: Solicitud para crear una transacción entrante (cobro) en cuentas BRL de Brasil
@@ -1270,6 +1404,89 @@ paths:
           description: URL firmada del comprobante subido
         '404':
           description: No encontrado
+
+  /claims:
+    post:
+      summary: Crear reclamo con comprobante adjunto
+      description: |
+        Crea un reclamo con la evidencia del comprobante de transferencia adjunta como PDF o JPEG codificado en base64.
+        Todos los campos de metadatos deben enviarse de forma explícita; la API no analiza ni extrae datos del archivo.
+        Las llamadas ADMIN deben incluir `accountId`. Las llamadas USER pueden omitir `accountId` o asociar el reclamo solo a su propia cuenta.
+        Requiere que la función Reclamos (`canAccessClaims`) esté habilitada para quien llama.
+      operationId: createClaim
+      tags: [Claims]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClaimRequest'
+            example:
+              accountId: "550e8400-e29b-41d4-a716-446655440123"
+              from: "Juan Pérez"
+              to: "Mi cuenta HG"
+              operationNumber: "987654321"
+              coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+              amount: 1500.00
+              currency: "ARS"
+              file:
+                contentBase64: "<bytes de PDF o imagen en base64>"
+                mimeType: "application/pdf"
+                filename: "comprobante.pdf"
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateClaimResponse'
+        '400':
+          description: Error de validación (campos inválidos, base64, tipo MIME o archivo demasiado grande)
+        '401':
+          description: No autorizado
+        '403':
+          description: Prohibido — función de reclamos deshabilitada o cuenta fuera de alcance
+        '404':
+          description: Cuenta no encontrada
+        '429':
+          description: Límite de tasa excedido
+        '500':
+          description: Error interno del servidor
+
+  /claims/{id}:
+    get:
+      summary: Obtener reclamo por ID
+      description: |
+        Devuelve un reclamo creado por el usuario autenticado o visible para un administrador con alcance.
+        Incluye una `fileUrl` firmada de duración limitada cuando hay evidencia almacenada.
+      operationId: getClaim
+      tags: [Claims]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          description: ID de reclamo inválido
+        '401':
+          description: No autorizado
+        '403':
+          description: Prohibido — función de reclamos deshabilitada o reclamo fuera de alcance
+        '404':
+          description: Reclamo no encontrado
+        '429':
+          description: Límite de tasa excedido
+        '500':
+          description: Error interno del servidor
 
   /br/transactions/inbound:
     post:
@@ -2289,3 +2506,5 @@ tags:
     description: "Bolivia — Cash-in con QR y payouts ACH (BOB)."
   - name: Checkouts
     description: "Sesiones de checkout hospedado para AR, BR, CL y BO"
+  - name: Claims
+    description: "Reclamos con evidencia de comprobante de transferencia"

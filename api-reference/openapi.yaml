@@ -622,6 +622,140 @@ components:
         pixCopiaECola: { type: string }
         checkoutUrlProvider: { type: string, format: uri }
 
+    CreateClaimRequest:
+      type: object
+      description: >
+        Payload to create a dispute claim ("reclamo") with a transfer receipt attached.
+        All metadata is supplied explicitly; the API does not parse or extract data from the file.
+      required:
+        - from
+        - to
+        - operationNumber
+        - coelsaCode
+        - amount
+        - currency
+        - file
+      properties:
+        accountId:
+          type: string
+          format: uuid
+          description: Required for ADMIN callers; optional for USER callers (associates the claim to your own account only).
+          example: "550e8400-e29b-41d4-a716-446655440123"
+        from:
+          type: string
+          description: Origin account or payer name from the receipt.
+          example: "Juan Pérez"
+        to:
+          type: string
+          description: Destination account name from the receipt.
+          example: "Mi cuenta HG"
+        operationNumber:
+          type: string
+          description: Bank operation number from the receipt.
+          example: "987654321"
+        coelsaCode:
+          type: string
+          pattern: '^[A-Z0-9]{22}$'
+          description: COELSA identification code (exactly 22 uppercase alphanumeric characters).
+          example: "67REZ8NPQDQ460QK94KVGO"
+        amount:
+          oneOf:
+            - type: number
+            - type: string
+          description: Positive amount with at most 2 decimal places.
+          example: 1500.00
+        currency:
+          type: string
+          enum: [ARS, USD, USDT]
+          example: "ARS"
+        file:
+          type: object
+          required: [contentBase64, mimeType, filename]
+          properties:
+            contentBase64:
+              type: string
+              description: Base64-encoded PDF or JPEG bytes (max 10 MB decoded). A `data:` URI prefix is stripped automatically.
+              example: "<base64-encoded PDF or image bytes>"
+            mimeType:
+              type: string
+              enum: [application/pdf, image/jpeg, image/jpg]
+              example: "application/pdf"
+            filename:
+              type: string
+              description: Original filename; the extension must match `mimeType`.
+              example: "comprobante.pdf"
+
+    CreateClaimResponse:
+      type: object
+      required:
+        - id
+        - status
+        - operationNumber
+        - coelsaCode
+        - amount
+        - currency
+        - extractedData
+        - originalFilename
+        - mimeType
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [OPEN, UNDER_REVIEW, RESOLVED, REJECTED]
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
+        operationNumber:
+          type: string
+        coelsaCode:
+          type: string
+        amount:
+          type: string
+          description: Decimal amount formatted with 2 decimal places.
+          example: "1500.00"
+        currency:
+          type: string
+          enum: [ARS, USD, USDT]
+        extractedData:
+          type: object
+          properties:
+            from:
+              type: string
+              nullable: true
+            to:
+              type: string
+              nullable: true
+        originalFilename:
+          type: string
+        mimeType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ClaimResponse:
+      allOf:
+        - $ref: '#/components/schemas/CreateClaimResponse'
+        - type: object
+          properties:
+            transactionId:
+              type: string
+              format: uuid
+              nullable: true
+              description: Linked transaction ID when reconciliation has matched the claim.
+            fileUrl:
+              type: string
+              format: uri
+              nullable: true
+              description: Time-limited signed URL (valid ~7 days) to download the receipt evidence.
+            updatedAt:
+              type: string
+              format: date-time
+
     InboundTransactionRequest:
       type: object
       description: Request to create an inbound transaction (receive payment) for Brazil BRL accounts
@@ -1271,6 +1405,89 @@ paths:
           description: Signed URL for uploaded receipt
         '404':
           description: Not Found
+
+  /claims:
+    post:
+      summary: Create claim with receipt attachment
+      description: |
+        Creates a dispute claim ("reclamo") with transfer receipt evidence attached as a base64-encoded PDF or JPEG.
+        All metadata fields must be supplied explicitly; the API does not parse or extract data from the file.
+        ADMIN callers must include `accountId`. USER callers may omit `accountId` or associate the claim to their own account only.
+        Requires the Claims feature (`canAccessClaims`) to be enabled for the caller.
+      operationId: createClaim
+      tags: [Claims]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClaimRequest'
+            example:
+              accountId: "550e8400-e29b-41d4-a716-446655440123"
+              from: "Juan Pérez"
+              to: "Mi cuenta HG"
+              operationNumber: "987654321"
+              coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+              amount: 1500.00
+              currency: "ARS"
+              file:
+                contentBase64: "<base64-encoded PDF or image bytes>"
+                mimeType: "application/pdf"
+                filename: "comprobante.pdf"
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateClaimResponse'
+        '400':
+          description: Validation error (invalid fields, base64, MIME type, or oversize file)
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden — claims feature disabled or account out of scope
+        '404':
+          description: Account not found
+        '429':
+          description: Rate limit exceeded
+        '500':
+          description: Internal Server Error
+
+  /claims/{id}:
+    get:
+      summary: Get claim by ID
+      description: |
+        Returns a single claim created by the authenticated user or visible to a scoped admin.
+        Includes a time-limited signed `fileUrl` when receipt evidence is stored.
+      operationId: getClaim
+      tags: [Claims]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          description: Invalid claim ID
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden — claims feature disabled or claim out of scope
+        '404':
+          description: Claim not found
+        '429':
+          description: Rate limit exceeded
+        '500':
+          description: Internal Server Error
 
   /br/transactions/inbound:
     post:
@@ -2290,3 +2507,5 @@ tags:
     description: "QR cash-in and ACH payouts for Bolivia (BOB)"
   - name: Checkouts
     description: "Hosted checkout sessions for AR, BR, CL, and BO"
+  - name: Claims
+    description: "Dispute claims with transfer receipt evidence"
