@@ -15,7 +15,7 @@ In the HG.cash dashboard (**Claims** in the sidebar), you can:
 - **Track status** and comment history for each claim
 - **Receive email** when a claim is automatically matched to a transaction by COELSA code
 
-HG.cash operations can **review**, change status, add internal comments, and (for scoped admins) filter claims by user or account. Claims are a **dashboard workflow**—there is no public REST API for creating or managing claims.
+HG.cash operations can **review**, change status, add internal comments, and (for scoped admins) filter claims by user or account. Beyond the dashboard, you can also **create and retrieve claims programmatically** through the REST API—see [Create and retrieve claims via API](#create-and-retrieve-claims-via-api).
 
 ## Overview
 
@@ -70,6 +70,45 @@ Each claim record can include:
 | **Scoped admin** | Same as admin, limited to **allowed accounts** (direct claim account or transaction account). |
 
 The **Claims** section must be enabled for your user (`canAccessClaims`). If you do not see **Claims** in the sidebar, contact HG.cash support.
+
+## Create and retrieve claims via API
+
+You can create and read claims programmatically with the same Bearer token used for the rest of the API. The Claims feature (`canAccessClaims`) must be enabled for the caller.
+
+Unlike the dashboard, the API does **not** parse or extract data from the receipt. You must send every metadata field explicitly and attach a single file as base64.
+
+| Endpoint | Description |
+| --- | --- |
+| `POST /claims` | Create a claim with receipt evidence. Send `from`, `to`, `operationNumber`, `coelsaCode`, `amount`, `currency`, and a `file` (base64 `contentBase64`, `mimeType`, `filename`). |
+| `GET /claims/{id}` | Retrieve a claim by ID, including a time-limited signed `fileUrl` for the stored receipt. |
+
+Key rules for the create endpoint:
+
+- **Metadata is explicit** — `from`, `to`, `operationNumber`, `coelsaCode`, `amount`, and `currency` are all required. There is no OCR or LLM step.
+- **COELSA code** must be exactly 22 uppercase alphanumeric characters.
+- **File** is a single attachment: base64-encoded `application/pdf`, `image/jpeg`, or `image/jpg`, up to **10 MB** decoded, with a `filename` extension that matches its `mimeType`.
+- **Account scope** — ADMIN callers must include `accountId`; USER callers may omit it or associate the claim to their own account only.
+
+```bash
+curl -X POST https://hg.cash/api/v1/claims \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer cash_your_token_here" \
+  -d '{
+    "from": "Juan Pérez",
+    "to": "Mi cuenta HG",
+    "operationNumber": "987654321",
+    "coelsaCode": "67REZ8NPQDQ460QK94KVGO",
+    "amount": 1500.00,
+    "currency": "ARS",
+    "file": {
+      "contentBase64": "<base64-encoded PDF or image bytes>",
+      "mimeType": "application/pdf",
+      "filename": "comprobante.pdf"
+    }
+  }'
+```
+
+For full request and response schemas, see the **Claims** group in the [API reference](/api-reference).
 
 ## Automatic reconciliation
 

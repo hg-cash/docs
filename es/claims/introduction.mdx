@@ -15,7 +15,7 @@ En el panel de HG.cash (**Reclamos** en la barra lateral) podés:
 - **Seguir el estado** y el historial de comentarios de cada reclamo
 - **Recibir un email** cuando un reclamo se vincula automáticamente a una transacción por código COELSA
 
-El equipo de HG.cash puede **revisar**, cambiar el estado, agregar comentarios internos y (para administradores con alcance) filtrar por usuario o cuenta. Los reclamos son un flujo del **panel** — no hay API REST pública para crearlos ni gestionarlos.
+El equipo de HG.cash puede **revisar**, cambiar el estado, agregar comentarios internos y (para administradores con alcance) filtrar por usuario o cuenta. Además del panel, también podés **crear y consultar reclamos de forma programática** mediante la API REST — ver [Crear y consultar reclamos con la API](#crear-y-consultar-reclamos-con-la-api).
 
 ## Resumen
 
@@ -70,6 +70,45 @@ Cada registro puede incluir:
 | **Admin con alcance** | Igual que admin, limitado a **cuentas permitidas** (cuenta del reclamo o de la transacción). |
 
 La sección **Reclamos** debe estar habilitada (`canAccessClaims`). Si no ves **Reclamos** en la barra lateral, contactá a soporte de HG.cash.
+
+## Crear y consultar reclamos con la API
+
+Podés crear y leer reclamos de forma programática con el mismo token Bearer que usás para el resto de la API. La función Reclamos (`canAccessClaims`) debe estar habilitada para quien llama.
+
+A diferencia del panel, la API **no** analiza ni extrae datos del comprobante. Tenés que enviar cada campo de metadatos de forma explícita y adjuntar un único archivo en base64.
+
+| Endpoint | Descripción |
+| --- | --- |
+| `POST /claims` | Crea un reclamo con la evidencia del comprobante. Enviá `from`, `to`, `operationNumber`, `coelsaCode`, `amount`, `currency` y un `file` (base64 `contentBase64`, `mimeType`, `filename`). |
+| `GET /claims/{id}` | Obtiene un reclamo por ID, incluyendo una `fileUrl` firmada de duración limitada para descargar el comprobante. |
+
+Reglas clave del endpoint de creación:
+
+- **Los metadatos son explícitos** — `from`, `to`, `operationNumber`, `coelsaCode`, `amount` y `currency` son todos obligatorios. No hay paso de OCR ni de LLM.
+- **El código COELSA** debe tener exactamente 22 caracteres alfanuméricos en mayúsculas.
+- **El archivo** es un único adjunto: `application/pdf`, `image/jpeg` o `image/jpg` codificado en base64, de hasta **10 MB** decodificado, con una extensión de `filename` que coincida con su `mimeType`.
+- **Alcance de cuenta** — las llamadas ADMIN deben incluir `accountId`; las llamadas USER pueden omitirlo o asociar el reclamo solo a su propia cuenta.
+
+```bash
+curl -X POST https://hg.cash/api/v1/claims \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer cash_your_token_here" \
+  -d '{
+    "from": "Juan Pérez",
+    "to": "Mi cuenta HG",
+    "operationNumber": "987654321",
+    "coelsaCode": "67REZ8NPQDQ460QK94KVGO",
+    "amount": 1500.00,
+    "currency": "ARS",
+    "file": {
+      "contentBase64": "<bytes de PDF o imagen en base64>",
+      "mimeType": "application/pdf",
+      "filename": "comprobante.pdf"
+    }
+  }'
+```
+
+Para los esquemas completos de solicitud y respuesta, ver el grupo **Claims** en la [Referencia API](/api-reference).
 
 ## Conciliación automática
 
