@@ -41,7 +41,7 @@ Pagadores **não fazem login** na HG.Cash na página pública. Seu backend (ou o
 
 ## Webhooks
 
-Quando um checkout muda de estado, a HG.Cash pode enviar webhook **`CHECKOUT`** (`checkout.completed`, `checkout.awaiting_manual_review` ou `checkout.rejected`). Configure **`webhookUrl`** por checkout na criação ou a URL padrão do usuário. Veja [Receber webhooks](/pt-BR/developers/receiving-webhooks) para assinatura HMAC.
+Quando um checkout muda de estado, a HG.Cash pode enviar webhook **`CHECKOUT`** (`checkout.completed`, `checkout.awaiting_manual_review` ou `checkout.rejected`). Configure **`webhookUrl`** por checkout na criação ou a URL padrão do usuário. Em **`checkout.completed`**, quando há uma transação de ledger vinculada, o webhook inclui um objeto **`transaction`** aninhado com os mesmos campos de movimentação de um webhook de [**Movimentação de conta**](/api-reference/webhooks/account-movement) (sem `topic` nem `eventType`). Veja [Receber webhooks](/pt-BR/developers/receiving-webhooks) para assinatura HMAC.
 
 ## Guias nesta seção
 
