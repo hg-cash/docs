@@ -110,13 +110,19 @@ curl -X POST https://hg.cash/api/v1/claims \
 
 For full request and response schemas, see the **Claims** group in the [API reference](/api-reference).
 
+## Webhook notifications
+
+When a claim's **status changes**—from an admin update or COELSA auto-reconcile—HG.cash POSTs a webhook to your user's **default webhook URL** with **`topic` `CLAIM`** and **`eventType` `status_change`**. The body matches the `GET /claims/{id}` fields (without `fileUrl`) plus routing metadata, and an optional **`comment`** field carries the latest comment text when the update included one.
+
+Webhooks are **not** sent when a claim is created (the create response already contains the claim) or on comment-only updates. Configure your default webhook URL and signing secret in **Settings**. See [Claim status updated](/api-reference/webhooks/claim-status-updated) for the full payload and [Receiving webhooks](/developers/receiving-webhooks) for delivery, retries, and signature verification.
+
 ## Automatic reconciliation
 
 In production, a scheduled job runs approximately **every 20 minutes**:
 
 1. Selects claims in `OPEN` or `UNDER_REVIEW` created in the last **48 hours** with a non-empty **COELSA** code.
 2. Finds the latest non-deleted **Transaction** with the same COELSA code (case-insensitive).
-3. Sets the claim to **`RESOLVED`**, appends a system comment with the transaction ID, and sends a **claim matched** email when your user email is on file.
+3. Sets the claim to **`RESOLVED`**, appends a system comment with the transaction ID, sends a **claim matched** email when your user email is on file, and emits a **`CLAIM` / `status_change`** [webhook](#webhook-notifications) when your default webhook URL is configured.
 
 If no transaction exists yet, leave the claim **OPEN**—matching can succeed once the inbound transfer is ingested. For older claims or missing COELSA on the receipt, rely on **admin review**.
 

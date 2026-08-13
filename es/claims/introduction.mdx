@@ -110,13 +110,19 @@ curl -X POST https://hg.cash/api/v1/claims \
 
 Para los esquemas completos de solicitud y respuesta, ver el grupo **Claims** en la [Referencia API](/api-reference).
 
+## Notificaciones de webhook
+
+Cuando cambia el **estado** de un reclamo —por una actualización de un administrador o por la autoconciliación de COELSA— HG.cash envía un webhook (`POST`) a la **URL de webhook predeterminada** de tu usuario con **`topic` `CLAIM`** y **`eventType` `status_change`**. El cuerpo coincide con los campos de `GET /claims/{id}` (sin `fileUrl`) más los metadatos de enrutamiento, y un campo **`comment`** opcional incluye el texto del último comentario cuando la actualización lo incluyó.
+
+Los webhooks **no** se envían al crear un reclamo (la respuesta de creación ya contiene el reclamo) ni en actualizaciones que solo agregan un comentario. Configurá tu URL de webhook predeterminada y el secreto de firma en **Configuración**. Ver [Estado de reclamo actualizado](/api-reference/webhooks/claim-status-updated) para el payload completo y [Recibir webhooks](/es/developers/receiving-webhooks) para entrega, reintentos y verificación de firma.
+
 ## Conciliación automática
 
 En producción, un job programado corre aproximadamente **cada 20 minutos**:
 
 1. Toma reclamos en `OPEN` o `UNDER_REVIEW` de las últimas **48 horas** con **COELSA** no vacío.
 2. Busca la última **Transaction** no eliminada con el mismo COELSA (sin distinguir mayúsculas/minúsculas).
-3. Pasa el reclamo a **`RESOLVED`**, agrega un comentario de sistema con el ID de transacción y envía email de **reclamo conciliado** si hay email de usuario.
+3. Pasa el reclamo a **`RESOLVED`**, agrega un comentario de sistema con el ID de transacción, envía email de **reclamo conciliado** si hay email de usuario y emite un webhook **`CLAIM` / `status_change`** cuando tu URL de webhook predeterminada está configurada.
 
 Si la transacción aún no existe, dejá el reclamo en **OPEN** — el match puede completarse cuando se ingeste el movimiento. Para reclamos más viejos o sin COELSA en el comprobante, dependé de la **revisión manual**.
 

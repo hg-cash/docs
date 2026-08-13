@@ -777,6 +777,95 @@ components:
               type: string
               format: date-time
 
+    ClaimStatusWebhook:
+      type: object
+      description: |
+        Payload enviado a tu endpoint de webhook cuando cambia el estado de un reclamo (actualización de un administrador o autoconciliación por COELSA).
+
+        **Cabeceras:** Cuando configuras un secreto de firma de webhook en la configuración de la cuenta, HG.Cash envía la cabecera `X-HG-Webhook-Signature: sha256=<hex>`, cuyo valor es el HMAC-SHA256 del cuerpo JSON en crudo usando tu secreto. Verifícalo para asegurar que la solicitud es auténtica.
+
+        Notas:
+        - Los valores numéricos (como `amount`) se envían como cadenas para preservar la precisión.
+        - `fileUrl` no se incluye (las URL firmadas expiran).
+        - No se envían webhooks al crear un reclamo ni en actualizaciones que solo agregan un comentario.
+        - Configura tu URL de webhook en la configuración de usuario.
+      required:
+        - topic
+        - eventType
+        - id
+        - status
+        - operationNumber
+        - coelsaCode
+        - amount
+        - currency
+        - extractedData
+        - originalFilename
+        - mimeType
+        - createdAt
+        - updatedAt
+      properties:
+        topic:
+          type: string
+          description: Tema del webhook para enrutamiento (siempre `CLAIM` para webhooks de reclamos)
+          enum: [CLAIM]
+          example: "CLAIM"
+        eventType:
+          type: string
+          description: Tipo de evento dentro del tema
+          enum: [status_change]
+          example: "status_change"
+        id:
+          type: string
+          format: uuid
+          description: ID del reclamo
+        status:
+          type: string
+          enum: [OPEN, UNDER_REVIEW, RESOLVED, REJECTED]
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
+        transactionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID de la transacción vinculada cuando la conciliación encontró un match
+        operationNumber:
+          type: string
+        coelsaCode:
+          type: string
+        amount:
+          type: string
+          nullable: true
+          description: Monto decimal con 2 decimales
+        currency:
+          type: string
+          enum: [ARS, USD, USDT]
+        extractedData:
+          type: object
+          properties:
+            from:
+              type: string
+              nullable: true
+            to:
+              type: string
+              nullable: true
+        originalFilename:
+          type: string
+          nullable: true
+        mimeType:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          description: Texto del último comentario cuando la actualización de estado incluyó un comentario (se elimina el prefijo de marca de tiempo ISO)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     InboundTransactionRequest:
       type: object
       description: Solicitud para crear una transacción entrante (cobro) en cuentas BRL de Brasil
@@ -2530,6 +2619,45 @@ webhooks:
                     accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
                   metadata: { adapterTransactionId: "in1345115478", user_id: "109659669" }
                   completedAt: "2026-08-10T06:02:57.136Z"
+  claim-status-updated:
+    post:
+      summary: Estado de reclamo actualizado
+      description: |
+        HG.Cash envía este webhook cuando cambia el estado de un reclamo (actualización de un administrador o autoconciliación por COELSA).
+        El cuerpo coincide con los campos de `GET /claims/{id}` (sin `fileUrl`) más los metadatos de enrutamiento. No se envían webhooks al crear ni en actualizaciones que solo agregan un comentario.
+      operationId: claimStatusUpdatedWebhook
+      tags:
+        - Webhooks
+      security:
+        - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimStatusWebhook'
+            examples:
+              resolved:
+                summary: Reclamo resuelto con transacción vinculada
+                value:
+                  topic: "CLAIM"
+                  eventType: "status_change"
+                  id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                  status: "RESOLVED"
+                  accountId: "550e8400-e29b-41d4-a716-446655440123"
+                  transactionId: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  operationNumber: "987654321"
+                  coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+                  amount: "1500.00"
+                  currency: "ARS"
+                  extractedData:
+                    from: "Juan Pérez"
+                    to: "Mi cuenta HG"
+                  originalFilename: "comprobante.pdf"
+                  mimeType: "application/pdf"
+                  comment: "Transacción encontrada. ID: 040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  createdAt: "2026-08-13T16:02:11.000Z"
+                  updatedAt: "2026-08-13T18:40:03.000Z"
 tags:
   - name: Transacciones
     description: "Gestión de transacciones - Crear y administrar transacciones en el sistema HG.Cash. Todos los endpoints de transacciones requieren autenticación."

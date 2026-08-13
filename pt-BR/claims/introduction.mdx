@@ -110,13 +110,19 @@ curl -X POST https://hg.cash/api/v1/claims \
 
 Para os esquemas completos de requisição e resposta, veja o grupo **Claims** na [Referência da API](/api-reference).
 
+## Notificações de webhook
+
+Quando o **status** de uma reclamação muda —por uma atualização de um administrador ou pela autoconciliação da COELSA— a HG.cash envia um webhook (`POST`) para a **URL de webhook padrão** do seu usuário com **`topic` `CLAIM`** e **`eventType` `status_change`**. O corpo corresponde aos campos de `GET /claims/{id}` (sem `fileUrl`) mais os metadados de roteamento, e um campo **`comment`** opcional inclui o texto do último comentário quando a atualização o incluiu.
+
+Webhooks **não** são enviados na criação de uma reclamação (a resposta de criação já contém a reclamação) nem em atualizações que apenas adicionam um comentário. Configure a URL do seu webhook padrão e o segredo de assinatura em **Configurações**. Veja [Status da reclamação atualizado](/api-reference/webhooks/claim-status-updated) para o payload completo e [Receber webhooks](/pt-BR/developers/receiving-webhooks) para entrega, retentativas e verificação de assinatura.
+
 ## Conciliação automática
 
 Em produção, um job agendado roda aproximadamente **a cada 20 minutos**:
 
 1. Seleciona reclamações em `OPEN` ou `UNDER_REVIEW` das últimas **48 horas** com **COELSA** preenchido.
 2. Encontra a última **Transaction** não excluída com o mesmo COELSA (sem diferenciar maiúsculas/minúsculas).
-3. Define **`RESOLVED`**, adiciona comentário de sistema com o ID da transação e envia e-mail de **reclamação conciliada** quando houver e-mail do usuário.
+3. Define **`RESOLVED`**, adiciona comentário de sistema com o ID da transação, envia e-mail de **reclamação conciliada** quando houver e-mail do usuário e emite um webhook **`CLAIM` / `status_change`** quando a URL do seu webhook padrão estiver configurada.
 
 Se a transação ainda não existir, mantenha a reclamação em **OPEN** — o match pode concluir quando o movimento for ingerido. Para reclamações mais antigas ou sem COELSA no comprovante, use **revisão manual**.
 

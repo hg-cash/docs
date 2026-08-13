@@ -22,6 +22,7 @@ Los payloads tienen la misma forma sin importar la cola: **`Content-Type: applic
 | `TRANSACTION` | `created` | Nuevo movimiento de cuenta persistido |
 | `TRANSACTION` | `status_change` | Actualización de estado de movimiento existente |
 | `CHECKOUT` | `checkout.completed`, `checkout.awaiting_manual_review`, `checkout.rejected` | Ciclo de checkout hospedado |
+| `CLAIM` | `status_change` | Estado de reclamo cambiado por un administrador o por autoconciliación de COELSA |
 
 Las solicitudes de transacción usan siempre **`topic` `TRANSACTION_REQUEST`**. Cuando un cash-out se vincula al movimiento bancario, busque **`eventType` `transaction_associated`** (no un topic separado).
 
@@ -31,6 +32,7 @@ La **forma del payload y ejemplos** están en la **referencia API** (pestaña **
 - **Solicitud vinculada a la transacción de libro** (después de asociar el cash-out con el movimiento bancario): [**Solicitud de transacción asociada**](/api-reference/webhooks/transaction-request-associated) — mismo esquema con **`transactionId`** obligatorio, **`topic` `TRANSACTION_REQUEST`** y **`eventType` `transaction_associated`**.
 - **Movimientos de libro / cuenta** (dinero entrante o saliente de tus cuentas HG.Cash; `type` es el nombre del tipo de movimiento como `inbound` u `outbound`): [**Movimiento de cuenta**](/api-reference/webhooks/account-movement) — esquema **`AccountMovementWebhook`** con ejemplo completo.
 - **Checkouts hospedados** (`event` como `checkout.completed`): [**Eventos de checkout**](/api-reference/webhooks/checkout-completed) — esquema **`WebhookCheckoutPayload`**. En **`checkout.completed`**, cuando hay una transacción de libro vinculada, la carga incluye un objeto **`transaction`** anidado (mismos campos que [**Movimiento de cuenta**](/api-reference/webhooks/account-movement), sin `topic` ni `eventType`). Ver **[Checkout hospedado](/es/developers/checkout)**.
+- **Cambios de estado de reclamo** (`topic` `CLAIM`, `eventType` `status_change`): [**Estado de reclamo actualizado**](/api-reference/webhooks/claim-status-updated) — esquema **`ClaimStatusWebhook`**. Se envía a tu **URL de webhook predeterminada** cuando un administrador actualiza un reclamo o COELSA lo autoconcilia. El cuerpo coincide con la respuesta de **Obtener reclamo** (`GET /claims/{id}`, sin `fileUrl`) más los metadatos de enrutamiento, con un campo **`comment`** opcional. **No** se envían webhooks al crear un reclamo ni en actualizaciones que solo agregan un comentario. Ver **[Reclamos](/es/claims/introduction)**.
 
 **Solicitudes de transacción (`type: "request"`)**
 
