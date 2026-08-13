@@ -777,6 +777,95 @@ components:
               type: string
               format: date-time
 
+    ClaimStatusWebhook:
+      type: object
+      description: |
+        Payload sent to your webhook endpoint when a claim status changes (admin update or COELSA auto-reconcile).
+
+        **Headers:** When you configure a webhook signing secret in account settings, HG.Cash sends the header `X-HG-Webhook-Signature: sha256=<hex>` where the value is HMAC-SHA256 of the raw JSON body using your secret. Verify this to ensure the request is authentic.
+
+        Notes:
+        - Numeric values (like `amount`) are sent as strings to preserve precision.
+        - `fileUrl` is not included (signed URLs expire).
+        - Webhooks are not sent on claim create or comment-only updates.
+        - Configure your webhook URL in user settings.
+      required:
+        - topic
+        - eventType
+        - id
+        - status
+        - operationNumber
+        - coelsaCode
+        - amount
+        - currency
+        - extractedData
+        - originalFilename
+        - mimeType
+        - createdAt
+        - updatedAt
+      properties:
+        topic:
+          type: string
+          description: Webhook topic for routing (always `CLAIM` for claim webhooks)
+          enum: [CLAIM]
+          example: "CLAIM"
+        eventType:
+          type: string
+          description: Event kind within the topic
+          enum: [status_change]
+          example: "status_change"
+        id:
+          type: string
+          format: uuid
+          description: Claim ID
+        status:
+          type: string
+          enum: [OPEN, UNDER_REVIEW, RESOLVED, REJECTED]
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
+        transactionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Linked transaction ID when reconciliation has matched the claim
+        operationNumber:
+          type: string
+        coelsaCode:
+          type: string
+        amount:
+          type: string
+          nullable: true
+          description: Decimal amount formatted with 2 decimal places
+        currency:
+          type: string
+          enum: [ARS, USD, USDT]
+        extractedData:
+          type: object
+          properties:
+            from:
+              type: string
+              nullable: true
+            to:
+              type: string
+              nullable: true
+        originalFilename:
+          type: string
+          nullable: true
+        mimeType:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          description: Latest comment text when the status update included a comment (ISO timestamp prefix stripped)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     InboundTransactionRequest:
       type: object
       description: Request to create an inbound transaction (receive payment) for Brazil BRL accounts
@@ -2531,6 +2620,45 @@ webhooks:
                     accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
                   metadata: { adapterTransactionId: "in1345115478", user_id: "109659669" }
                   completedAt: "2026-08-10T06:02:57.136Z"
+  claim-status-updated:
+    post:
+      summary: Claim status updated
+      description: |
+        HG.Cash sends this webhook when a claim status changes (admin update or COELSA auto-reconcile).
+        The body matches `GET /claims/{id}` fields (without `fileUrl`) plus routing metadata. Webhooks are not sent on create or comment-only updates.
+      operationId: claimStatusUpdatedWebhook
+      tags:
+        - Webhooks
+      security:
+        - webhookHmac: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimStatusWebhook'
+            examples:
+              resolved:
+                summary: Claim resolved with matched transaction
+                value:
+                  topic: "CLAIM"
+                  eventType: "status_change"
+                  id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                  status: "RESOLVED"
+                  accountId: "550e8400-e29b-41d4-a716-446655440123"
+                  transactionId: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  operationNumber: "987654321"
+                  coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+                  amount: "1500.00"
+                  currency: "ARS"
+                  extractedData:
+                    from: "Juan Pérez"
+                    to: "Mi cuenta HG"
+                  originalFilename: "comprobante.pdf"
+                  mimeType: "application/pdf"
+                  comment: "Transacción encontrada. ID: 040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  createdAt: "2026-08-13T16:02:11.000Z"
+                  updatedAt: "2026-08-13T18:40:03.000Z"
 tags:
   - name: Transactions
     description: "Transaction Management - Create and manage transactions in the HG.Cash system. All transaction endpoints require authentication."

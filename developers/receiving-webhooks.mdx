@@ -22,6 +22,7 @@ Payloads are identical in shape regardless of queue: **`Content-Type: applicatio
 | `TRANSACTION` | `created` | New account movement persisted |
 | `TRANSACTION` | `status_change` | Existing movement status updated |
 | `CHECKOUT` | `checkout.completed`, `checkout.awaiting_manual_review`, `checkout.rejected` | Hosted checkout lifecycle |
+| `CLAIM` | `status_change` | Claim status changed by an admin update or COELSA auto-reconcile |
 
 Transaction request webhooks always use **`topic` `TRANSACTION_REQUEST`**. When a cash-out is linked to its bank movement, look for **`eventType` `transaction_associated`** (not a separate topic).
 
@@ -31,6 +32,7 @@ Transaction request webhooks always use **`topic` `TRANSACTION_REQUEST`**. When 
 - **Transaction request linked to ledger row** (after Urbana associates the cash-out with the bank movement): [**Transaction request associated**](/api-reference/webhooks/transaction-request-associated) — same schema with required **`transactionId`**, **`topic` `TRANSACTION_REQUEST`**, and **`eventType` `transaction_associated`**. You may receive this in addition to a status update when the link is established.
 - **Ledger / account movements** (money in or out of your HG.Cash accounts; `type` is your movement / transaction type name such as `inbound` or `outbound`): [**Account movement**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** with a full example payload.
 - **Hosted checkouts** (`event` such as `checkout.completed`): [**Checkout events**](/api-reference/webhooks/checkout-completed) — schema **`WebhookCheckoutPayload`**. On **`checkout.completed`**, when a ledger transaction is linked, the payload includes a nested **`transaction`** object (same fields as [**Account movement**](/api-reference/webhooks/account-movement), without `topic` or `eventType`). See **[Hosted checkout](/developers/checkout)** for flows by country.
+- **Claim status changes** (`topic` `CLAIM`, `eventType` `status_change`): [**Claim status updated**](/api-reference/webhooks/claim-status-updated) — schema **`ClaimStatusWebhook`**. Sent to your **default webhook URL** when a claim is updated by an admin or auto-reconciled by COELSA. The body matches the **Get claim** (`GET /claims/{id}`) response (without `fileUrl`) plus routing metadata, with an optional **`comment`** field. Webhooks are **not** sent on claim create or comment-only updates. See **[Claims](/claims/introduction)** for the full flow.
 
 **Transaction requests (`type: "request"`)**
 
