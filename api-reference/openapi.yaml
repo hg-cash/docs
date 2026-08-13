@@ -405,16 +405,11 @@ components:
           type: string
           format: uuid
           description: Linked ledger transaction ID (included on transaction_associated webhooks)
-    AccountMovementWebhook:
+    AccountMovementWebhookBody:
       type: object
       description: |
-        Payload sent to your webhook endpoint whenever money moves in or out of one of your HG.Cash accounts.
-        
-        **Headers:** When you configure a webhook signing secret in account settings, HG.Cash sends the header `X-HG-Webhook-Signature: sha256=<hex>` where the value is HMAC-SHA256 of the raw JSON body using your secret. Verify this to ensure the request is authentic.
-        
-        Notes:
-        - Numeric values (like `amount`, CBU/CUIT) are sent as strings to preserve precision and formatting.
-        - `date` is a local date-time and must be interpreted using `timezone`.
+        Core ledger movement fields (without routing metadata).
+        Numeric values (like `amount`, CBU/CUIT) are sent as strings. `date` is local and must be interpreted using `timezone`.
       required:
         - id
         - externalID
@@ -426,19 +421,7 @@ components:
         - accountId
         - date
         - timezone
-        - topic
-        - eventType
       properties:
-        topic:
-          type: string
-          description: Webhook topic for routing
-          enum: [TRANSACTION]
-          example: "TRANSACTION"
-        eventType:
-          type: string
-          description: Event kind within the topic
-          enum: [created, status_change]
-          example: "created"
         id:
           type: string
           format: uuid
@@ -500,9 +483,44 @@ components:
           type: string
           description: Coelsa transaction code
 
+    AccountMovementWebhook:
+      type: object
+      description: |
+        Payload sent to your webhook endpoint whenever money moves in or out of one of your HG.Cash accounts.
+        
+        **Headers:** When you configure a webhook signing secret in account settings, HG.Cash sends the header `X-HG-Webhook-Signature: sha256=<hex>` where the value is HMAC-SHA256 of the raw JSON body using your secret. Verify this to ensure the request is authentic.
+        
+        Notes:
+        - Numeric values (like `amount`, CBU/CUIT) are sent as strings to preserve precision and formatting.
+        - `date` is a local date-time and must be interpreted using `timezone`.
+      allOf:
+        - $ref: '#/components/schemas/AccountMovementWebhookBody'
+        - type: object
+          required:
+            - topic
+            - eventType
+          properties:
+            topic:
+              type: string
+              description: Webhook topic for routing
+              enum: [TRANSACTION]
+              example: "TRANSACTION"
+            eventType:
+              type: string
+              description: Event kind within the topic
+              enum: [created, status_change]
+              example: "created"
+
+    WebhookTransactionNestedPayload:
+      description: Ledger transaction nested inside checkout.completed webhooks (no topic or eventType).
+      allOf:
+        - $ref: '#/components/schemas/AccountMovementWebhookBody'
+
     WebhookCheckoutPayload:
       type: object
-      description: Payload sent when a hosted checkout session changes state
+      description: |
+        Payload sent when a hosted checkout session changes state.
+        On `checkout.completed`, when a ledger transaction is linked, includes a nested `transaction` object with the same fields as [Account movement](/api-reference/webhooks/account-movement) webhooks, excluding `topic` and `eventType`.
       required:
         - id
         - status
@@ -553,6 +571,9 @@ components:
           format: uuid
           nullable: true
           description: Linked inbound transaction when available
+        transaction:
+          $ref: '#/components/schemas/WebhookTransactionNestedPayload'
+          description: Present on `checkout.completed` when a ledger transaction is linked. Omitted when no transaction is linked.
         metadata:
           type: object
           description: Opaque metadata from checkout create
@@ -2464,6 +2485,8 @@ webhooks:
       description: |
         HG.Cash sends this webhook when a hosted checkout session completes, needs manual review, or is rejected.
         Configure `webhookUrl` on create or use your default webhook URL in Settings.
+
+        On `checkout.completed`, when a ledger transaction is linked, the payload includes a nested `transaction` object with the same fields as a `TRANSACTION` / `created` webhook (excluding `topic` and `eventType`).
       operationId: checkoutEventWebhook
       tags:
         - Webhooks
@@ -2481,15 +2504,33 @@ webhooks:
                 value:
                   topic: "CHECKOUT"
                   eventType: "checkout.completed"
-                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  id: "8cc52116-355c-4bc6-a9e5-2a49bd800f4e"
                   status: "completed"
                   event: "checkout.completed"
-                  amount: "1500.00"
+                  amount: "6000.00"
                   currency: "ARS"
                   country: "AR"
-                  transactionId: "789e0123-e89b-12d3-a456-426614174999"
-                  metadata: { orderId: "ORD-42" }
-                  completedAt: "2026-06-05T12:00:00.000Z"
+                  transactionId: "170be3b6-01b9-4baa-8fcf-2031e9596596"
+                  transaction:
+                    id: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                    externalID: "E-67REZ8NPQDQ460QK94KVGO-2026-01-14 09:17:21"
+                    amount: "12000"
+                    currency: "ARS"
+                    direction: "Inbound"
+                    status: "hecha"
+                    type: "inbound"
+                    date: "2026-01-14T09:17:21"
+                    timezone: "America/Argentina/Buenos_Aires"
+                    fromName: "Jose Angel Gallucci"
+                    fromCBU: "0000003100117987328844"
+                    fromCUIT: "20125680667"
+                    toName: "MUNDO OFERTA IMPORTACIONES S.A"
+                    toCBU: "0000151500037626120131"
+                    toCUIT: "30718891813"
+                    coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+                    accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+                  metadata: { adapterTransactionId: "in1345115478", user_id: "109659669" }
+                  completedAt: "2026-08-10T06:02:57.136Z"
 tags:
   - name: Transactions
     description: "Transaction Management - Create and manage transactions in the HG.Cash system. All transaction endpoints require authentication."

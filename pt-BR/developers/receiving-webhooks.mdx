@@ -11,7 +11,7 @@ A HG.Cash enfileira um **`POST`** assíncrono para:
 1. A **URL de webhook padrão** do usuário (configurada em **Configurações** da HG.Cash junto com o segredo de assinatura do webhook), **ou**
 2. Um **`webhookUrl`** informado **por operação** onde a API ou o formulário permitirem — por exemplo ao criar uma transação de ledger pela API REST (`POST /api/v1/transactions`) ou uma **solicitação de transação** nos fluxos de transferência quando o campo existir.
 
-Os payloads têm o mesmo formato independentemente da fila: **`Content-Type: application/json`** e o **corpo é um único objeto JSON plano** (não aninhado em `{ "transaction": ... }`). Cada payload inclui **`topic`** e **`eventType`** no nível superior para roteamento.
+Os payloads têm o mesmo formato independentemente da fila: **`Content-Type: application/json`**. Cada payload inclui **`topic`** e **`eventType`** no nível superior para roteamento. A maioria dos corpos é um objeto JSON plano; **`checkout.completed`** pode incluir também um objeto **`transaction`** aninhado com os dados da movimentação no ledger (mesmos campos de [**Movimentação de conta**](/api-reference/webhooks/account-movement), sem `topic` nem `eventType`).
 
 ## Topic e eventType
 
@@ -30,7 +30,7 @@ O **formato do payload e exemplos** estão na **referência da API** (aba **Refe
 - **Solicitações de transação** (pipeline cash-out; `type` é sempre **`"request"`**): [**Atualização de status da solicitação de transação**](/api-reference/webhooks/transaction-request-status-updated) — schema **`TransactionRequestStatusWebhook`** com exemplo completo.
 - **Solicitação vinculada à transação de ledger** (após associar o cash-out ao movimento bancário): [**Solicitação de transação associada**](/api-reference/webhooks/transaction-request-associated) — mesmo schema com **`transactionId`** obrigatório, **`topic` `TRANSACTION_REQUEST`** e **`eventType` `transaction_associated`**.
 - **Movimentações de conta / ledger** (dinheiro entrando ou saindo das contas HG.Cash; `type` é o nome do tipo de movimento como `inbound` ou `outbound`): [**Movimento de conta**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** com exemplo completo.
-- **Checkouts hospedados** (`event` como `checkout.completed`): [**Eventos de checkout**](/api-reference/webhooks/checkout-completed) — schema **`WebhookCheckoutPayload`**. Veja **[Checkout hospedado](/pt-BR/developers/checkout)**.
+- **Checkouts hospedados** (`event` como `checkout.completed`): [**Eventos de checkout**](/api-reference/webhooks/checkout-completed) — schema **`WebhookCheckoutPayload`**. Em **`checkout.completed`**, quando há uma transação de ledger vinculada, o payload inclui um objeto **`transaction`** aninhado (mesmos campos de [**Movimentação de conta**](/api-reference/webhooks/account-movement), sem `topic` nem `eventType`). Veja **[Checkout hospedado](/pt-BR/developers/checkout)**.
 
 **Solicitações de transação (`type: "request"`)**
 
