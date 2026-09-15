@@ -15,14 +15,26 @@ Requires sufficient **net balance**. The transaction starts in `processing` when
 - `accountId`, `amount`
 - `name` — recipient display name
 - `keyType` — `document`, `email`, `evp`, `phone`, or `cnpj`
-- `keyPix` — PIX key value matching `keyType`
+- `keyPix` — destination PIX key matching `keyType` (required; cannot be omitted)
+
+## Optional fields
+
+- `document` — recipient CPF or CNPJ (11 or 14 digits). Forwarded to the PIX provider when provided. You may send formatted values (for example `123.456.789-01`); HG.Cash normalizes to digits before calling the provider.
+
+## Inbound vs outbound
+
+[PIX cash-in](/countries/brazil/pix-cash-in) requires payer `document`. Outbound payouts require `keyType` + `keyPix` because the provider withdraw-by-key API uses `pixKey` (required) and `document` (optional). The optional outbound `document` identifies the key holder when you send it — it does not replace `keyPix`.
+
+When `keyType` is `document` or `cnpj`, send `keyPix` as the destination key. HG.Cash strips punctuation before forwarding CPF/CNPJ keys to the provider.
 
 ## Status updates
 
 - Poll: `GET /api/v1/br/transactions/{id}/status`
 - Optional `webhookUrl` on the request (see [Receiving webhooks](/developers/receiving-webhooks))
 
-## Example request
+## Example requests
+
+Email key:
 
 ```bash
 curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
@@ -34,6 +46,21 @@ curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
     "name": "João Silva",
     "keyType": "email",
     "keyPix": "joao@example.com"
+  }'
+```
+
+CPF key (`keyType: document`). You may send masked or unmasked CPF in `keyPix`; HG.Cash forwards digits only:
+
+```bash
+curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 5.00,
+    "name": "Clara Gotelli",
+    "keyType": "document",
+    "keyPix": "235.997.998-14"
   }'
 ```
 

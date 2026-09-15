@@ -15,14 +15,26 @@ Requiere **saldo neto** suficiente. La transacción inicia en `processing` si es
 - `accountId`, `amount`
 - `name` — nombre del beneficiario
 - `keyType` — `document`, `email`, `evp`, `phone` o `cnpj`
-- `keyPix` — valor de la clave PIX
+- `keyPix` — clave PIX de destino según `keyType` (obligatoria; no puede omitirse)
+
+## Campos opcionales
+
+- `document` — CPF o CNPJ del beneficiario (11 o 14 dígitos). Se reenvía al proveedor PIX cuando se envía. Puede usar valores con formato (por ejemplo `123.456.789-01`); HG.Cash normaliza a dígitos antes de llamar al proveedor.
+
+## Cash-in vs cash-out
+
+El [cash-in PIX](/es/countries/brazil/pix-cash-in) exige `document` del pagador. Los payouts salientes exigen `keyType` + `keyPix` porque la API del proveedor de retiro por clave usa `pixKey` (obligatorio) y `document` (opcional). El `document` opcional en cash-out identifica al titular de la clave cuando lo envía — no reemplaza a `keyPix`.
+
+Cuando `keyType` es `document` o `cnpj`, envíe `keyPix` como clave de destino. HG.Cash elimina la puntuación antes de reenviar claves CPF/CNPJ al proveedor.
 
 ## Actualizaciones de estado
 
 - Consulta: `GET /api/v1/br/transactions/{id}/status`
 - `webhookUrl` opcional — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
 
-## Ejemplo
+## Ejemplos
+
+Clave email:
 
 ```bash
 curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
@@ -34,6 +46,21 @@ curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
     "name": "João Silva",
     "keyType": "email",
     "keyPix": "joao@example.com"
+  }'
+```
+
+Clave CPF (`keyType: document`). Puede enviar CPF con o sin máscara en `keyPix`; HG.Cash reenvía solo dígitos:
+
+```bash
+curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 5.00,
+    "name": "Clara Gotelli",
+    "keyType": "document",
+    "keyPix": "235.997.998-14"
   }'
 ```
 
