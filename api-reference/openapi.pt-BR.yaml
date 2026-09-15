@@ -1162,6 +1162,13 @@ components:
         keyPix:
           type: string
           description: Valor da chave PIX (e-mail, CPF, CNPJ, telefone ou chave aleatória)
+        document:
+          type: string
+          description: |
+            CPF ou CNPJ do beneficiário opcional (apenas dígitos, ou formatado com pontuação).
+            Não é obrigatório. Quando informado, deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ).
+            Encaminhado ao provedor PIX quando presente. Bankizi lista este campo como opcional
+            em saques PIX por chave; cash-in Brasil ainda exige `document` (CPF/CNPJ do pagador).
         webhookUrl:
           type: string
           format: uri

@@ -1147,6 +1147,13 @@ components:
         keyPix:
           type: string
           description: PIX key value (email, CPF, CNPJ, phone, or random key)
+        document:
+          type: string
+          description: |
+            Optional recipient CPF or CNPJ (digits only, or formatted with punctuation).
+            Not required. When provided, must be 11 digits (CPF) or 14 digits (CNPJ).
+            Forwarded to the PIX provider when present. Bankizi lists this field as optional
+            on PIX withdraw-by-key; inbound Brazil still requires `document` (payer CPF/CNPJ).
         webhookUrl:
           type: string
           format: uri

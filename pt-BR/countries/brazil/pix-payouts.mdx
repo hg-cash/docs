@@ -15,14 +15,26 @@ Exige **saldo líquido** suficiente. A transação inicia em `processing` se ace
 - `accountId`, `amount`
 - `name` — nome do beneficiário
 - `keyType` — `document`, `email`, `evp`, `phone` ou `cnpj`
-- `keyPix` — valor da chave PIX
+- `keyPix` — chave PIX de destino conforme `keyType` (obrigatória; não pode ser omitida)
+
+## Campos opcionais
+
+- `document` — CPF ou CNPJ do beneficiário (11 ou 14 dígitos). Encaminhado ao provedor PIX quando informado. Você pode enviar valores formatados (por exemplo `123.456.789-01`); a HG.Cash normaliza para dígitos antes de chamar o provedor.
+
+## Cash-in vs cash-out
+
+O [cash-in PIX](/pt-BR/countries/brazil/pix-cash-in) exige `document` do pagador. Payouts de saída exigem `keyType` + `keyPix` porque a API do provedor de saque por chave usa `pixKey` (obrigatório) e `document` (opcional). O `document` opcional no cash-out identifica o titular da chave quando enviado — não substitui `keyPix`.
+
+Quando `keyType` é `document` ou `cnpj`, envie `keyPix` como chave de destino. A HG.Cash remove pontuação antes de encaminhar chaves CPF/CNPJ ao provedor.
 
 ## Atualizações de status
 
 - Consulta: `GET /api/v1/br/transactions/{id}/status`
 - `webhookUrl` opcional — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)
 
-## Exemplo
+## Exemplos
+
+Chave email:
 
 ```bash
 curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
@@ -34,6 +46,21 @@ curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
     "name": "João Silva",
     "keyType": "email",
     "keyPix": "joao@example.com"
+  }'
+```
+
+Chave CPF (`keyType: document`). Você pode enviar CPF com ou sem máscara em `keyPix`; a HG.Cash encaminha apenas dígitos:
+
+```bash
+curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": 5.00,
+    "name": "Clara Gotelli",
+    "keyType": "document",
+    "keyPix": "235.997.998-14"
   }'
 ```
 
