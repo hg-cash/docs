@@ -1396,29 +1396,59 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - id
+                  - status
+                  - amount
+                  - createdAt
+                  - updatedAt
                 properties:
                   id:
                     type: string
                     format: uuid
+                    description: ID da solicitação de transação
+                    example: "789e0123-e89b-12d3-a456-426614174999"
                   externalID:
                     type: string
                     nullable: true
+                    description: ID externo enviado ao criar a solicitação, se houver
+                    example: "REQ-2024-001234"
                   status:
                     type: string
+                    description: Status atual da solicitação de transação
                     enum: [PENDING, AWAITING_REVIEW, PROCESSING, DONE, ERROR, CANCELLED]
+                    example: "PENDING"
                   errorMessage:
                     type: string
                     nullable: true
+                    description: Detalhe do erro quando o status é ERROR; caso contrário null
                   errorCode:
                     type: string
                     nullable: true
+                    description: Código de erro quando o status é ERROR; caso contrário null
                     enum: [INSUFFICIENT_BALANCE, DESTINATION_ERROR]
+                  amount:
+                    type: number
+                    format: decimal
+                    description: Valor da solicitação (mesmo tipo de amount em POST /transactions)
+                    example: 15000.50
                   createdAt:
                     type: string
                     format: date-time
+                    example: "2024-06-19T10:30:00Z"
                   updatedAt:
                     type: string
                     format: date-time
+                    example: "2024-06-19T10:30:00Z"
+              example:
+                id: "789e0123-e89b-12d3-a456-426614174999"
+                externalID: "REQ-2024-001234"
+                status: "PENDING"
+                errorMessage: null
+                errorCode: null
+                amount: 15000.50
+                createdAt: "2024-06-19T10:30:00Z"
+                updatedAt: "2024-06-19T10:30:00Z"
         '401':
           description: Não autorizado
         '404':
