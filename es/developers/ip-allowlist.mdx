@@ -25,7 +25,7 @@ La edición también requiere:
 - **2FA** habilitado en **Seguridad**
 - Un **dispositivo de confianza** (guardá desde un dispositivo que ya verificaste por email)
 
-Guardar una lista no bloquea el tráfico por sí solo. HG.Cash activa la **aplicación** por separado. Mientras la aplicación está desactivada, las solicitudes desde cualquier IP siguen teniendo éxito. Cuando está activada, HG.Cash permite una solicitud solo si la IPv4 pública que observa coincide con uno de tus CIDRs.
+Guardar una lista no bloquea el tráfico por sí solo. HG.Cash activa el control por separado. Mientras el control está desactivado, las solicitudes desde cualquier IP siguen teniendo éxito. Cuando el control está activo, HG.Cash permite una solicitud solo si la IPv4 pública que observa coincide con uno de tus CIDRs.
 
 ## Agregar CIDRs
 
@@ -56,7 +56,7 @@ Reglas:
 
 ## Solicitudes denegadas
 
-Cuando la aplicación está activa y la lista no está vacía, HG.Cash responde **403 Forbidden** si la dirección de cliente observada falta, no es una IPv4 válida o no coincide con un CIDR guardado:
+Cuando el control está activo y la lista no está vacía, HG.Cash responde **403 Forbidden** si la dirección de cliente observada falta, no es una IPv4 válida o no coincide con un CIDR guardado:
 
 ```json
 {
@@ -66,7 +66,7 @@ Cuando la aplicación está activa y la lista no está vacía, HG.Cash responde 
 
 **403** significa que el token es válido y la IP de origen no está permitida. **401 Unauthorized** significa que el token falta, tiene un formato inválido o fue revocado.
 
-Permití la dirección pública de egress de los servidores que llaman a la API (por ejemplo `203.0.113.0/24`). El tráfico que sale de tu red por IPv6 no puede coincidir con un allowlist IPv4 y se deniega mientras la aplicación está activa.
+Permití la dirección pública de egress de los servidores que llaman a la API (por ejemplo `203.0.113.0/24`). El tráfico que sale de tu red por IPv6 no puede coincidir con un allowlist IPv4 y se deniega mientras el control está activo.
 
 ## Guías relacionadas
 

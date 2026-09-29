@@ -25,7 +25,7 @@ A edição também exige:
 - **2FA** habilitado em **Segurança**
 - Um **dispositivo confiável** (salve a partir de um dispositivo que você já verificou por e-mail)
 
-Salvar uma lista não bloqueia o tráfego por si só. A HG.Cash ativa a **aplicação** separadamente. Enquanto a aplicação estiver desligada, solicitações de qualquer IP ainda são aceitas. Quando estiver ligada, a HG.Cash permite uma solicitação somente se o IPv4 público observado corresponder a um dos seus CIDRs.
+Salvar uma lista não bloqueia o tráfego por si só. A HG.Cash ativa o controle separadamente. Enquanto o controle estiver desligado, solicitações de qualquer IP ainda são aceitas. Quando o controle estiver ligado, a HG.Cash permite uma solicitação somente se o IPv4 público observado corresponder a um dos seus CIDRs.
 
 ## Adicionar CIDRs
 
@@ -56,7 +56,7 @@ Regras:
 
 ## Solicitações negadas
 
-Quando a aplicação está ativa e a lista não está vazia, a HG.Cash retorna **403 Forbidden** se o endereço de cliente observado estiver ausente, não for um IPv4 válido ou não corresponder a um CIDR salvo:
+Quando o controle está ligado e a lista não está vazia, a HG.Cash retorna **403 Forbidden** se o endereço de cliente observado estiver ausente, não for um IPv4 válido ou não corresponder a um CIDR salvo:
 
 ```json
 {
@@ -66,7 +66,7 @@ Quando a aplicação está ativa e a lista não está vazia, a HG.Cash retorna *
 
 **403** significa que o token é válido e o IP de origem não é permitido. **401 Unauthorized** significa que o token está ausente, malformado ou revogado.
 
-Permita o endereço público de egress dos servidores que chamam a API (por exemplo `203.0.113.0/24`). O tráfego que sai da sua rede por IPv6 não corresponde a um allowlist IPv4 e é negado enquanto a aplicação estiver ativa.
+Permita o endereço público de egress dos servidores que chamam a API (por exemplo `203.0.113.0/24`). O tráfego que sai da sua rede por IPv6 não corresponde a um allowlist IPv4 e é negado enquanto o controle estiver ligado.
 
 ## Guias relacionados
 
