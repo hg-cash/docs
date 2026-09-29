@@ -1,0 +1,74 @@
+---
+title: "API IP allowlist"
+description: "Restrict partner API calls to IPv4 CIDR ranges you configure in Settings"
+icon: "shield"
+---
+
+## What it restricts
+
+The **API IP allowlist** limits which public IPv4 addresses can call HG.Cash with your user API token. It applies to authenticated `https://hg.cash/api/v1` requests that send `Authorization: Bearer`.
+
+An **empty list** allows requests from any IP. That is the default.
+
+The allowlist does not apply to dashboard sign-in. If a saved list blocks your servers, you can still open **Settings** and change it.
+
+<Warning>
+A misconfigured allowlist can block all API traffic from your integration. Use stable NAT or egress CIDRs, not a single laptop IP.
+</Warning>
+
+## Turn on editing
+
+HG.Cash enables allowlist editing per account. Until then, **Settings** shows the current list as read-only. Contact support if you need to configure egress CIDRs.
+
+Editing also requires:
+
+- **2FA** enabled under **Security**
+- A **trusted device** (save from a device you already verified by email)
+
+Saving a list does not block traffic by itself. HG.Cash turns on **enforcement** separately. While enforcement is off, requests from any IP still succeed. When enforcement is on, HG.Cash allows a request only when the public IPv4 it observes matches one of your CIDRs.
+
+## Add CIDRs
+
+In the HG.Cash dashboard, open **Settings**. The **API IP allowlist** card sits below **API token**.
+
+1. Enter a CIDR and click **Add CIDR**.
+2. Repeat for each range. You can store up to **50** CIDRs.
+3. Click **Save allowlist**.
+4. Enter the code from your authenticator.
+5. Enter the 6-digit code sent to your email. The code expires in **10 minutes** and applies only to the list you just submitted. If you change the list, start the save again.
+
+HG.Cash stores each entry in canonical form:
+
+| You enter | Stored as | Notes |
+| --- | --- | --- |
+| `203.0.113.0/24` | `203.0.113.0/24` | Network range. Host bits must be zero. |
+| `203.0.113.10` | `203.0.113.10/32` | A single host. |
+| `203.0.113.10/32` | `203.0.113.10/32` | Same as a host with no prefix. |
+| `203.0.113.10/24` | Rejected | Use the network address `203.0.113.0/24`. |
+| `0.0.0.0/0` | Rejected | Leave the list empty to allow every IP. |
+
+Rules:
+
+- IPv4 only. IPv6 CIDRs are rejected.
+- Prefix length is **1–32**.
+- Duplicate entries are stored once.
+- To allow every IP again, remove every CIDR and save an empty list.
+
+## Denied requests
+
+When enforcement is on and the list is not empty, HG.Cash returns **403 Forbidden** if the observed client address is missing, is not a valid IPv4 address, or does not match a saved CIDR:
+
+```json
+{
+  "error": "Access denied: request IP is not allowed for this API token"
+}
+```
+
+**403** means the token is valid and the source IP is not allowed. **401 Unauthorized** means the token is missing, malformed, or revoked.
+
+Allow the public egress address of the servers that call the API (for example `203.0.113.0/24`). Traffic that leaves your network over IPv6 cannot match an IPv4 allowlist and is denied while enforcement is on.
+
+## Related guides
+
+- **[Overview](/developers/introduction)** — Developer guides in this section.
+- **API reference** — Bearer authentication for `https://hg.cash/api/v1`.

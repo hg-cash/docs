@@ -53,6 +53,7 @@
                 "group": "Developers",
                 "pages": [
                   "developers/introduction",
+                  "developers/ip-allowlist",
                   "developers/receiving-webhooks",
                   "developers/webhook-delivery-and-monitoring"
                 ]
@@ -137,6 +138,7 @@
                 "group": "Desarrolladores",
                 "pages": [
                   "es/developers/introduction",
+                  "es/developers/ip-allowlist",
                   "es/developers/receiving-webhooks",
                   "es/developers/webhook-delivery-and-monitoring"
                 ]
@@ -221,6 +223,7 @@
                 "group": "Desenvolvedores",
                 "pages": [
                   "pt-BR/developers/introduction",
+                  "pt-BR/developers/ip-allowlist",
                   "pt-BR/developers/receiving-webhooks",
                   "pt-BR/developers/webhook-delivery-and-monitoring"
                 ]
