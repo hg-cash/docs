@@ -30,7 +30,7 @@ Transaction request webhooks always use **`topic` `TRANSACTION_REQUEST`**. When 
 
 - **Transaction requests** (cash-out pipeline, `type` is always **`"request"`**): [**Transaction Request Status Updated**](/api-reference/webhooks/transaction-request-status-updated) — schema **`TransactionRequestStatusWebhook`** with a full example payload.
 - **Transaction request linked to ledger row** (after Urbana associates the cash-out with the bank movement): [**Transaction request associated**](/api-reference/webhooks/transaction-request-associated) — same schema with required **`transactionId`**, **`topic` `TRANSACTION_REQUEST`**, and **`eventType` `transaction_associated`**. You may receive this in addition to a status update when the link is established.
-- **Ledger / account movements** (money in or out of your HG.Cash accounts; `type` is your movement / transaction type name such as `inbound` or `outbound`): [**Account movement**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** with a full example payload.
+- **Ledger / account movements** (money in or out of your HG.Cash accounts; `type` is your movement / transaction type name such as `inbound` or `outbound`): [**Account movement**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** with example payloads. When a fee snapshot was stored, the body includes optional **`feeBreakdown`**. See [**Fee breakdown**](#fee-breakdown).
 - **Hosted checkouts** (`event` such as `checkout.completed`): [**Checkout events**](/api-reference/webhooks/checkout-completed) — schema **`WebhookCheckoutPayload`**. On **`checkout.completed`**, when a ledger transaction is linked, the payload includes a nested **`transaction`** object (same fields as [**Account movement**](/api-reference/webhooks/account-movement), without `topic` or `eventType`). See **[Hosted checkout](/developers/checkout)** for flows by country.
 - **Claim status changes** (`topic` `CLAIM`, `eventType` `status_change`): [**Claim status updated**](/api-reference/webhooks/claim-status-updated) — schema **`ClaimStatusWebhook`**. Sent to your **default webhook URL** when a claim is updated by an admin or auto-reconciled by COELSA. The body matches the **Get claim** (`GET /claims/{id}`) response (without `fileUrl`) plus routing metadata, with an optional **`comment`** field. Webhooks are **not** sent on claim create or comment-only updates. See **[Claims](/claims/introduction)** for the full flow.
 
@@ -41,6 +41,29 @@ Callbacks are sent when HG.Cash **updates** a transaction request’s status or 
 **Ledger transactions**
 
 When a ledger **transaction row** is ingested from webhooks/API and your resolved URL applies, HG.Cash can notify immediately after persistence; `type` is the **business type name**, not `"request"`.
+
+## Fee breakdown
+
+Account movement webhooks (`topic` **`TRANSACTION`**, `eventType` **`created`** or **`status_change`**) include optional **`feeBreakdown`** when HG.Cash stored a fee snapshot on the movement. The field is omitted when there is no breakdown. Internal fee rows do not send a webhook.
+
+Amounts and rates are decimal strings. A rate of **`0.01`** is 1%. **`collectedAmount`** is the percentage charged to you plus one flat fee per transaction. **`platformFee`** is the recorded wallet cost and is not added to **`collectedAmount`**. Webhooks send **`flatFee.amount`** only. They do not include **`flatFee.source`**.
+
+On **`checkout.completed`**, the nested **`transaction`** object uses the same fields, including **`feeBreakdown`** when the linked movement has a snapshot.
+
+```json
+{
+  "feeBreakdown": {
+    "platformFee": { "amount": "60", "rate": "0.005" },
+    "transactionFee": { "amount": "120", "rate": "0.01" },
+    "flatFee": { "amount": "15" },
+    "collectedAmount": "135"
+  }
+}
+```
+
+In this example the movement amount is **12,000**. The client percentage is **1%** (`120`) plus a flat fee of **15**, so **`collectedAmount`** is **135**. The platform percentage (**0.5%**, `60`) is recorded separately.
+
+`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status` returns the same snapshot when one is stored, and includes **`flatFee.source`** (`account` or `platform`). `GET /transaction/{id}/status` is a transaction-request status and does not include **`feeBreakdown`**.
 
 ## Signing secret (`X-HG-Webhook-Signature`)
 

@@ -482,6 +482,56 @@ components:
         coelsaCode:
           type: string
           description: Código de transacción Coelsa
+        feeBreakdown:
+          $ref: '#/components/schemas/WebhookFeeBreakdown'
+
+    WebhookFeeBreakdown:
+      type: object
+      description: >-
+        Desglose de comisión opcional en un webhook de transacción. Los montos y las tasas
+        son cadenas decimales. Se omite cuando el movimiento no tiene desglose.
+        `collectedAmount` es la comisión porcentual más la comisión fija. `platformFee` es
+        el costo de billetera registrado y no se suma a `collectedAmount`. `flatFee` incluye
+        solo el monto: los webhooks no envían `flatFee.source`.
+      properties:
+        platformFee:
+          type: object
+          description: Porcentaje de billetera registrado. No se suma a `collectedAmount`.
+          properties:
+            amount:
+              type: string
+              description: Comisión porcentual de plataforma como cadena decimal
+              example: "60"
+            rate:
+              type: string
+              nullable: true
+              description: Tasa porcentual de plataforma como cadena decimal (`0.005` es 0,5%)
+              example: "0.005"
+        transactionFee:
+          type: object
+          description: Porcentaje cobrado al cliente.
+          properties:
+            amount:
+              type: string
+              description: Comisión porcentual del cliente como cadena decimal
+              example: "120"
+            rate:
+              type: string
+              nullable: true
+              description: Tasa porcentual del cliente como cadena decimal (`0.01` es 1%)
+              example: "0.01"
+        flatFee:
+          type: object
+          description: Monto absoluto cobrado además del porcentaje. Los webhooks incluyen solo `amount`.
+          properties:
+            amount:
+              type: string
+              description: Comisión fija por transacción como cadena decimal
+              example: "15"
+        collectedAmount:
+          type: string
+          description: "`transactionFee.amount` más `flatFee.amount`"
+          example: "135"
 
     AccountMovementWebhook:
       type: object
@@ -520,7 +570,7 @@ components:
       type: object
       description: |
         Carga enviada cuando una sesión de checkout hospedado cambia de estado.
-        En `checkout.completed`, cuando hay una transacción de libro vinculada, incluye un objeto `transaction` anidado con los mismos campos que los webhooks de [movimiento de cuenta](/api-reference/webhooks/account-movement), excepto `topic` y `eventType`.
+        En `checkout.completed`, cuando hay una transacción de libro vinculada, incluye un objeto `transaction` anidado con los mismos campos que los webhooks de [movimiento de cuenta](/api-reference/webhooks/account-movement), excepto `topic` y `eventType`. Ese objeto incluye `feeBreakdown` opcional cuando el movimiento vinculado tiene un desglose de comisión.
       required:
         - id
         - status
@@ -1192,6 +1242,59 @@ components:
           type: string
         currency:
           type: string
+        feeBreakdown:
+          $ref: '#/components/schemas/FeeBreakdown'
+
+    FeeBreakdown:
+      type: object
+      description: >-
+        Desglose de comisión opcional en la respuesta de estado de una transacción directa.
+        Los montos y las tasas son cadenas decimales. Se omite cuando la transacción no
+        tiene desglose. `collectedAmount` es la comisión porcentual más la comisión fija.
+        `platformFee` es el costo de billetera registrado y no se suma a `collectedAmount`.
+        Incluye `flatFee.source`, que los webhooks de transacción omiten.
+      properties:
+        platformFee:
+          type: object
+          description: Porcentaje de billetera registrado. No se suma a `collectedAmount`.
+          properties:
+            amount:
+              type: string
+              example: "60"
+            rate:
+              type: string
+              nullable: true
+              description: Tasa porcentual de plataforma como cadena decimal (`0.005` es 0,5%)
+              example: "0.005"
+        transactionFee:
+          type: object
+          description: Porcentaje cobrado al cliente.
+          properties:
+            amount:
+              type: string
+              example: "120"
+            rate:
+              type: string
+              nullable: true
+              description: Tasa porcentual del cliente como cadena decimal (`0.01` es 1%)
+              example: "0.01"
+        flatFee:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: Comisión fija por transacción como cadena decimal
+              example: "15"
+            source:
+              type: string
+              nullable: true
+              enum: [account, platform]
+              description: Valor de la cuenta, o el monto de la plataforma cuando la cuenta lo hereda
+              example: "platform"
+        collectedAmount:
+          type: string
+          description: "`transactionFee.amount` más `flatFee.amount`"
+          example: "135"
 
 paths:
   /transactions:
@@ -2570,6 +2673,8 @@ webhooks:
         HG.Cash enviará este webhook cada vez que entre o salga dinero de una de sus cuentas. El cuerpo de la solicitud contiene los detalles del movimiento.
         
         Úselo para mantener sus saldos internos y libros contables sincronizados con HG.Cash.
+
+        Cuando el movimiento tiene un desglose de comisión guardado, el cuerpo incluye `feeBreakdown` opcional (porcentaje del cliente, comisión fija y monto cobrado). El campo se omite cuando no hay desglose. En el webhook, `flatFee` incluye solo `amount`.
       operationId: accountMovementWebhook
       tags:
         - Webhooks
@@ -2582,8 +2687,42 @@ webhooks:
             schema:
               $ref: '#/components/schemas/AccountMovementWebhook'
             examples:
-              example:
-                summary: Ejemplo de carga de movimiento de cuenta
+              with_fee_breakdown:
+                summary: Movimiento de cuenta con desglose de comisión
+                description: Movimiento que guardó una comisión porcentual más una comisión fija. `collectedAmount` es `120` + `15`.
+                value:
+                  topic: "TRANSACTION"
+                  eventType: "created"
+                  id: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  externalID: "E-67REZ8NPQDQ460QK94KVGO-2026-01-14 09:17:21"
+                  amount: "12000"
+                  currency: "ARS"
+                  direction: "Inbound"
+                  status: "hecha"
+                  type: "inbound"
+                  date: "2026-01-14T09:17:21"
+                  timezone: "America/Argentina/Buenos_Aires"
+                  fromName: "Jose Angel Gallucci"
+                  toName: "MUNDO OFERTA IMPORTACIONES S.A"
+                  fromCBU: "0000003100117987328844"
+                  toCBU: "0000151500037626120131"
+                  fromCUIT: "20125680667"
+                  toCUIT: "30718891813"
+                  coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+                  accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+                  feeBreakdown:
+                    platformFee:
+                      amount: "60"
+                      rate: "0.005"
+                    transactionFee:
+                      amount: "120"
+                      rate: "0.01"
+                    flatFee:
+                      amount: "15"
+                    collectedAmount: "135"
+              without_fee_breakdown:
+                summary: Movimiento de cuenta sin desglose de comisión
+                description: El campo `feeBreakdown` se omite cuando el movimiento no tiene un desglose guardado.
                 value:
                   topic: "TRANSACTION"
                   eventType: "created"
@@ -2611,7 +2750,7 @@ webhooks:
         HG.Cash envía este webhook cuando una sesión de checkout hospedado se completa, requiere revisión manual o es rechazada.
         Configure `webhookUrl` al crear o use su URL de webhook predeterminada en Configuración.
 
-        En `checkout.completed`, cuando hay una transacción de libro vinculada, la carga incluye un objeto `transaction` anidado con los mismos campos que un webhook `TRANSACTION` / `created` (excepto `topic` y `eventType`).
+        En `checkout.completed`, cuando hay una transacción de libro vinculada, la carga incluye un objeto `transaction` anidado con los mismos campos que un webhook `TRANSACTION` / `created` (excepto `topic` y `eventType`), incluido `feeBreakdown` opcional cuando ese movimiento tiene un desglose de comisión.
       operationId: checkoutEventWebhook
       tags:
         - Webhooks
@@ -2654,6 +2793,16 @@ webhooks:
                     toCUIT: "30718891813"
                     coelsaCode: "67REZ8NPQDQ460QK94KVGO"
                     accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+                    feeBreakdown:
+                      platformFee:
+                        amount: "60"
+                        rate: "0.005"
+                      transactionFee:
+                        amount: "120"
+                        rate: "0.01"
+                      flatFee:
+                        amount: "15"
+                      collectedAmount: "135"
                   metadata: { adapterTransactionId: "in1345115478", user_id: "109659669" }
                   completedAt: "2026-08-10T06:02:57.136Z"
   claim-status-updated:
