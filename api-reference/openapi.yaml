@@ -482,6 +482,56 @@ components:
         coelsaCode:
           type: string
           description: Coelsa transaction code
+        feeBreakdown:
+          $ref: '#/components/schemas/WebhookFeeBreakdown'
+
+    WebhookFeeBreakdown:
+      type: object
+      description: >-
+        Optional fee snapshot on a transaction webhook. Amounts and rates are decimal
+        strings. Omitted when the movement has no breakdown. `collectedAmount` is the
+        percentage transaction fee plus the flat fee. `platformFee` is the recorded
+        wallet cost and is not added to `collectedAmount`. `flatFee` is the amount only —
+        webhooks do not include `flatFee.source`.
+      properties:
+        platformFee:
+          type: object
+          description: Recorded wallet percentage. Not added to `collectedAmount`.
+          properties:
+            amount:
+              type: string
+              description: Platform percentage fee as a decimal string
+              example: "60"
+            rate:
+              type: string
+              nullable: true
+              description: Platform percentage rate as a decimal string (`0.005` is 0.5%)
+              example: "0.005"
+        transactionFee:
+          type: object
+          description: Percentage charged to the client.
+          properties:
+            amount:
+              type: string
+              description: Client percentage fee as a decimal string
+              example: "120"
+            rate:
+              type: string
+              nullable: true
+              description: Client percentage rate as a decimal string (`0.01` is 1%)
+              example: "0.01"
+        flatFee:
+          type: object
+          description: Absolute amount charged on top of the percentage. Webhooks include `amount` only.
+          properties:
+            amount:
+              type: string
+              description: Flat fee per transaction as a decimal string
+              example: "15"
+        collectedAmount:
+          type: string
+          description: "`transactionFee.amount` plus `flatFee.amount`"
+          example: "135"
 
     AccountMovementWebhook:
       type: object
@@ -520,7 +570,7 @@ components:
       type: object
       description: |
         Payload sent when a hosted checkout session changes state.
-        On `checkout.completed`, when a ledger transaction is linked, includes a nested `transaction` object with the same fields as [Account movement](/api-reference/webhooks/account-movement) webhooks, excluding `topic` and `eventType`.
+        On `checkout.completed`, when a ledger transaction is linked, includes a nested `transaction` object with the same fields as [Account movement](/api-reference/webhooks/account-movement) webhooks, excluding `topic` and `eventType`. That object includes optional `feeBreakdown` when the linked movement has a fee snapshot.
       required:
         - id
         - status
@@ -1200,6 +1250,59 @@ components:
           type: string
         currency:
           type: string
+        feeBreakdown:
+          $ref: '#/components/schemas/FeeBreakdown'
+
+    FeeBreakdown:
+      type: object
+      description: >-
+        Optional fee snapshot on a direct transaction status response. Amounts and rates
+        are decimal strings. Omitted when the transaction has no breakdown.
+        `collectedAmount` is the percentage transaction fee plus the flat fee.
+        `platformFee` is the recorded wallet cost and is not added to `collectedAmount`.
+        Includes `flatFee.source`, which transaction webhooks omit.
+      properties:
+        platformFee:
+          type: object
+          description: Recorded wallet percentage. Not added to `collectedAmount`.
+          properties:
+            amount:
+              type: string
+              example: "60"
+            rate:
+              type: string
+              nullable: true
+              description: Platform percentage rate as a decimal string (`0.005` is 0.5%)
+              example: "0.005"
+        transactionFee:
+          type: object
+          description: Percentage charged to the client.
+          properties:
+            amount:
+              type: string
+              example: "120"
+            rate:
+              type: string
+              nullable: true
+              description: Client percentage rate as a decimal string (`0.01` is 1%)
+              example: "0.01"
+        flatFee:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: Flat fee per transaction as a decimal string
+              example: "15"
+            source:
+              type: string
+              nullable: true
+              enum: [account, platform]
+              description: Account override, or the platform amount when the account inherits it
+              example: "platform"
+        collectedAmount:
+          type: string
+          description: "`transactionFee.amount` plus `flatFee.amount`"
+          example: "135"
 
 paths:
   /transactions:
@@ -2582,6 +2685,8 @@ webhooks:
         HG.Cash will send this webhook whenever money moves in or out of one of your accounts. The request body contains the movement details.
         
         Use this to keep your internal balances and ledgers in sync with HG.Cash.
+
+        When the movement has a stored fee snapshot, the body includes optional `feeBreakdown` (client percentage, flat fee, and collected amount). The field is omitted when there is no breakdown. Webhook `flatFee` includes `amount` only.
       operationId: accountMovementWebhook
       tags:
         - Webhooks
@@ -2594,8 +2699,42 @@ webhooks:
             schema:
               $ref: '#/components/schemas/AccountMovementWebhook'
             examples:
-              example:
-                summary: Account movement example payload
+              with_fee_breakdown:
+                summary: Account movement with fee breakdown
+                description: Movement that stored a percentage fee plus a flat fee. `collectedAmount` is `120` + `15`.
+                value:
+                  topic: "TRANSACTION"
+                  eventType: "created"
+                  id: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  externalID: "E-67REZ8NPQDQ460QK94KVGO-2026-01-14 09:17:21"
+                  amount: "12000"
+                  currency: "ARS"
+                  direction: "Inbound"
+                  status: "hecha"
+                  type: "inbound"
+                  date: "2026-01-14T09:17:21"
+                  timezone: "America/Argentina/Buenos_Aires"
+                  fromName: "Jose Angel Gallucci"
+                  toName: "MUNDO OFERTA IMPORTACIONES S.A"
+                  fromCBU: "0000003100117987328844"
+                  toCBU: "0000151500037626120131"
+                  fromCUIT: "20125680667"
+                  toCUIT: "30718891813"
+                  coelsaCode: "67REZ8NPQDQ460QK94KVGO"
+                  accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+                  feeBreakdown:
+                    platformFee:
+                      amount: "60"
+                      rate: "0.005"
+                    transactionFee:
+                      amount: "120"
+                      rate: "0.01"
+                    flatFee:
+                      amount: "15"
+                    collectedAmount: "135"
+              without_fee_breakdown:
+                summary: Account movement without a fee snapshot
+                description: The `feeBreakdown` field is omitted when the movement has no stored breakdown.
                 value:
                   topic: "TRANSACTION"
                   eventType: "created"
@@ -2623,7 +2762,7 @@ webhooks:
         HG.Cash sends this webhook when a hosted checkout session completes, needs manual review, or is rejected.
         Configure `webhookUrl` on create or use your default webhook URL in Settings.
 
-        On `checkout.completed`, when a ledger transaction is linked, the payload includes a nested `transaction` object with the same fields as a `TRANSACTION` / `created` webhook (excluding `topic` and `eventType`).
+        On `checkout.completed`, when a ledger transaction is linked, the payload includes a nested `transaction` object with the same fields as a `TRANSACTION` / `created` webhook (excluding `topic` and `eventType`), including optional `feeBreakdown` when that movement has a fee snapshot.
       operationId: checkoutEventWebhook
       tags:
         - Webhooks
@@ -2666,6 +2805,16 @@ webhooks:
                     toCUIT: "30718891813"
                     coelsaCode: "67REZ8NPQDQ460QK94KVGO"
                     accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+                    feeBreakdown:
+                      platformFee:
+                        amount: "60"
+                        rate: "0.005"
+                      transactionFee:
+                        amount: "120"
+                        rate: "0.01"
+                      flatFee:
+                        amount: "15"
+                      collectedAmount: "135"
                   metadata: { adapterTransactionId: "in1345115478", user_id: "109659669" }
                   completedAt: "2026-08-10T06:02:57.136Z"
   claim-status-updated:

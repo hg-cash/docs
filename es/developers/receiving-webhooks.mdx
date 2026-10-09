@@ -30,7 +30,7 @@ La **forma del payload y ejemplos** están en la **referencia API** (pestaña **
 
 - **Solicitudes de transacción** (pipeline cash-out; `type` es siempre **`"request"`**): [**Actualización de estado de solicitud de transacción**](/api-reference/webhooks/transaction-request-status-updated) — esquema **`TransactionRequestStatusWebhook`** con ejemplo completo.
 - **Solicitud vinculada a la transacción de libro** (después de asociar el cash-out con el movimiento bancario): [**Solicitud de transacción asociada**](/api-reference/webhooks/transaction-request-associated) — mismo esquema con **`transactionId`** obligatorio, **`topic` `TRANSACTION_REQUEST`** y **`eventType` `transaction_associated`**.
-- **Movimientos de libro / cuenta** (dinero entrante o saliente de tus cuentas HG.Cash; `type` es el nombre del tipo de movimiento como `inbound` u `outbound`): [**Movimiento de cuenta**](/api-reference/webhooks/account-movement) — esquema **`AccountMovementWebhook`** con ejemplo completo.
+- **Movimientos de libro / cuenta** (dinero entrante o saliente de tus cuentas HG.Cash; `type` es el nombre del tipo de movimiento como `inbound` u `outbound`): [**Movimiento de cuenta**](/api-reference/webhooks/account-movement) — esquema **`AccountMovementWebhook`** con ejemplos. Cuando se guardó un desglose de comisión, el cuerpo incluye **`feeBreakdown`** opcional. Ver [**Desglose de comisión**](#desglose-de-comisión).
 - **Checkouts hospedados** (`event` como `checkout.completed`): [**Eventos de checkout**](/api-reference/webhooks/checkout-completed) — esquema **`WebhookCheckoutPayload`**. En **`checkout.completed`**, cuando hay una transacción de libro vinculada, la carga incluye un objeto **`transaction`** anidado (mismos campos que [**Movimiento de cuenta**](/api-reference/webhooks/account-movement), sin `topic` ni `eventType`). Ver **[Checkout hospedado](/es/developers/checkout)**.
 - **Cambios de estado de reclamo** (`topic` `CLAIM`, `eventType` `status_change`): [**Estado de reclamo actualizado**](/api-reference/webhooks/claim-status-updated) — esquema **`ClaimStatusWebhook`**. Se envía a tu **URL de webhook predeterminada** cuando un administrador actualiza un reclamo o COELSA lo autoconcilia. El cuerpo coincide con la respuesta de **Obtener reclamo** (`GET /claims/{id}`, sin `fileUrl`) más los metadatos de enrutamiento, con un campo **`comment`** opcional. **No** se envían webhooks al crear un reclamo ni en actualizaciones que solo agregan un comentario. Ver **[Reclamos](/es/claims/introduction)**.
 
@@ -41,6 +41,29 @@ Los callbacks se envían cuando HG.Cash **actualiza** el estado de una solicitud
 **Transacciones de libro**
 
 Cuando una fila de **transacción** del libro se ingesta desde webhooks/API y aplica tu URL resuelta, HG.Cash puede notificar justo después de persistir; `type` es el **nombre del tipo de negocio**, no `"request"`.
+
+## Desglose de comisión
+
+Los webhooks de movimiento de cuenta (`topic` **`TRANSACTION`**, `eventType` **`created`** o **`status_change`**) incluyen **`feeBreakdown`** opcional cuando HG.Cash guardó un desglose de comisión en el movimiento. El campo se omite cuando no hay desglose. Las filas internas de comisión no envían un webhook.
+
+Los montos y las tasas son cadenas decimales. Una tasa de **`0.01`** es 1%. **`collectedAmount`** es el porcentaje cobrado más una comisión fija por transacción. **`platformFee`** es el costo de billetera registrado y no se suma a **`collectedAmount`**. Los webhooks envían solo **`flatFee.amount`**. No incluyen **`flatFee.source`**.
+
+En **`checkout.completed`**, el objeto **`transaction`** anidado usa los mismos campos, incluido **`feeBreakdown`** cuando el movimiento vinculado tiene un desglose.
+
+```json
+{
+  "feeBreakdown": {
+    "platformFee": { "amount": "60", "rate": "0.005" },
+    "transactionFee": { "amount": "120", "rate": "0.01" },
+    "flatFee": { "amount": "15" },
+    "collectedAmount": "135"
+  }
+}
+```
+
+En este ejemplo el monto del movimiento es **12.000**. El porcentaje del cliente es **1%** (`120`) más una comisión fija de **15**, así que **`collectedAmount`** es **135**. El porcentaje de plataforma (**0,5%**, `60`) queda registrado aparte.
+
+`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status` devuelve el mismo desglose cuando existe, e incluye **`flatFee.source`** (`account` o `platform`). `GET /transaction/{id}/status` es el estado de una solicitud de transacción y no incluye **`feeBreakdown`**.
 
 ## Secreto de firma (`X-HG-Webhook-Signature`)
 
