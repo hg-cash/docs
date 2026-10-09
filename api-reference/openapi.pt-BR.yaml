@@ -1199,7 +1199,15 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, done, expired, cancelled]
+          description: |
+            Status normalizado da transação.
+
+            - `processing`: Primeiro status de uma transação de saída ao criá-la. O payout está em andamento no provedor.
+            - `pending`: Primeiro status de uma transação de entrada ao criá-la, até o pagador concluir o pagamento.
+            - `done`: Pagamento ou payout concluído.
+            - `expired`: A cobrança de entrada expirou antes do pagamento.
+            - `cancelled`: A transação foi cancelada ou o provedor a rejeitou.
+          enum: [processing, pending, done, expired, cancelled]
         direction:
           type: string
           enum: [Inbound, Outbound]
@@ -1730,6 +1738,9 @@ paths:
       description: |
         Obtém o status atual de uma transação direta PIX (entrada ou saída) no Brasil.
         Diferente de `GET /transaction/{id}/status`, que retorna o status de uma **solicitação** de transação.
+
+        Uma transação de saída é criada em `processing`. Uma transação de entrada é criada em `pending`.
+        Valores possíveis de `status`: `processing`, `pending`, `done`, `expired` e `cancelled`.
       operationId: getBrTransactionStatus
       parameters:
         - in: path
