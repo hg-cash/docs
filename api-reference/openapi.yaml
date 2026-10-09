@@ -482,6 +482,12 @@ components:
         coelsaCode:
           type: string
           description: Coelsa transaction code
+        endToEndId:
+          type: string
+          description: >-
+            Optional Brazil PIX end-to-end identifier stored on the movement.
+            Included on `TRANSACTION` webhooks when present. Omitted when empty.
+          example: "E60701190202505022140DY5DH1K8FL1"
         feeBreakdown:
           $ref: '#/components/schemas/WebhookFeeBreakdown'
 
@@ -570,7 +576,7 @@ components:
       type: object
       description: |
         Payload sent when a hosted checkout session changes state.
-        On `checkout.completed`, when a ledger transaction is linked, includes a nested `transaction` object with the same fields as [Account movement](/api-reference/webhooks/account-movement) webhooks, excluding `topic` and `eventType`. That object includes optional `feeBreakdown` when the linked movement has a fee snapshot.
+        On `checkout.completed`, when a ledger transaction is linked, includes a nested `transaction` object with the same fields as [Account movement](/api-reference/webhooks/account-movement) webhooks, excluding `topic` and `eventType`. That object includes optional `feeBreakdown` when the linked movement has a fee snapshot, and optional `endToEndId` when the linked Brazil PIX movement stores one.
       required:
         - id
         - status
@@ -2687,6 +2693,8 @@ webhooks:
         Use this to keep your internal balances and ledgers in sync with HG.Cash.
 
         When the movement has a stored fee snapshot, the body includes optional `feeBreakdown` (client percentage, flat fee, and collected amount). The field is omitted when there is no breakdown. Webhook `flatFee` includes `amount` only.
+
+        When a Brazil PIX movement stores an end-to-end identifier, the body includes optional `endToEndId`. The field is omitted when it is absent or empty. A later update that newly stores the identifier sends one `status_change` when that update did not already notify you. An identifier that is already stored does not trigger another delivery by itself.
       operationId: accountMovementWebhook
       tags:
         - Webhooks
@@ -2755,6 +2763,26 @@ webhooks:
                   toCUIT: "30718891813"
                   coelsaCode: "67REZ8NPQDQ460QK94KVGO"
                   accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+              with_end_to_end_id:
+                summary: Brazil PIX movement with an end-to-end id
+                description: >-
+                  Included when the movement stores a PIX end-to-end id. Omitted when
+                  that id is absent or empty. A later update that newly stores the id
+                  sends one `status_change` if that update did not already notify you.
+                value:
+                  topic: "TRANSACTION"
+                  eventType: "status_change"
+                  id: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  externalID: "bankizi-tx-01"
+                  amount: "250.00"
+                  currency: "BRL"
+                  direction: "Inbound"
+                  status: "done"
+                  type: "inbound"
+                  date: "2026-05-02T21:40:00"
+                  timezone: "America/Sao_Paulo"
+                  accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+                  endToEndId: "E60701190202505022140DY5DH1K8FL1"
   checkout-completed:
     post:
       summary: Checkout event
@@ -2762,7 +2790,7 @@ webhooks:
         HG.Cash sends this webhook when a hosted checkout session completes, needs manual review, or is rejected.
         Configure `webhookUrl` on create or use your default webhook URL in Settings.
 
-        On `checkout.completed`, when a ledger transaction is linked, the payload includes a nested `transaction` object with the same fields as a `TRANSACTION` / `created` webhook (excluding `topic` and `eventType`), including optional `feeBreakdown` when that movement has a fee snapshot.
+        On `checkout.completed`, when a ledger transaction is linked, the payload includes a nested `transaction` object with the same fields as a `TRANSACTION` / `created` webhook (excluding `topic` and `eventType`), including optional `feeBreakdown` when that movement has a fee snapshot and optional `endToEndId` when the linked Brazil PIX movement stores one.
       operationId: checkoutEventWebhook
       tags:
         - Webhooks

@@ -38,6 +38,8 @@ curl -X POST https://hg.cash/api/v1/br/transactions/inbound \
 
 La transacción inicia en `pending` y pasa a `done` al confirmarse el PIX.
 
+Cuando se confirma el pago, HG.Cash envía un webhook de movimiento de cuenta (`topic` `TRANSACTION`, `eventType` `status_change`) a la `webhookUrl` de la solicitud o a tu URL de webhook predeterminada. Si el movimiento guarda un identificador end-to-end de PIX, ese cuerpo incluye `endToEndId`. El campo se omite cuando el identificador está ausente o vacío. Ver [Identificador end-to-end PIX](/es/developers/receiving-webhooks#identificador-end-to-end-pix).
+
 ## Estado de la cuenta
 
 La cuenta origen debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`.
