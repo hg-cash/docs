@@ -1184,7 +1184,15 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, done, expired, cancelled]
+          description: |
+            Estado normalizado de la transacción.
+
+            - `processing`: Primer estado de una transacción saliente al crearla. El payout está en curso con el proveedor.
+            - `pending`: Primer estado de una transacción entrante al crearla, hasta que el pagador completa el pago.
+            - `done`: Pago o payout completado.
+            - `expired`: El cobro entrante expiró antes del pago.
+            - `cancelled`: La transacción fue cancelada o el proveedor la rechazó.
+          enum: [processing, pending, done, expired, cancelled]
         direction:
           type: string
           enum: [Inbound, Outbound]
@@ -1713,6 +1721,9 @@ paths:
       description: |
         Obtiene el estado actual de una transacción directa (entrante o saliente).
         Distinto de `GET /transaction/{id}/status`, que devuelve el estado de TransactionRequest.
+
+        Una transacción saliente se crea en `processing`. Una transacción entrante se crea en `pending`.
+        Valores posibles de `status`: `processing`, `pending`, `done`, `expired` y `cancelled`.
       operationId: getBrTransactionStatus
       parameters:
         - in: path

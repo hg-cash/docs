@@ -1184,7 +1184,15 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, done, expired, cancelled]
+          description: |
+            Normalized status of the transaction.
+
+            - `processing`: First status of an outbound transaction after it is created. The payout is in flight with the provider.
+            - `pending`: First status of an inbound transaction after it is created, until the payer completes payment.
+            - `done`: Payment or payout completed.
+            - `expired`: Inbound charge expired before payment.
+            - `cancelled`: Transaction was cancelled or the provider rejected it.
+          enum: [processing, pending, done, expired, cancelled]
         direction:
           type: string
           enum: [Inbound, Outbound]
@@ -1714,6 +1722,9 @@ paths:
       description: |
         Fetch the current status of a direct transaction (inbound or outbound).
         Distinct from `GET /transaction/{id}/status` which returns TransactionRequest status.
+
+        An outbound transaction is created in `processing`. An inbound transaction is created in `pending`.
+        Possible `status` values: `processing`, `pending`, `done`, `expired`, and `cancelled`.
       operationId: getBrTransactionStatus
       parameters:
         - in: path
