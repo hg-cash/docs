@@ -32,6 +32,8 @@ When `keyType` is `document` or `cnpj`, send `keyPix` as the destination key. HG
 - Poll: `GET /api/v1/br/transactions/{id}/status`
 - Optional `webhookUrl` on the request (see [Receiving webhooks](/developers/receiving-webhooks))
 
+Status webhooks use the account-movement body (`topic` `TRANSACTION`, `eventType` `status_change`). A stored PIX end-to-end id is sent as `endToEndId` and omitted when empty. See [PIX end-to-end id](/developers/receiving-webhooks#pix-end-to-end-id).
+
 ## Example requests
 
 Email key:

@@ -482,6 +482,12 @@ components:
         coelsaCode:
           type: string
           description: Código de transação Coelsa
+        endToEndId:
+          type: string
+          description: >-
+            Identificador end-to-end opcional de um PIX do Brasil armazenado na movimentação.
+            Incluído nos webhooks `TRANSACTION` quando presente. Omitido quando vazio.
+          example: "E60701190202505022140DY5DH1K8FL1"
         feeBreakdown:
           $ref: '#/components/schemas/WebhookFeeBreakdown'
 
@@ -570,7 +576,7 @@ components:
       type: object
       description: |
         Payload enviado quando uma sessão de checkout hospedado muda de estado.
-        Em `checkout.completed`, quando há uma transação de ledger vinculada, inclui um objeto `transaction` aninhado com os mesmos campos dos webhooks de [movimentação de conta](/api-reference/webhooks/account-movement), exceto `topic` e `eventType`. Esse objeto inclui `feeBreakdown` opcional quando a movimentação vinculada tem um detalhamento de taxa.
+        Em `checkout.completed`, quando há uma transação de ledger vinculada, inclui um objeto `transaction` aninhado com os mesmos campos dos webhooks de [movimentação de conta](/api-reference/webhooks/account-movement), exceto `topic` e `eventType`. Esse objeto inclui `feeBreakdown` opcional quando a movimentação vinculada tem um detalhamento de taxa, e `endToEndId` opcional quando a movimentação PIX do Brasil vinculada armazena um.
       required:
         - id
         - status
@@ -2705,6 +2711,8 @@ webhooks:
         Use isso para manter seus saldos e ledgers internos sincronizados com a HG.Cash.
 
         Quando a movimentação tem um detalhamento de taxa salvo, o corpo inclui `feeBreakdown` opcional (percentual do cliente, taxa fixa e valor cobrado). O campo é omitido quando não há detalhamento. No webhook, `flatFee` inclui apenas `amount`.
+
+        Quando uma movimentação PIX do Brasil armazena um identificador end-to-end, o corpo inclui `endToEndId` opcional. O campo é omitido quando está ausente ou vazio. Uma atualização posterior que grava o identificador pela primeira vez envia um `status_change` se essa atualização ainda não notificou você. Um identificador que já estava armazenado não gera outra entrega por si só.
       operationId: accountMovementWebhook
       tags:
         - Webhooks
@@ -2773,6 +2781,27 @@ webhooks:
                   toCUIT: "30718891813"
                   coelsaCode: "67REZ8NPQDQ460QK94KVGO"
                   accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+              with_end_to_end_id:
+                summary: Movimentação PIX do Brasil com identificador end-to-end
+                description: >-
+                  Incluído quando a movimentação armazena um identificador end-to-end de PIX.
+                  Omitido quando esse identificador está ausente ou vazio. Uma atualização
+                  posterior que o grava pela primeira vez envia um `status_change` se essa
+                  atualização ainda não notificou você.
+                value:
+                  topic: "TRANSACTION"
+                  eventType: "status_change"
+                  id: "040eac5b-a998-4879-9d8a-05fd2a08c625"
+                  externalID: "bankizi-tx-01"
+                  amount: "250.00"
+                  currency: "BRL"
+                  direction: "Inbound"
+                  status: "done"
+                  type: "inbound"
+                  date: "2026-05-02T21:40:00"
+                  timezone: "America/Sao_Paulo"
+                  accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
+                  endToEndId: "E60701190202505022140DY5DH1K8FL1"
   checkout-completed:
     post:
       summary: Evento de checkout
@@ -2780,7 +2809,7 @@ webhooks:
         A HG.Cash envia este webhook quando uma sessão de checkout hospedado é concluída, precisa de revisão manual ou é rejeitada.
         Configure `webhookUrl` na criação ou use sua URL de webhook padrão em Configurações.
 
-        Em `checkout.completed`, quando há uma transação de ledger vinculada, o payload inclui um objeto `transaction` aninhado com os mesmos campos de um webhook `TRANSACTION` / `created` (exceto `topic` e `eventType`), inclusive `feeBreakdown` opcional quando essa movimentação tem um detalhamento de taxa.
+        Em `checkout.completed`, quando há uma transação de ledger vinculada, o payload inclui um objeto `transaction` aninhado com os mesmos campos de um webhook `TRANSACTION` / `created` (exceto `topic` e `eventType`), inclusive `feeBreakdown` opcional quando essa movimentação tem um detalhamento de taxa e `endToEndId` opcional quando a movimentação PIX do Brasil vinculada armazena um.
       operationId: checkoutEventWebhook
       tags:
         - Webhooks

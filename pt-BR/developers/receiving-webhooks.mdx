@@ -30,7 +30,7 @@ O **formato do payload e exemplos** estão na **referência da API** (aba **Refe
 
 - **Solicitações de transação** (pipeline cash-out; `type` é sempre **`"request"`**): [**Atualização de status da solicitação de transação**](/api-reference/webhooks/transaction-request-status-updated) — schema **`TransactionRequestStatusWebhook`** com exemplo completo.
 - **Solicitação vinculada à transação de ledger** (após associar o cash-out ao movimento bancário): [**Solicitação de transação associada**](/api-reference/webhooks/transaction-request-associated) — mesmo schema com **`transactionId`** obrigatório, **`topic` `TRANSACTION_REQUEST`** e **`eventType` `transaction_associated`**.
-- **Movimentações de conta / ledger** (dinheiro entrando ou saindo das contas HG.Cash; `type` é o nome do tipo de movimento como `inbound` ou `outbound`): [**Movimento de conta**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** com exemplos. Quando um detalhamento de taxa foi salvo, o corpo inclui **`feeBreakdown`** opcional. Veja [**Detalhamento da taxa**](#detalhamento-da-taxa).
+- **Movimentações de conta / ledger** (dinheiro entrando ou saindo das contas HG.Cash; `type` é o nome do tipo de movimento como `inbound` ou `outbound`): [**Movimento de conta**](/api-reference/webhooks/account-movement) — schema **`AccountMovementWebhook`** com exemplos. Quando um detalhamento de taxa foi salvo, o corpo inclui **`feeBreakdown`** opcional. Veja [**Detalhamento da taxa**](#detalhamento-da-taxa). Quando uma movimentação PIX do Brasil armazena um identificador end-to-end, o corpo inclui **`endToEndId`** opcional. Veja [**Identificador end-to-end PIX**](#identificador-end-to-end-pix).
 - **Checkouts hospedados** (`event` como `checkout.completed`): [**Eventos de checkout**](/api-reference/webhooks/checkout-completed) — schema **`WebhookCheckoutPayload`**. Em **`checkout.completed`**, quando há uma transação de ledger vinculada, o payload inclui um objeto **`transaction`** aninhado (mesmos campos de [**Movimentação de conta**](/api-reference/webhooks/account-movement), sem `topic` nem `eventType`). Veja **[Checkout hospedado](/pt-BR/developers/checkout)**.
 - **Mudanças de status de reclamação** (`topic` `CLAIM`, `eventType` `status_change`): [**Status da reclamação atualizado**](/api-reference/webhooks/claim-status-updated) — schema **`ClaimStatusWebhook`**. Enviado para a sua **URL de webhook padrão** quando um administrador atualiza uma reclamação ou a COELSA a autoconcilia. O corpo corresponde à resposta de **Obter reclamação** (`GET /claims/{id}`, sem `fileUrl`) mais os metadados de roteamento, com um campo **`comment`** opcional. Webhooks **não** são enviados na criação da reclamação nem em atualizações que apenas adicionam um comentário. Veja **[Reclamações](/pt-BR/claims/introduction)**.
 
@@ -64,6 +64,38 @@ Em **`checkout.completed`**, o objeto **`transaction`** aninhado usa os mesmos c
 Neste exemplo o valor da movimentação é **12.000**. O percentual do cliente é **1%** (`120`) mais uma taxa fixa de **15**, então **`collectedAmount`** é **135**. O percentual da plataforma (**0,5%**, `60`) fica registrado à parte.
 
 `GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status` devolve o mesmo detalhamento quando ele existe, e inclui **`flatFee.source`** (`account` ou `platform`). `GET /transaction/{id}/status` é o status de uma solicitação de transação e não inclui **`feeBreakdown`**.
+
+## Identificador end-to-end PIX
+
+Webhooks de movimentação de conta (`topic` **`TRANSACTION`**, `eventType` **`created`** ou **`status_change`**) incluem **`endToEndId`** opcional quando a movimentação armazena um identificador end-to-end de um PIX do Brasil. O valor é essa string armazenada, sem espaços no início ou no fim. A HG.Cash omite o campo quando o identificador está ausente ou vazio. O campo fica no nível superior do JSON, junto de campos como **`id`** e **`status`**. Vale para PIX de entrada e de saída.
+
+Você recebe o campo nestes casos:
+
+- Uma atualização de status PIX envia **`eventType` `status_change`** e o identificador já está armazenado.
+- Uma atualização posterior do provedor grava o identificador pela primeira vez e essa atualização ainda não notificou você. A HG.Cash envia então um **`TRANSACTION` / `status_change`** com o corpo atualizado.
+- Um reenvio pelo painel envia **`eventType` `created`** a partir da movimentação armazenada, e o identificador já está salvo.
+
+Uma mudança de status na mesma atualização inclui **`endToEndId`** uma única vez. Um identificador que já estava armazenado não gera outra entrega por si só.
+
+Em **`checkout.completed`**, o objeto **`transaction`** aninhado usa os mesmos campos de movimentação, inclusive **`endToEndId`** quando a movimentação vinculada tem um.
+
+```json
+{
+  "topic": "TRANSACTION",
+  "eventType": "status_change",
+  "id": "040eac5b-a998-4879-9d8a-05fd2a08c625",
+  "externalID": "bankizi-tx-01",
+  "amount": "250.00",
+  "currency": "BRL",
+  "direction": "Inbound",
+  "status": "done",
+  "type": "inbound",
+  "accountId": "843d9d8b-6db8-47a2-8c22-23b198e99c15",
+  "date": "2026-05-02T21:40:00",
+  "timezone": "America/Sao_Paulo",
+  "endToEndId": "E60701190202505022140DY5DH1K8FL1"
+}
+```
 
 ## Segredo de assinatura (`X-HG-Webhook-Signature`)
 

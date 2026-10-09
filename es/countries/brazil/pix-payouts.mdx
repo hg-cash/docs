@@ -32,6 +32,8 @@ Cuando `keyType` es `document` o `cnpj`, envíe `keyPix` como clave de destino. 
 - Consulta: `GET /api/v1/br/transactions/{id}/status`
 - `webhookUrl` opcional — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
 
+Los webhooks de estado usan el cuerpo de movimiento de cuenta (`topic` `TRANSACTION`, `eventType` `status_change`). Un identificador end-to-end de PIX guardado se envía como `endToEndId` y se omite cuando está vacío. Ver [Identificador end-to-end PIX](/es/developers/receiving-webhooks#identificador-end-to-end-pix).
+
 ## Ejemplos
 
 Clave email:
