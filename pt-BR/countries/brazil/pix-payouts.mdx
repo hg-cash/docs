@@ -66,7 +66,11 @@ curl -X POST https://hg.cash/api/v1/br/transactions/outbound \
 
 ## Ciclo do payout
 
-A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling ou seu webhook para reagir às mudanças.
+Um payout aceito inicia em `processing`. Vai para `done` quando a transferência PIX é liquidada, ou para `cancelled` quando o provedor rejeita ou falha.
+
+Resultados do provedor como `FAILED` e `REJECTED` da Zetta/Bankizi são normalizados para `cancelled`. A HG.Cash **não** expõe um status `failed` separado nos payouts do Brasil.
+
+Use polling (`GET /api/v1/br/transactions/{id}/status`) ou seu webhook para reagir às mudanças.
 
 ## Status da conta
 
