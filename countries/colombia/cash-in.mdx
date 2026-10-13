@@ -1,0 +1,61 @@
+---
+title: "Cash-in"
+description: "Hosted payment pages for Colombia COP accounts"
+icon: "arrow-down-to-bracket"
+---
+
+## Overview
+
+Colombia cash-in uses **hosted checkout** only. There is no `POST /api/v1/co/transactions/inbound`.
+
+Create a session with `POST /api/v1/checkouts` and `country: "CO"`. The response includes `checkoutUrl`. The payer opens that HG page, pays on the hosted page, and returns to the HG success page. Your `successUrl` is used only after payment is confirmed.
+
+The account must use currency **COP** and be **`Operativa`**. Payment rails are configured on the account. The create request does not choose them.
+
+## Prerequisites
+
+- Bearer API token with access to the COP account
+- A Colombia **COP** account with status **`Operativa`**
+
+## Create body
+
+Required:
+
+- `country` — `"CO"`
+- `amount`
+- `successUrl`
+
+Colombia does not require payer name, document, or email.
+
+Optional, same as other countries: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
+
+## Flow
+
+1. `POST /api/v1/checkouts` with `country: "CO"`, `amount`, and `successUrl`
+2. Send `checkoutUrl` from the response to the payer
+3. The payer pays on the HG hosted page and lands on the HG success page
+4. After payment is confirmed, HG.Cash redirects the payer to your `successUrl`
+5. Optionally set `webhookUrl` — see [Receiving webhooks](/developers/receiving-webhooks) and [Create checkouts](/checkouts/create)
+
+## Example request
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "CO",
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "50000.00",
+    "successUrl": "https://merchant.example/success",
+    "cancelUrl": "https://merchant.example/cancel",
+    "webhookUrl": "https://merchant.example/hooks/checkout",
+    "reference": "ORD-42"
+  }'
+```
+
+The checkout starts in `pending` and moves to `completed` when payment is confirmed.
+
+## Account status
+
+The account must be **`Operativa`**. Requests against **`Bloqueada`** or **`Cerrada`** accounts return `403` with `code: ACCOUNT_NOT_OPERATIVE`. A **`Restringida`** account returns `403` with `code: RESTRICTED`.

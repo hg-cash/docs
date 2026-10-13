@@ -79,6 +79,10 @@
               {
                 "group": "Bolivia",
                 "pages": ["countries/bolivia/qr-cash-in", "countries/bolivia/payouts"]
+              },
+              {
+                "group": "Colombia",
+                "pages": ["countries/colombia/cash-in", "countries/colombia/payouts"]
               }
             ]
           },
@@ -164,6 +168,10 @@
               {
                 "group": "Bolivia",
                 "pages": ["es/countries/bolivia/qr-cash-in", "es/countries/bolivia/payouts"]
+              },
+              {
+                "group": "Colombia",
+                "pages": ["es/countries/colombia/cash-in", "es/countries/colombia/payouts"]
               }
             ]
           },
@@ -249,6 +257,10 @@
               {
                 "group": "Bolívia",
                 "pages": ["pt-BR/countries/bolivia/qr-cash-in", "pt-BR/countries/bolivia/payouts"]
+              },
+              {
+                "group": "Colômbia",
+                "pages": ["pt-BR/countries/colombia/cash-in", "pt-BR/countries/colombia/payouts"]
               }
             ]
           },

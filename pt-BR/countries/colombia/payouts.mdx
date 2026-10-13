@@ -1,0 +1,159 @@
+---
+title: "Payouts"
+description: "Payouts bancários, chave Bre-B e QR Bre-B a partir de contas COP na Colômbia"
+icon: "arrow-up-from-bracket"
+---
+
+## Visão geral
+
+Crie payouts de saída a partir de contas **COP** com `POST /api/v1/co/transactions/outbound`.
+
+Omita `destinationType`, ou envie `bank`, para um payout bancário (Fast Pay / ACH). Envie `breb_key` ou `breb_qr` para Bre-B.
+
+O valor mais a taxa de saída precisa caber no **saldo líquido**. Uma criação bem-sucedida retorna `201` com `id` e `status: processing`.
+
+## Pré-requisitos
+
+- Token Bearer com acesso à conta COP
+- Para payouts bancários, um `bankCode` de `GET /api/v1/co/banks`
+
+## Listar bancos
+
+`GET /api/v1/co/banks` retorna `code`, `name`, `accountTypes`, `fastPay` e `ach` de cada instituição.
+
+`bankCode` é o `code` de 4 dígitos. O banco precisa aceitar Fast Pay ou ACH e listar o `accountType` enviado.
+
+## Destinos
+
+### Banco (Fast Pay / ACH)
+
+Obrigatório: `accountId`, `amount` (até 2 casas decimais), `accountType`, `bankCode`, `accountNumber` (máx. 20 caracteres), `beneficiaryFullName`, `documentType`, `documentNumber`.
+
+`accountType`:
+
+| Código | Rótulo |
+| --- | --- |
+| `cc` | Corrente |
+| `ch` | Poupança |
+| `dp` | Depósito eletrônico |
+
+### Chave Bre-B
+
+`destinationType: breb_key`, mais `keyValue`, `beneficiaryFullName`, `documentType` e `documentNumber`. Não envie campos bancários.
+
+### QR Bre-B
+
+`destinationType: breb_qr`, mais `qrValue` (EMV ou base64). `beneficiaryFullName`, `documentType` e `documentNumber` são opcionais. Se o QR tiver um valor fixo, `amount` precisa coincidir ou a API retorna `400` com `code: BREB_QR_AMOUNT_MISMATCH`.
+
+## Tipos de documento
+
+| Código | Rótulo | Formato do número |
+| --- | --- | --- |
+| `cc` | Cédula de cidadania | Somente dígitos |
+| `nit` | NIT | Somente dígitos |
+| `ce` | Cédula de estrangeiro | Somente dígitos |
+| `pa` | Passaporte | Alfanumérico |
+| `ppt` | PPT | Alfanumérico |
+| `ti` | Carteira de identidade | Somente dígitos |
+| `rc` | Registro civil | Somente dígitos |
+| `te` | Carteira de estrangeiro | Somente dígitos |
+| `die` | Documento de identificação estrangeiro | Somente dígitos |
+| `nd` | Sem documento (Nequi) | Deve ser `ND` |
+
+`nd` é só bancário e só para o código de banco `1507`. `documentNumber` deve ser `ND` e `phone` (E.164) é obrigatório. `nd` é rejeitado na chave Bre-B e no QR Bre-B.
+
+## Campos opcionais
+
+Nos três destinos: `phone` (E.164), `email`, `description` (máx. 40 caracteres), `webhookUrl`.
+
+## Fluxo
+
+1. `GET /api/v1/co/banks` quando o destino é uma conta bancária
+2. `POST /api/v1/co/transactions/outbound`
+3. Consulte `GET /api/v1/co/transactions/{id}/status` ou defina `webhookUrl` — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)
+
+A consulta de status é **somente de saída**. Ela retorna `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` e `providerStatus` quando houve uma atualização. Uma transação que não é um payout de saída retorna `400`. Uma falha de atualização retorna `502` com `error`, `code` e `type`.
+
+## Exemplo (banco)
+
+```bash
+curl -X POST https://hg.cash/api/v1/co/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "50000.00",
+    "accountType": "cc",
+    "bankCode": "1001",
+    "accountNumber": "0000000001",
+    "beneficiaryFullName": "Ana Ejemplo",
+    "documentType": "cc",
+    "documentNumber": "1000000000",
+    "description": "Pagamento a fornecedor"
+  }'
+```
+
+## Exemplo (chave Bre-B)
+
+```bash
+curl -X POST https://hg.cash/api/v1/co/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destinationType": "breb_key",
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "25000.00",
+    "keyValue": "@EXAMPLEKEY",
+    "beneficiaryFullName": "Ana Ejemplo",
+    "documentType": "cc",
+    "documentNumber": "1000000000",
+    "email": "payer@example.com"
+  }'
+```
+
+## Exemplo (QR Bre-B)
+
+```bash
+curl -X POST https://hg.cash/api/v1/co/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destinationType": "breb_qr",
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "15000.00",
+    "qrValue": "000201010212EXAMPLEQR"
+  }'
+```
+
+## Exemplo (sem documento, banco `1507`)
+
+```bash
+curl -X POST https://hg.cash/api/v1/co/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "10000.00",
+    "accountType": "ch",
+    "bankCode": "1507",
+    "accountNumber": "3000000000",
+    "beneficiaryFullName": "Ana Ejemplo",
+    "documentType": "nd",
+    "documentNumber": "ND",
+    "phone": "+570000000000"
+  }'
+```
+
+O banco `1507` aceita poupança (`ch`) e depósito eletrônico (`dp`).
+
+## Ciclo do payout
+
+O payout começa em `processing` e passa para `done` quando liquida, ou para `cancelled` quando é rejeitado.
+
+Se a conta não cobrir o valor e a taxa de saída, a API retorna `409` com `code: INSUFFICIENT_NET_BALANCE`.
+
+Uma conta que não é COP retorna `400`.
+
+## Status da conta
+
+A conta de origem deve estar **`Operativa`**. **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** retorna `403` com `code: RESTRICTED`.

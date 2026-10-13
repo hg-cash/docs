@@ -1,6 +1,6 @@
 ---
 title: "Introduction"
-description: "Hosted payment pages for Argentina, Brazil, Chile, and Bolivia"
+description: "Hosted payment pages for Argentina, Brazil, Chile, Bolivia, and Colombia"
 icon: "cart-shopping"
 ---
 
@@ -25,6 +25,7 @@ You can also integrate entirely via the **REST API** (`POST /api/v1/checkouts` a
 | **BR** | PIX QR / copia-e-cola | Provider inbound transaction + webhook; payer sees QR on hosted page |
 | **CL** | PayRetailers hosted iframe | Provider checkout URL; completion via provider webhook |
 | **BO** | QR payment | Provider inbound transaction + webhook; payer sees QR on hosted page |
+| **CO** | Hosted checkout | Payer pays on the HG page. Merchant `successUrl` is used only after confirmation. Payment rails are configured on the account |
 
 Payers **do not log in** to HG.cash on the public page. Your backend (or dashboard) uses the same **Bearer API token** as other v1 endpoints.
 
@@ -52,6 +53,6 @@ When a checkout changes state, HG.Cash can send a **`CHECKOUT`** webhook (`check
 ## Before you begin
 
 - **Access** to **Checkouts** in the dashboard (enabled per user; contact HG.cash if you do not see it)
-- An **operative** receiving account for the country (ARS + Urbana for AR, BRL PIX platform for BR, CL PayRetailers for CL, BOB for BO). **`Bloqueada`** or **`Cerrada`** accounts cannot be used for BR, CL, or BO checkouts and return `403` with `ACCOUNT_NOT_OPERATIVE`.
+- An **operative** receiving account for the country (ARS + Urbana for AR, BRL PIX platform for BR, CL PayRetailers for CL, BOB for BO, COP for CO). **`Bloqueada`** or **`Cerrada`** accounts cannot be used for BR, CL, BO, or CO checkouts and return `403` with `ACCOUNT_NOT_OPERATIVE`.
 - **`successUrl`** on every create — where the payer is redirected after success
 - Optional **webhook signing secret** in account settings

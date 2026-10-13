@@ -1,0 +1,61 @@
+---
+title: "Cash-in"
+description: "Páginas de pagamento hospedadas para contas COP na Colômbia"
+icon: "arrow-down-to-bracket"
+---
+
+## Visão geral
+
+O cash-in na Colômbia usa apenas **checkout hospedado**. Não existe `POST /api/v1/co/transactions/inbound`.
+
+Crie uma sessão com `POST /api/v1/checkouts` e `country: "CO"`. A resposta inclui `checkoutUrl`. O pagador abre essa página da HG, paga na página hospedada e volta à página de sucesso da HG. Sua `successUrl` é usada somente depois que o pagamento é confirmado.
+
+A conta deve usar a moeda **COP** e estar **`Operativa`**. Os meios de pagamento são configurados na conta. A requisição de criação não os escolhe.
+
+## Pré-requisitos
+
+- Token Bearer com acesso à conta COP
+- Uma conta **COP** da Colômbia com status **`Operativa`**
+
+## Corpo da criação
+
+Obrigatório:
+
+- `country` — `"CO"`
+- `amount`
+- `successUrl`
+
+A Colômbia não exige nome, documento nem e-mail do pagador.
+
+Opcional, como nos outros países: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
+
+## Fluxo
+
+1. `POST /api/v1/checkouts` com `country: "CO"`, `amount` e `successUrl`
+2. Envie o `checkoutUrl` da resposta ao pagador
+3. O pagador paga na página hospedada da HG e chega à página de sucesso da HG
+4. Depois da confirmação do pagamento, a HG.Cash redireciona o pagador para sua `successUrl`
+5. Opcional: `webhookUrl` — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks) e [Criar checkouts](/pt-BR/checkouts/create)
+
+## Exemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "CO",
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "50000.00",
+    "successUrl": "https://merchant.example/success",
+    "cancelUrl": "https://merchant.example/cancel",
+    "webhookUrl": "https://merchant.example/hooks/checkout",
+    "reference": "ORD-42"
+  }'
+```
+
+O checkout começa em `pending` e passa para `completed` quando o pagamento é confirmado.
+
+## Status da conta
+
+A conta deve estar **`Operativa`**. Requisições contra contas **`Bloqueada`** ou **`Cerrada`** retornam `403` com `code: ACCOUNT_NOT_OPERATIVE`. Uma conta **`Restringida`** retorna `403` com `code: RESTRICTED`.
