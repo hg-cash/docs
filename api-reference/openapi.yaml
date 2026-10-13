@@ -2535,6 +2535,13 @@ paths:
                       amount:
                         type: string
                         description: Decimal amount as a string
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                externalID: "550e8400-e29b-41d4-a716-446655440000"
+                status: processing
+                direction: Outbound
+                amount: "50000.00"
+                currency: COP
         '400':
           description: Transaction is not an outbound payout supported for status polling
           content:

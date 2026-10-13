@@ -2534,6 +2534,13 @@ paths:
                       amount:
                         type: string
                         description: Monto decimal como string
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                externalID: "550e8400-e29b-41d4-a716-446655440000"
+                status: processing
+                direction: Outbound
+                amount: "50000.00"
+                currency: COP
         '400':
           description: La transacción no es un payout saliente admitido para consulta de estado
           content:
