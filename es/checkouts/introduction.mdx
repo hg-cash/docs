@@ -1,6 +1,6 @@
 ---
 title: "Introducción"
-description: "Páginas de pago hospedadas para Argentina, Brasil, Chile y Bolivia"
+description: "Páginas de pago hospedadas para Argentina, Brasil, Chile, Bolivia y Colombia"
 icon: "cart-shopping"
 ---
 
@@ -25,6 +25,7 @@ También podés integrar solo con la **API REST** (`POST /api/v1/checkouts` y en
 | **BR** | PIX QR / copia-e-cola | Transacción entrante del proveedor + webhook; el pagador ve el QR en la página hospedada |
 | **CL** | Iframe PayRetailers | URL del proveedor; completado vía webhook del proveedor |
 | **BO** | Pago QR | Transacción entrante del proveedor + webhook; el pagador ve el QR en la página hospedada |
+| **CO** | Checkout hospedado | El pagador paga en la página de HG. La `successUrl` del comercio se usa solo después de la confirmación. Los medios de pago se configuran en la cuenta |
 
 Los pagadores **no inician sesión** en HG.Cash en la página pública. Tu backend (o el panel) usa el mismo **token Bearer API** que el resto de v1.
 
@@ -52,6 +53,6 @@ Cuando un checkout cambia de estado, HG.Cash puede enviar un webhook **`CHECKOUT
 ## Antes de empezar
 
 - **Acceso** a **Checkouts** en el panel (habilitado por usuario; contactá a HG.Cash si no lo ves)
-- Una cuenta receptora **operativa** para el país (ARS + Urbana en AR, plataforma PIX BRL en BR, PayRetailers CL en CL, BOB en BO). Las cuentas **`Bloqueada`** o **`Cerrada`** no pueden usarse para checkouts BR, CL o BO y devuelven `403` con `ACCOUNT_NOT_OPERATIVE`.
+- Una cuenta receptora **operativa** para el país (ARS + Urbana en AR, plataforma PIX BRL en BR, PayRetailers CL en CL, BOB en BO, COP en CO). Las cuentas **`Bloqueada`** o **`Cerrada`** no pueden usarse para checkouts BR, CL, BO o CO y devuelven `403` con `ACCOUNT_NOT_OPERATIVE`.
 - **`successUrl`** en cada creación — destino tras el éxito
 - Secreto de firma de webhook opcional en Configuración

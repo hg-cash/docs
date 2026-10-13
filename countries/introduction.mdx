@@ -10,13 +10,13 @@ HG.Cash operates in several countries. Each market uses its own **currency**, **
 
 Shared concepts—authentication, accounts, balances, and [webhooks](/developers/receiving-webhooks)—work the same everywhere. Country guides focus on **cash-in** (receive funds) and **payouts** (send funds) for that market.
 
-## Account status (Brazil, Chile, Bolivia)
+## Account status (Brazil, Chile, Bolivia, Colombia)
 
-Accounts have lifecycle status `Operativa`, `Bloqueada`, or `Cerrada`. For **Brazil**, **Chile**, and **Bolivia** direct inbound/outbound APIs and **hosted checkouts** (`POST /api/v1/checkouts`), only **`Operativa`** accounts can receive or send funds. Blocked or closed accounts return HTTP `403` with `code: ACCOUNT_NOT_OPERATIVE`.
+Accounts have lifecycle status `Operativa`, `Bloqueada`, or `Cerrada`. For **hosted checkouts** (`POST /api/v1/checkouts`) and direct cash-in or payout APIs in **Brazil**, **Chile**, **Bolivia**, and **Colombia**, only **`Operativa`** accounts can receive or send funds. Blocked or closed accounts return HTTP `403` with `code: ACCOUNT_NOT_OPERATIVE`.
 
 Use `GET /api/v1/accounts` or `GET /api/v1/account/{id}/balance` to check status before creating a transaction or checkout.
 
-For a **single hosted payment page** across Argentina, Brazil, Chile, and Bolivia, use **[Hosted checkout](/developers/checkout)** (`POST /api/v1/checkouts`) instead of country-specific inbound APIs where that fits your product.
+For a **single hosted payment page** across Argentina, Brazil, Chile, Bolivia, and Colombia, use **[Hosted checkout](/developers/checkout)** (`POST /api/v1/checkouts`) instead of country-specific inbound APIs where that fits your product.
 
 ## Where we operate
 
@@ -24,17 +24,20 @@ For a **single hosted payment page** across Argentina, Brazil, Chile, and Bolivi
   <Card title="Argentina" icon="building-columns" href="/countries/argentina/bank-transfers">
     **ARS** — Assigned banking accounts; cash-ins and cash-outs notified by webhook; instant API cash-outs.
   </Card>
-  <Card title="Chile" icon="flag" href="/countries/chile/cash-in">
-    **CLP** — Hosted checkout for cash-in and bank payouts for withdrawals.
+  <Card title="Bolivia" icon="flag" href="/countries/bolivia/qr-cash-in">
+    **BOB** — QR cash-in and ACH bank payouts.
   </Card>
   <Card title="Brazil" icon="flag" href="/countries/brazil/pix-cash-in">
     **BRL** — PIX QR / copy-paste for cash-in and PIX key payouts.
   </Card>
-  <Card title="Bolivia" icon="flag" href="/countries/bolivia/qr-cash-in">
-    **BOB** — QR cash-in and ACH bank payouts.
+  <Card title="Chile" icon="flag" href="/countries/chile/cash-in">
+    **CLP** — Hosted checkout for cash-in and bank payouts for withdrawals.
+  </Card>
+  <Card title="Colombia" icon="flag" href="/countries/colombia/cash-in">
+    **COP** — Hosted checkout for cash-in, and bank, Bre-B key, or Bre-B QR payouts.
   </Card>
 </CardGroup>
 
 ## API reference
 
-Country-specific endpoints are grouped in the [API reference](/api-reference) tab (**Transactions** for Argentina; **Brazil**, **Chile**, and **Bolivia** for direct cash-in and payouts). Start from the guide for your country, then use the interactive reference for request and response schemas.
+Country-specific endpoints are grouped in the [API reference](/api-reference) tab (**Transactions** for Argentina; **Brazil**, **Chile**, and **Bolivia** for direct cash-in and payouts; **Colombia** for bank, Bre-B key, and Bre-B QR payouts). Colombia cash-in uses hosted checkout. Start from the guide for your country, then use the interactive reference for request and response schemas.

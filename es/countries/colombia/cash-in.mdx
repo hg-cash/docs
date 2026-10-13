@@ -1,0 +1,61 @@
+---
+title: "Cash-in"
+description: "Páginas de pago hospedadas para cuentas COP en Colombia"
+icon: "arrow-down-to-bracket"
+---
+
+## Resumen
+
+El cash-in en Colombia usa solo **checkout hospedado**. No existe `POST /api/v1/co/transactions/inbound`.
+
+Cree una sesión con `POST /api/v1/checkouts` y `country: "CO"`. La respuesta incluye `checkoutUrl`. El pagador abre esa página de HG, paga en la página hospedada y vuelve a la página de éxito de HG. Su `successUrl` se usa solo después de confirmar el pago.
+
+La cuenta debe usar moneda **COP** y estar **`Operativa`**. Los medios de pago se configuran en la cuenta. La solicitud de creación no los elige.
+
+## Requisitos
+
+- Token Bearer con acceso a la cuenta COP
+- Una cuenta **COP** de Colombia con estado **`Operativa`**
+
+## Cuerpo de creación
+
+Obligatorio:
+
+- `country` — `"CO"`
+- `amount`
+- `successUrl`
+
+Colombia no exige nombre, documento ni email del pagador.
+
+Opcional, igual que en otros países: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
+
+## Flujo
+
+1. `POST /api/v1/checkouts` con `country: "CO"`, `amount` y `successUrl`
+2. Envíe el `checkoutUrl` de la respuesta al pagador
+3. El pagador paga en la página hospedada de HG y llega a la página de éxito de HG
+4. Después de confirmar el pago, HG.Cash redirige al pagador a su `successUrl`
+5. Opcional: `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks) y [Crear checkouts](/es/checkouts/create)
+
+## Ejemplo
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "CO",
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "50000.00",
+    "successUrl": "https://merchant.example/success",
+    "cancelUrl": "https://merchant.example/cancel",
+    "webhookUrl": "https://merchant.example/hooks/checkout",
+    "reference": "ORD-42"
+  }'
+```
+
+El checkout inicia en `pending` y pasa a `completed` cuando se confirma el pago.
+
+## Estado de la cuenta
+
+La cuenta debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`. Una cuenta **`Restringida`** devuelve `403` con `code: RESTRICTED`.

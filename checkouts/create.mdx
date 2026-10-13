@@ -21,6 +21,7 @@ Use **Validate** or **Reconcile** (top right) when you need those flows.
 | **BR** | **Payer name**, **CPF/CNPJ (`document`)**, and **email** required |
 | **CL** | Create via **API only** for now (payment method + customer payload) |
 | **BO** | **Payer name**, **CI/document (`document`)**, and **email** required |
+| **CO** | No extra payer fields |
 
 ## API
 
@@ -36,7 +37,7 @@ Use **Validate** or **Reconcile** (top right) when you need those flows.
 
 Optional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, `locale`, and `payer` (country-specific).
 
-For **BR**, **CL**, and **BO**, if you pass an explicit `accountId` that is **`Bloqueada`** or **`Cerrada`**, the API returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. When `accountId` is omitted, HG.Cash selects an eligible **`Operativa`** account.
+For **BR**, **CL**, **BO**, and **CO**, if you pass an explicit `accountId` that is **`Bloqueada`** or **`Cerrada`**, the API returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. When `accountId` is omitted, HG.Cash selects an eligible **`Operativa`** account.
 
 ### Argentina (`AR`)
 
@@ -57,6 +58,13 @@ For **BR**, **CL**, and **BO**, if you pass an explicit `accountId` that is **`B
 
 - **`payer.name`**, **`payer.document`** (payer CI or document ID), and **`payer.email`** required on create.
 - Response may include **`qrCode`** for the payer to scan.
+
+### Colombia (`CO`)
+
+- No payer name, document, or email is required. See [Colombia cash-in](/countries/colombia/cash-in).
+- The account must be **COP** and **`Operativa`**. Payment rails are configured on the account. The create request does not choose them.
+- Optional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
+- Response includes **`checkoutUrl`**. The payer opens that HG page, pays on the hosted page, and returns to the HG success page. Your `successUrl` is used only after payment is confirmed.
 
 ## Example (Brazil)
 
@@ -97,6 +105,22 @@ curl -X POST https://hg.cash/api/v1/checkouts \
 ```
 
 Response includes **`checkoutUrl`** — send that URL to the payer. A **`qrCode`** (base64 image) may also be returned on create.
+
+## Example (Colombia)
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "CO",
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "50000.00",
+    "successUrl": "https://merchant.example/success"
+  }'
+```
+
+Response includes **`checkoutUrl`** — send that URL to the payer. There is no inbound Colombia transaction endpoint.
 
 ## Example (Argentina)
 

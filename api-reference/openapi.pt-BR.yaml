@@ -621,7 +621,7 @@ components:
           description: Código de moeda ISO 4217
         country:
           type: string
-          enum: [AR, BR, CL, BO]
+          enum: [AR, BR, CL, BO, CO]
         transactionId:
           type: string
           format: uuid
@@ -644,7 +644,7 @@ components:
       properties:
         country:
           type: string
-          enum: [AR, BR, CL, BO]
+          enum: [AR, BR, CL, BO, CO]
           description: País do checkout (AR, BR, CL ou BO)
         amount:
           type: string
@@ -684,7 +684,7 @@ components:
             name: { type: string, description: "Nome completo do pagador (obrigatório para BR e BO)" }
             document: { type: string, description: "AR DNI de 8 dígitos; BR CPF/CNPJ do pagador; BO CI/documento do pagador" }
             email: { type: string, format: email }
-          description: "BR exige name, document e email; BO exige name, document e email"
+          description: "BR exige name, document e email; BO exige name, document e email. CO não exige campos de payer."
         paymentMethodId:
           type: string
           format: uuid
@@ -1192,6 +1192,198 @@ components:
         type:
           type: string
 
+    ColombiaProviderError:
+      type: object
+      required: [error, code, type]
+      description: Erro quando um payout da Colômbia não pode ser concluído ou o status não pode ser atualizado
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          description: CO_OUTBOUND_PROVIDER_CREATE_FAILED ou CO_TRANSACTION_STATUS_PROVIDER_ERROR
+        type:
+          type: string
+          description: provider_error
+
+    ColombiaBank:
+      type: object
+      required: [code, name, accountTypes, fastPay, ach]
+      properties:
+        code:
+          type: string
+          description: Código da instituição com 4 dígitos
+          example: "1001"
+        name:
+          type: string
+        accountTypes:
+          type: array
+          description: Tipos de conta aceitos pelo banco. `cc` corrente, `ch` poupança, `dp` depósito eletrônico.
+          items:
+            type: string
+            enum: [cc, ch, dp]
+        fastPay:
+          type: boolean
+          description: O banco aceita payouts Fast Pay
+        ach:
+          type: boolean
+          description: O banco aceita payouts ACH
+
+    ColombiaBanksResponse:
+      type: object
+      required: [banks]
+      properties:
+        banks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColombiaBank'
+
+    ColombiaDocumentType:
+      type: string
+      enum: [cc, nit, ce, pa, ppt, ti, rc, te, die, nd]
+      description: |
+        `cc` cédula de cidadania, `nit` NIT, `ce` cédula de estrangeiro, `pa` passaporte, `ppt` PPT,
+        `ti` carteira de identidade, `rc` registro civil, `te` carteira de estrangeiro,
+        `die` documento de identificação estrangeiro, `nd` sem documento (Nequi).
+        A maioria dos números é somente dígitos. Passaporte (`pa`) e PPT (`ppt`) são alfanuméricos.
+        `nd` é só bancário e só para o código de banco `1507`. `documentNumber` deve ser `ND` e `phone` (E.164) é obrigatório.
+        `nd` é rejeitado no Bre-B.
+
+    ColombiaOutboundRequest:
+      type: object
+      description: |
+        Payout de saída em COP. Omita `destinationType` ou envie `bank` para Fast Pay / ACH.
+        Banco exige `accountType`, `bankCode`, `accountNumber` (máx. 20), `beneficiaryFullName`, `documentType` e `documentNumber`.
+        O banco precisa aceitar Fast Pay ou ACH e o tipo de conta escolhido.
+        `breb_key` exige `keyValue`, `beneficiaryFullName`, `documentType` e `documentNumber`. Não envie campos bancários.
+        `breb_qr` exige `qrValue` (EMV ou base64). Beneficiário e documento são opcionais.
+        Se o QR tiver um valor fixo, `amount` precisa coincidir ou a API retorna `400` com `code: BREB_QR_AMOUNT_MISMATCH`.
+      required: [accountId, amount]
+      properties:
+        destinationType:
+          type: string
+          enum: [bank, breb_key, breb_qr]
+          description: O padrão é `bank` quando omitido
+        accountId:
+          type: string
+          format: uuid
+          example: YOUR_ACCOUNT_UUID
+        amount:
+          description: Valor positivo. Strings aceitam no máximo 2 casas decimais.
+          oneOf:
+            - type: number
+              exclusiveMinimum: 0
+            - type: string
+              pattern: "^\\d+(\\.\\d{1,2})?$"
+        accountType:
+          type: string
+          enum: [cc, ch, dp]
+          description: Obrigatório para banco. `cc` corrente, `ch` poupança, `dp` depósito eletrônico.
+        bankCode:
+          type: string
+          pattern: "^\\d{4}$"
+          description: Obrigatório para banco. Código de 4 dígitos de GET /co/banks.
+        accountNumber:
+          type: string
+          maxLength: 20
+          description: Obrigatório para banco
+        beneficiaryFullName:
+          type: string
+          description: Obrigatório para banco e chave Bre-B. Opcional para QR Bre-B.
+        documentType:
+          $ref: '#/components/schemas/ColombiaDocumentType'
+        documentNumber:
+          type: string
+        keyValue:
+          type: string
+          description: Obrigatório para `breb_key`
+        qrValue:
+          type: string
+          description: Obrigatório para `breb_qr`. Payload EMV ou base64.
+        phone:
+          type: string
+          description: Telefone E.164 opcional. Obrigatório quando `documentType` é `nd`.
+          example: "+570000000000"
+        email:
+          type: string
+          format: email
+          example: payer@example.com
+        description:
+          type: string
+          maxLength: 40
+        webhookUrl:
+          type: string
+          format: uri
+
+    ColombiaOutboundResponse:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [processing]
+
+    ColombiaValidationError:
+      type: object
+      required: [error, details]
+      properties:
+        error:
+          type: string
+          example: Validation failed
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    ColombiaBrebQrAmountMismatch:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+          example: Bre-B QR amount does not match the amount encoded in the QR
+        code:
+          type: string
+          enum: [BREB_QR_AMOUNT_MISMATCH]
+        details:
+          type: object
+          properties:
+            qrAmountCents:
+              type: integer
+            requestedAmountCents:
+              type: integer
+
+    ColombiaInsufficientNetBalance:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+          example: Insufficient balance to cover transfer and fee
+        code:
+          type: string
+          enum: [INSUFFICIENT_NET_BALANCE]
+        details:
+          type: object
+
+    ColombiaAccountStatusError:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [ACCOUNT_NOT_OPERATIVE, RESTRICTED]
+
     OutboundTransactionRequest:
       type: object
       description: Solicitação para criar uma transação de saída (saque) em contas BRL do Brasil
@@ -1577,7 +1769,8 @@ paths:
     post:
       summary: Criar sessão de checkout
       description: |
-        Cria um checkout hospedado para AR (transferência + DNI), BR (QR PIX), CL (iframe do provedor) ou BO (pagamento QR).
+        Cria um checkout hospedado para AR (transferência + DNI), BR (QR PIX), CL (iframe do provedor), BO (pagamento QR) ou CO (página de pagamento hospedada).
+        A Colômbia não exige nome, documento nem e-mail do pagador. O pagador abre `checkoutUrl`, paga na página da HG e `successUrl` é usada só depois da confirmação do pagamento. Os meios de pagamento são configurados na conta.
         Retorna `checkoutUrl` para o pagador e campos opcionais do provedor (QR, URL do iframe).
       operationId: createCheckout
       tags: [Checkouts]
@@ -1615,7 +1808,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [AR, BR, CL, BO]
+            enum: [AR, BR, CL, BO, CO]
         - name: limit
           in: query
           schema:
@@ -2188,6 +2381,212 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BoliviaProviderError'
+
+  /co/banks:
+    get:
+      summary: Listar bancos (Colômbia)
+      description: |
+        Retorna as instituições disponíveis para payouts bancários na Colômbia.
+        Cada banco inclui `code`, `name`, `accountTypes`, `fastPay` e `ach`.
+      operationId: listCoBanks
+      tags:
+        - Colômbia
+      responses:
+        '200':
+          description: Lista de bancos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColombiaBanksResponse'
+        '401':
+          description: Não autorizado
+        '500':
+          description: Erro interno do servidor
+
+  /co/transactions/outbound:
+    post:
+      summary: Criar transação de saída (Colômbia)
+      description: |
+        Cria um payout em COP a partir de uma conta COP operativa.
+        Omita `destinationType` ou envie `bank` para Fast Pay / ACH.
+        Envie `breb_key` ou `breb_qr` para Bre-B.
+        O sucesso é `201` com `id` e `status: processing`.
+        O valor mais a taxa de saída precisa caber no saldo líquido, ou a API retorna `409` com `code: INSUFFICIENT_NET_BALANCE`.
+        Uma conta que não é COP retorna `400`.
+        `Bloqueada` ou `Cerrada` retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`.
+        `Restringida` retorna `403` com `code: RESTRICTED`.
+      operationId: createCoOutboundTransaction
+      tags:
+        - Colômbia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColombiaOutboundRequest'
+            examples:
+              bank:
+                summary: Payout bancário
+                value:
+                  accountId: YOUR_ACCOUNT_UUID
+                  amount: "50000.00"
+                  accountType: cc
+                  bankCode: "1001"
+                  accountNumber: "0000000001"
+                  beneficiaryFullName: Ana Ejemplo
+                  documentType: cc
+                  documentNumber: "1000000000"
+              brebKey:
+                summary: Chave Bre-B
+                value:
+                  destinationType: breb_key
+                  accountId: YOUR_ACCOUNT_UUID
+                  amount: "25000.00"
+                  keyValue: "@EXAMPLEKEY"
+                  beneficiaryFullName: Ana Ejemplo
+                  documentType: cc
+                  documentNumber: "1000000000"
+                  email: payer@example.com
+              brebQr:
+                summary: QR Bre-B
+                value:
+                  destinationType: breb_qr
+                  accountId: YOUR_ACCOUNT_UUID
+                  amount: "15000.00"
+                  qrValue: "000201010212EXAMPLEQR"
+      responses:
+        '201':
+          description: Payout aceito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColombiaOutboundResponse'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                status: processing
+        '400':
+          description: |
+            Validação falhou, a moeda da conta não é COP, a conta não aceita esta operação, ou o valor do QR Bre-B não coincide (`code: BREB_QR_AMOUNT_MISMATCH`).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ColombiaValidationError'
+                  - $ref: '#/components/schemas/ColombiaBrebQrAmountMismatch'
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                        example: Account currency must be COP for this operation
+        '401':
+          description: Não autorizado
+        '403':
+          description: A conta não está operativa (`Bloqueada` ou `Cerrada`) ou está restrita (`Restringida`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColombiaAccountStatusError'
+              examples:
+                notOperative:
+                  summary: A conta não está operativa
+                  value:
+                    error: Account is not operative
+                    code: ACCOUNT_NOT_OPERATIVE
+                restricted:
+                  summary: A conta está restrita
+                  value:
+                    error: Account is restricted
+                    code: RESTRICTED
+        '404':
+          description: Conta não encontrada
+        '409':
+          description: O valor mais a taxa de saída excede o saldo líquido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColombiaInsufficientNetBalance'
+        '502':
+          description: Não foi possível concluir este payout com o provedor de pagamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColombiaProviderError'
+              example:
+                error: Unable to complete this payout with the payment provider.
+                code: CO_OUTBOUND_PROVIDER_CREATE_FAILED
+                type: provider_error
+        '500':
+          description: Erro interno do servidor
+
+  /co/transactions/{id}/status:
+    get:
+      summary: Consultar status da transação (Colômbia)
+      description: |
+        Somente payouts de saída da Colômbia.
+        Retorna `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` e `providerStatus` quando houve uma atualização.
+        Uma transação que não é um payout de saída retorna `400`.
+        Uma falha de atualização retorna `502` com `error`, `code` e `type`.
+      operationId: getCoTransactionStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - Colômbia
+      responses:
+        '200':
+          description: Status da transação
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/DirectTransactionStatus'
+                  - type: object
+                    properties:
+                      providerStatus:
+                        type: string
+                        description: Presente quando esta requisição atualizou um payout em andamento. Omitido caso contrário.
+                      amount:
+                        type: string
+                        description: Valor decimal como string
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                externalID: "550e8400-e29b-41d4-a716-446655440000"
+                status: processing
+                direction: Outbound
+                amount: "50000.00"
+                currency: COP
+        '400':
+          description: A transação não é um payout de saída aceito para consulta de status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+                    example: Transaction is not supported for status polling
+        '401':
+          description: Não autorizado
+        '404':
+          description: Transação não encontrada
+        '502':
+          description: Falha na atualização
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColombiaProviderError'
+              example:
+                error: Unable to fetch transaction status from the payment provider.
+                code: CO_TRANSACTION_STATUS_PROVIDER_ERROR
+                type: provider_error
+        '500':
+          description: Erro interno do servidor
 
   /transactions/{id}/receipt:
     get:
@@ -2918,7 +3317,9 @@ tags:
     description: "Chile — Checkout hospedado e payouts bancários (CLP)."
   - name: Bolívia
     description: "Bolívia — Cash-in com QR e payouts ACH (BOB)."
+  - name: Colômbia
+    description: "Colômbia — Cash-in com checkout hospedado e payouts bancários, chave Bre-B ou QR Bre-B (COP)."
   - name: Checkouts
-    description: "Sessões de checkout hospedado para AR, BR, CL e BO"
+    description: "Sessões de checkout hospedado para AR, BR, CL, BO e CO"
   - name: Claims
     description: "Reclamações com evidência de comprovante de transferência"

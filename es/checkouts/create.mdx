@@ -21,6 +21,7 @@ Usá **Validar** o **Conciliar** (arriba a la derecha) cuando necesites esos flu
 | **BR** | **Nombre del pagador**, **CPF/CNPJ (`document`)** y **email** obligatorios |
 | **CL** | Por ahora solo vía **API** (método de pago + datos del cliente) |
 | **BO** | **Nombre del pagador**, **CI/documento (`document`)** y **email** obligatorios |
+| **CO** | Sin campos extra del pagador |
 
 ## API
 
@@ -36,7 +37,7 @@ Usá **Validar** o **Conciliar** (arriba a la derecha) cuando necesites esos flu
 
 Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `idempotencyKey`, `locale` y `payer` (según país).
 
-Para **BR**, **CL** y **BO**, si indicás un `accountId` explícito que esté **`Bloqueada`** o **`Cerrada`**, la API responde `403` con `code: ACCOUNT_NOT_OPERATIVE`. Si omitís `accountId`, HG.Cash elige una cuenta **`Operativa`** elegible.
+Para **BR**, **CL**, **BO** y **CO**, si indicás un `accountId` explícito que esté **`Bloqueada`** o **`Cerrada`**, la API responde `403` con `code: ACCOUNT_NOT_OPERATIVE`. Si omitís `accountId`, HG.Cash elige una cuenta **`Operativa`** elegible.
 
 ### Argentina (`AR`)
 
@@ -57,6 +58,13 @@ Para **BR**, **CL** y **BO**, si indicás un `accountId` explícito que esté **
 
 - **`payer.name`**, **`payer.document`** (CI o documento del pagador) y **`payer.email`** obligatorios al crear.
 - La respuesta puede incluir **`qrCode`** para que el pagador lo escanee.
+
+### Colombia (`CO`)
+
+- No hace falta nombre, documento ni email del pagador. Ver [Cash-in Colombia](/es/countries/colombia/cash-in).
+- La cuenta debe ser **COP** y **`Operativa`**. Los medios de pago se configuran en la cuenta. La solicitud de creación no los elige.
+- Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
+- La respuesta incluye **`checkoutUrl`**. El pagador abre esa página de HG, paga en la página hospedada y vuelve a la página de éxito de HG. Tu `successUrl` se usa solo después de confirmar el pago.
 
 ## Ejemplo (Brasil)
 
@@ -97,6 +105,22 @@ curl -X POST https://hg.cash/api/v1/checkouts \
 ```
 
 La respuesta incluye **`checkoutUrl`** — enviá esa URL al pagador. Un **`qrCode`** (imagen base64) también puede devolverse al crear.
+
+## Ejemplo (Colombia)
+
+```bash
+curl -X POST https://hg.cash/api/v1/checkouts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "country": "CO",
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "50000.00",
+    "successUrl": "https://merchant.example/success"
+  }'
+```
+
+La respuesta incluye **`checkoutUrl`** — enviá esa URL al pagador. No hay un endpoint de transacción entrante para Colombia.
 
 ## Ejemplo (Argentina)
 
