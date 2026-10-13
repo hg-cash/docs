@@ -1,0 +1,138 @@
+---
+title: "Payouts"
+description: "USDT payouts from Venezuela accounts"
+icon: "arrow-up-from-bracket"
+---
+
+## Overview
+
+Create a payout from an operative **USDT** account with `POST /api/v1/ve/transactions/outbound`. Check the recipient first with `POST /api/v1/ve/recipients/kyc` when you want the verification result before you reserve funds.
+
+`amount` is a positive USDT decimal string. Do not send a JSON number. Up to 8 fractional digits may be present. VES fields are metadata only.
+
+Bank, account-type, and document-type values come from `GET /api/v1/ve/banks`. This guide does not list them.
+
+## Prerequisites
+
+- Bearer API token that can pay from the USDT account
+- Catalogue values from `GET /api/v1/ve/banks`
+
+## Banks
+
+`GET /api/v1/ve/banks` returns `country` and `onramp`.
+
+`country` includes `pais`, `nombre`, `moneda`, `banks`, `accountTypes`, `documentTypes`, and `phoneCode`. Each catalogue item is `{value, label}`.
+
+`onramp.banks` items are `{id, name}`. Use `name` as `bancoPago` on cash-in. Do not send that name as payout `banco`.
+
+If the catalogue is not configured, the API returns `500` with `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`. A catalogue fetch failure returns `502` with `code: VE_BANKS_PROVIDER_ERROR`.
+
+Send payout `banco`, `tipoCuenta`, and `tipoDocumento` as the catalogue `value` from `country.banks`, `country.accountTypes`, and `country.documentTypes`. String labels are accepted for compatibility.
+
+`BANK_VALUE` and `ACCOUNT_TYPE_VALUE` in the examples below are placeholders. Replace them with values from `GET /api/v1/ve/banks`.
+
+## Recipient check
+
+`POST /api/v1/ve/recipients/kyc` checks a recipient before a payout. It does not create a transaction, does not reserve USDT, and does not save a bank account.
+
+Required: `accountId` (an operative USDT account you can pay from), `email`, `documentoIdentidad`, `tipoDocumento`.
+
+Optional: `numeroCuenta`. When you send it, `ready` means identity verification is approved and that account is already on file. When you omit it, `ready` means approved and a bank account is already on file. `kyc_approved_no_account` means verification is approved and that account is not on file yet.
+
+`documentoIdentidad` is digits only. The letter belongs in `tipoDocumento` (`V`, `J`, `P`, or `E` from the banks catalogue). A matching `V-`, `J-`, `P-`, or `E-` prefix is accepted and stripped.
+
+A missing account returns `404`. If you cannot pay from that account, or it is not a Venezuela USDT account, the API returns `403`. A non-operative account returns `403` with `code: ACCOUNT_NOT_OPERATIVE`.
+
+`firstName`, `lastName`, `prefijoTelefono`, `numeroTelefono`, `direccion`, and `ciudad` are required only when the email is not already registered (`400`, `code: KOLLAT_RECIPIENT_DETAILS_REQUIRED`). When those fields are present and the email is still not registered, the response is `kyc_not_started` without `empleado_id` and without `kyc_url`. This check does not register that email.
+
+A document that does not match an existing email returns `400` with `code: KOLLAT_IDENTITY_UNCONFIRMED` and does not start identity verification.
+
+Success `status` is `ready`, `kyc_approved_no_account`, `kyc_in_progress`, `kyc_not_started`, or `kyc_declined`.
+
+`kyc_declined` includes `code: KOLLAT_KYC_DECLINED` and `empleado_id`. For an existing recipient, `kyc_not_started` returns `kyc_url` when a session URL was issued. `kyc_in_progress` includes `kyc_url` only when the status payload has one, or when a payout on this `accountId` already stored one. Do not read that URL from another account's transactions.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/recipients/kyc \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "email": "payer@example.com",
+    "documentoIdentidad": "00000000",
+    "tipoDocumento": "V"
+  }'
+```
+
+## Create a payout
+
+Required: `accountId`, `amount`, `firstName`, `lastName`, `email`, `documentoIdentidad`, `tipoDocumento`, `prefijoTelefono`, `numeroTelefono`, `direccion`, `ciudad`, `pais` (`"VE"`), `banco`, `tipoCuenta`, `numeroCuenta`, `nombreTitular`, `apellidoTitular`.
+
+Optional: `celular`, `webhookUrl`. `celular` is required when `tipoCuenta` is Pago Móvil (`13`, `"Pago Móvil"`, or `pago_movil`). Use `+580000000000` only as a placeholder phone.
+
+If the account cannot cover the amount and the outbound fee, the API returns `409` with `code: INSUFFICIENT_NET_BALANCE`.
+
+If the recipient still needs identity verification, the response is `201` with `status: pending_kyc`, `kyc_url` when a URL was stored, and `kyc_expires_at` (24 hours from create). That amount and its outbound fee stay reserved. The account balance is not debited. No payout order is created until verification is approved.
+
+Approved verification with a usable bank account returns `201` with `status: processing`.
+
+Declined verification, verification that finished without approval, an email whose document does not match, a rejected document, or a rejected bank account does not create a transaction and returns `400`:
+
+| `code` | Result |
+| --- | --- |
+| `KOLLAT_KYC_DECLINED` | Verification was declined |
+| `KOLLAT_KYC_NOT_APPROVED` | Verification finished without approval |
+| `KOLLAT_IDENTITY_UNCONFIRMED` | The document does not match the email |
+| `KOLLAT_INVALID_DOCUMENT` | The document was rejected. Send digits only. The letter belongs in `tipoDocumento` |
+| `KOLLAT_INVALID_BANK` | The bank account was rejected |
+| `missing_cuenta_id` | No id was returned for the payout account |
+| `missing_terms` | Terms could not be loaded, so the recipient was not registered |
+
+The `error` string says what to fix for a bank-account or document failure.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "25.5",
+    "firstName": "Ada",
+    "lastName": "Example",
+    "email": "payer@example.com",
+    "documentoIdentidad": "00000000",
+    "tipoDocumento": "V",
+    "prefijoTelefono": "+58",
+    "numeroTelefono": "0000000000",
+    "direccion": "Example street",
+    "ciudad": "Example city",
+    "pais": "VE",
+    "banco": "BANK_VALUE",
+    "tipoCuenta": "ACCOUNT_TYPE_VALUE",
+    "numeroCuenta": "00000000000000000000",
+    "nombreTitular": "Ada",
+    "apellidoTitular": "Example",
+    "webhookUrl": "https://merchant.example/hooks/hg"
+  }'
+```
+
+`BANK_VALUE` and `ACCOUNT_TYPE_VALUE` come from `GET /api/v1/ve/banks`. The phone placeholder is `+580000000000` (`+58` and `0000000000`).
+
+## Status
+
+`GET /api/v1/ve/transactions/{id}/status` reads inbound or outbound status. `amount` is a USDT decimal string. `status` includes `pending_kyc`.
+
+The body always includes `id`, `externalID`, `status`, `direction`, `amount`, and `currency`. Optional fields, only when present:
+
+- `orden_id`, `montoFiat`, `tasaCompra`
+- inbound-only `banco` and `numero_cuenta`
+- outbound `kyc_url`
+- `kyc_expires_at` while a `pending_kyc` hold is open
+- `feeBreakdown` when a fee snapshot exists
+
+For an outbound cancelled because identity verification was required, `kyc_url` is included only when a non-empty URL was stored. `cancelledReason` is included only for `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED`, or `KOLLAT_KYC_REQUIRED`. Other cancellation reasons are omitted.
+
+The merchant `status_change` webhook includes `cancelledReason` only for those same three codes. See [Account movement](/api-reference/webhooks/account-movement).
+
+## Account status
+
+The source account must be **`Operativa`** and **USDT**. **`Bloqueada`** or **`Cerrada`** returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. A missing account returns `404`. No access returns `403`. An unsupported account or a non-USDT currency returns `400`.

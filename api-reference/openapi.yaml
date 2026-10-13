@@ -488,6 +488,16 @@ components:
             Optional Brazil PIX end-to-end identifier stored on the movement.
             Included on `TRANSACTION` webhooks when present. Omitted when empty.
           example: "E60701190202505022140DY5DH1K8FL1"
+        cancelledReason:
+          type: string
+          description: >-
+            On a Venezuela payout `status_change`, included only for
+            `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED`, or `KOLLAT_KYC_REQUIRED`.
+            Other cancellation reasons are omitted.
+          enum:
+            - KOLLAT_KYC_EXPIRED
+            - KOLLAT_KYC_DECLINED
+            - KOLLAT_KYC_REQUIRED
         feeBreakdown:
           $ref: '#/components/schemas/WebhookFeeBreakdown'
 
@@ -1368,6 +1378,297 @@ components:
         code:
           type: string
           enum: [ACCOUNT_NOT_OPERATIVE, RESTRICTED]
+
+    VenezuelaUsdtAmount:
+      type: string
+      description: >-
+        Positive USDT decimal string. Not a JSON number. Up to 8 fractional digits
+        may be present. VES amounts are not this field.
+      pattern: "^\\d+(\\.\\d+)?$"
+      example: "100.5"
+
+    VenezuelaCatalogueOption:
+      type: object
+      required: [value, label]
+      description: Country catalogue item. Send `value` on payouts. String labels are accepted for compatibility.
+      properties:
+        value:
+          oneOf:
+            - type: string
+            - type: number
+        label:
+          type: string
+        id:
+          type: integer
+          description: Present when the catalogue item includes an id
+
+    VenezuelaBanksResponse:
+      type: object
+      required: [country, onramp]
+      description: >-
+        Live bank catalogue. Not a hardcoded list. Country items are `{value, label}`.
+        On-ramp banks are `{id, name}`.
+      properties:
+        country:
+          type: object
+          required: [pais, moneda, banks, accountTypes, documentTypes]
+          properties:
+            pais:
+              type: string
+              example: VE
+            nombre:
+              type: string
+            moneda:
+              type: string
+              example: VES
+            banks:
+              type: array
+              items:
+                $ref: '#/components/schemas/VenezuelaCatalogueOption'
+            accountTypes:
+              type: array
+              items:
+                $ref: '#/components/schemas/VenezuelaCatalogueOption'
+            documentTypes:
+              type: array
+              items:
+                $ref: '#/components/schemas/VenezuelaCatalogueOption'
+            phoneCode:
+              $ref: '#/components/schemas/VenezuelaCatalogueOption'
+        onramp:
+          type: object
+          required: [currency, banks, total]
+          properties:
+            currency:
+              type: string
+              example: VES
+            total:
+              type: integer
+            banks:
+              type: array
+              description: Payer banks for cash-in. `bancoPago` must match `name` exactly.
+              items:
+                type: object
+                required: [name]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+
+    VenezuelaProviderError:
+      type: object
+      required: [error, code, type]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            - VE_BANKS_PROVIDER_NOT_CONFIGURED
+            - VE_BANKS_PROVIDER_ERROR
+            - VE_INBOUND_INVALID_BANCO_PAGO
+            - VE_INBOUND_PROVIDER_CREATE_FAILED
+            - VE_INBOUND_PROVIDER_MISSING_ORDEN_ID
+        type:
+          type: string
+          enum: [provider_error, provider_invalid_response, validation_error]
+
+    VenezuelaPreflightError:
+      type: object
+      required: [error, code]
+      description: >-
+        Returned when a payout or recipient check is rejected before a transaction exists.
+        The `error` string says what to fix for a bank-account or document failure.
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            - KOLLAT_RECIPIENT_DETAILS_REQUIRED
+            - KOLLAT_IDENTITY_UNCONFIRMED
+            - KOLLAT_KYC_DECLINED
+            - KOLLAT_KYC_NOT_APPROVED
+            - KOLLAT_INVALID_DOCUMENT
+            - KOLLAT_INVALID_BANK
+            - missing_cuenta_id
+            - missing_terms
+
+    VenezuelaInsufficientNetBalance:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+          example: Insufficient balance to cover transfer and fee
+        code:
+          type: string
+          enum: [INSUFFICIENT_NET_BALANCE]
+        details:
+          type: object
+          description: Amounts are USDT decimal strings.
+          properties:
+            accountId:
+              type: string
+              format: uuid
+            currency:
+              type: string
+              example: USDT
+            amount:
+              type: string
+            feeAmount:
+              type: string
+            totalRequired:
+              type: string
+            balance:
+              type: string
+            pendingOutboundSum:
+              type: string
+            pendingOutboundFeeReserve:
+              type: string
+            remainingAfterPending:
+              type: string
+
+    VenezuelaValidationError:
+      type: object
+      required: [error, details]
+      properties:
+        error:
+          type: string
+          example: Validation failed
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    VenezuelaInboundCreated:
+      type: object
+      required: [id, status, amount, orden_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending]
+        amount:
+          $ref: '#/components/schemas/VenezuelaUsdtAmount'
+        orden_id:
+          type: integer
+        montoFiat:
+          type: string
+          description: VES metadata. Included only when the create response has it.
+        tasaCompra:
+          type: string
+          description: VES metadata. Included only when the create response has it.
+
+    VenezuelaRecipientKycResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ready, kyc_approved_no_account, kyc_in_progress, kyc_not_started, kyc_declined]
+        empleado_id:
+          type: integer
+          description: >-
+            Omitted when the email is not registered. Included for an existing recipient,
+            including `kyc_declined`.
+        kyc_url:
+          type: string
+          format: uri
+          description: >-
+            For an existing recipient, `kyc_not_started` includes this when a session URL was issued.
+            `kyc_in_progress` includes it only when the status payload has one, or when a payout on
+            this `accountId` already stored one. Never taken from another account's transactions.
+            Omitted on `kyc_not_started` for an email that is not registered.
+        code:
+          type: string
+          enum: [KOLLAT_KYC_DECLINED]
+          description: Present only when `status` is `kyc_declined`.
+
+    VenezuelaOutboundCreated:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [processing, pending_kyc]
+        kyc_url:
+          type: string
+          format: uri
+          description: Included on `pending_kyc` only when a URL was stored.
+        kyc_expires_at:
+          type: string
+          format: date-time
+          description: Present on `pending_kyc`. 24 hours from create.
+
+    VenezuelaTransactionStatus:
+      type: object
+      required: [id, externalID, status, direction, amount, currency]
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalID:
+          type: string
+        status:
+          type: string
+          description: >-
+            Current ledger status. Includes `pending` for cash-in, `processing` when a payout
+            is accepted, `pending_kyc` while identity verification holds a payout, `done`, and `cancelled`.
+        direction:
+          type: string
+          enum: [Inbound, Outbound]
+        amount:
+          $ref: '#/components/schemas/VenezuelaUsdtAmount'
+        currency:
+          type: string
+          example: USDT
+        orden_id:
+          type: integer
+          description: Included only when present.
+        montoFiat:
+          type: string
+          description: VES metadata. Included only when present.
+        tasaCompra:
+          type: string
+          description: VES metadata. Included only when present.
+        banco:
+          type: string
+          description: Inbound pay-in bank. Never returned for a payout.
+        numero_cuenta:
+          type: string
+          description: Inbound pay-in account number. Never returned for a payout.
+        kyc_url:
+          type: string
+          description: >-
+            Outbound only. Included when a non-empty URL was stored, including when an outbound
+            was cancelled because identity verification was required.
+        kyc_expires_at:
+          type: string
+          format: date-time
+          description: Included while a `pending_kyc` hold is open.
+        cancelledReason:
+          type: string
+          description: >-
+            Included only for `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED`, or `KOLLAT_KYC_REQUIRED`.
+            Other cancellation reasons are omitted.
+          enum:
+            - KOLLAT_KYC_EXPIRED
+            - KOLLAT_KYC_DECLINED
+            - KOLLAT_KYC_REQUIRED
+        feeBreakdown:
+          $ref: '#/components/schemas/FeeBreakdown'
 
     OutboundTransactionRequest:
       type: object
@@ -2570,6 +2871,733 @@ paths:
         '500':
           description: Internal server error
 
+  /ve/banks:
+    get:
+      summary: List banks (Venezuela)
+      description: |
+        Returns the live Venezuela catalogue. This is not a hardcoded list.
+
+        `country` includes `pais`, `nombre`, `moneda`, `banks`, `accountTypes`, `documentTypes`, and `phoneCode`.
+        Catalogue items are `{value, label}`.
+
+        `onramp.banks` items are `{id, name}`. Cash-in `bancoPago` must match `name` exactly.
+        Payout `banco`, `tipoCuenta`, and `tipoDocumento` use the catalogue `value`. String labels are accepted for compatibility.
+
+        If the catalogue is not configured, the API returns `500` with `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`.
+        A catalogue fetch failure returns `502` with `code: VE_BANKS_PROVIDER_ERROR`.
+      operationId: listVeBanks
+      tags:
+        - Venezuela
+      responses:
+        '200':
+          description: Country catalogue and on-ramp banks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaBanksResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Catalogue is not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaProviderError'
+              example:
+                error: The payment provider is not configured.
+                code: VE_BANKS_PROVIDER_NOT_CONFIGURED
+                type: provider_error
+        '502':
+          description: Catalogue fetch failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaProviderError'
+              example:
+                error: Unable to fetch banks from the payment provider.
+                code: VE_BANKS_PROVIDER_ERROR
+                type: provider_error
+
+  /ve/transactions/inbound:
+    post:
+      summary: Create inbound transaction (Venezuela)
+      description: |
+        Credit an operative USDT account. `amount` is a positive decimal string, not a JSON number.
+        Up to 8 fractional digits may be present. `montoFiat` and `tasaCompra` are VES metadata.
+
+        Required: `accountId`, `amount`. Optional: `bancoPago`, `webhookUrl`.
+
+        `bancoPago` must be an exact `onramp.banks[].name` from `GET /ve/banks`.
+        It is not the numeric id and not a `country.banks[].label`. Omit it to leave the payer bank unset.
+        An unknown name or a raw id returns `400` with `code: VE_INBOUND_INVALID_BANCO_PAGO`.
+
+        Success is `201` with `id`, `status: pending`, `amount`, `orden_id`, and `montoFiat` / `tasaCompra` only when the create response includes them.
+
+        A missing account returns `404`. No access returns `403`. `Bloqueada` or `Cerrada` returns `403` with `code: ACCOUNT_NOT_OPERATIVE`.
+        An unsupported account or a non-USDT currency returns `400`.
+      operationId: createVeInboundTransaction
+      tags:
+        - Venezuela
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId, amount]
+              properties:
+                accountId:
+                  type: string
+                  format: uuid
+                  example: YOUR_ACCOUNT_UUID
+                amount:
+                  $ref: '#/components/schemas/VenezuelaUsdtAmount'
+                bancoPago:
+                  type: string
+                  description: Exact `onramp.banks[].name` from `GET /ve/banks`. Not the numeric id.
+                  example: ONRAMP_BANK_NAME
+                webhookUrl:
+                  type: string
+                  format: uri
+            example:
+              accountId: YOUR_ACCOUNT_UUID
+              amount: "100.5"
+              bancoPago: ONRAMP_BANK_NAME
+      responses:
+        '201':
+          description: Cash-in created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaInboundCreated'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                status: pending
+                amount: "100.5"
+                orden_id: 1000
+        '400':
+          description: >-
+            Validation failed, the account is not supported, the currency is not USDT,
+            or `bancoPago` is not an on-ramp bank name (`VE_INBOUND_INVALID_BANCO_PAGO`).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VenezuelaValidationError'
+                  - $ref: '#/components/schemas/VenezuelaProviderError'
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+              examples:
+                invalid_banco_pago:
+                  summary: bancoPago is not an on-ramp bank name
+                  value:
+                    error: bancoPago must match an on-ramp bank name from GET /ve/banks (onramp.banks[].name).
+                    code: VE_INBOUND_INVALID_BANCO_PAGO
+                    type: validation_error
+                unsupported_account:
+                  summary: Account is not supported
+                  value:
+                    error: Account is not supported for this operation
+                currency:
+                  summary: Currency is not USDT
+                  value:
+                    error: Account currency must be USDT for this operation
+        '403':
+          description: No access, or the account is `Bloqueada` or `Cerrada`
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                  - type: object
+                    required: [error, code]
+                    properties:
+                      error:
+                        type: string
+                      code:
+                        type: string
+                        enum: [ACCOUNT_NOT_OPERATIVE]
+              examples:
+                no_access:
+                  summary: No access
+                  value:
+                    error: You do not have access to this account
+                not_operative:
+                  summary: Account is not operative
+                  value:
+                    error: Account is not operative
+                    code: ACCOUNT_NOT_OPERATIVE
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+                    example: Account not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Catalogue is not configured, or an internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaProviderError'
+              example:
+                error: The payment provider is not configured.
+                code: VE_BANKS_PROVIDER_NOT_CONFIGURED
+                type: provider_error
+        '502':
+          description: Cash-in could not be created, the order id was missing, or the on-ramp bank list could not be fetched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaProviderError'
+              examples:
+                create_failed:
+                  summary: Cash-in could not be created
+                  value:
+                    error: Unable to complete this request with the payment provider.
+                    code: VE_INBOUND_PROVIDER_CREATE_FAILED
+                    type: provider_error
+                missing_orden_id:
+                  summary: Create response had no order id
+                  value:
+                    error: The payment provider returned an incomplete response. Please try again or contact support.
+                    code: VE_INBOUND_PROVIDER_MISSING_ORDEN_ID
+                    type: provider_invalid_response
+                banks_failed:
+                  summary: On-ramp bank list could not be fetched
+                  value:
+                    error: Unable to fetch banks from the payment provider.
+                    code: VE_BANKS_PROVIDER_ERROR
+                    type: provider_error
+
+  /ve/recipients/kyc:
+    post:
+      summary: Check recipient (Venezuela)
+      description: |
+        Check a recipient before a payout. This does not create a transaction, does not reserve USDT, and does not save a bank account.
+
+        Required: `accountId` (operative USDT account the caller can pay from), `email`, `documentoIdentidad`, `tipoDocumento`.
+        Optional: `numeroCuenta`. When `numeroCuenta` is sent, `ready` means identity verification is approved and that account is already on file.
+        When it is omitted, `ready` means approved and a bank account is already on file.
+
+        `documentoIdentidad` is digits only. The letter belongs in `tipoDocumento` (`V`, `J`, `P`, or `E` from `GET /ve/banks`).
+        A matching `V-`, `J-`, `P-`, or `E-` prefix is accepted and stripped.
+
+        A missing account returns `404`. A caller who cannot pay from that account, or an account that is not a Venezuela USDT account, returns `403`.
+        A non-operative account returns `403` with `code: ACCOUNT_NOT_OPERATIVE`.
+
+        `firstName`, `lastName`, `prefijoTelefono`, `numeroTelefono`, `direccion`, and `ciudad` are required only when the email is not already registered
+        (`400`, `code: KOLLAT_RECIPIENT_DETAILS_REQUIRED`). When those fields are present and the email is still not registered, the response is
+        `kyc_not_started` without `empleado_id` and without `kyc_url`.
+
+        A document that does not match an existing email returns `400` with `code: KOLLAT_IDENTITY_UNCONFIRMED` and does not start identity verification.
+
+        Success `status` is `ready`, `kyc_approved_no_account`, `kyc_in_progress`, `kyc_not_started`, or `kyc_declined`.
+        `kyc_declined` includes `code: KOLLAT_KYC_DECLINED` and `empleado_id`.
+        For an existing recipient, `kyc_not_started` returns `kyc_url` when a session URL was issued.
+        `kyc_in_progress` includes `kyc_url` only when the status payload has one, or when a payout on this `accountId` already stored one.
+        Do not read that URL from another account's transactions.
+      operationId: checkVeRecipientKyc
+      tags:
+        - Venezuela
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId, email, documentoIdentidad, tipoDocumento]
+              properties:
+                accountId:
+                  type: string
+                  format: uuid
+                  example: YOUR_ACCOUNT_UUID
+                email:
+                  type: string
+                  format: email
+                  example: payer@example.com
+                documentoIdentidad:
+                  type: string
+                  description: Digits only. A matching `V-`, `J-`, `P-`, or `E-` prefix is stripped.
+                  example: "00000000"
+                tipoDocumento:
+                  type: string
+                  description: Catalogue `value` from `country.documentTypes`. `V`, `J`, `P`, or `E`.
+                  example: V
+                numeroCuenta:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                prefijoTelefono:
+                  type: string
+                  example: "+58"
+                numeroTelefono:
+                  type: string
+                  example: "0000000000"
+                direccion:
+                  type: string
+                ciudad:
+                  type: string
+            example:
+              accountId: YOUR_ACCOUNT_UUID
+              email: payer@example.com
+              documentoIdentidad: "00000000"
+              tipoDocumento: V
+      responses:
+        '200':
+          description: Recipient check result. Does not create a transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaRecipientKycResponse'
+              examples:
+                ready:
+                  summary: Approved and a bank account is on file
+                  value:
+                    status: ready
+                    empleado_id: 1000
+                not_registered:
+                  summary: Email is not registered
+                  value:
+                    status: kyc_not_started
+                declined:
+                  summary: Verification declined
+                  value:
+                    status: kyc_declined
+                    empleado_id: 1000
+                    code: KOLLAT_KYC_DECLINED
+        '400':
+          description: >-
+            Validation failed, recipient details are required (`KOLLAT_RECIPIENT_DETAILS_REQUIRED`),
+            or the document does not match the email (`KOLLAT_IDENTITY_UNCONFIRMED`).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VenezuelaValidationError'
+                  - $ref: '#/components/schemas/VenezuelaPreflightError'
+              examples:
+                details_required:
+                  summary: New email is missing name, phone, address, or city
+                  value:
+                    error: Name, phone, address, and city are required to register a new recipient.
+                    code: KOLLAT_RECIPIENT_DETAILS_REQUIRED
+                identity:
+                  summary: Document does not match the email
+                  value:
+                    error: The document does not match the email. Verification was not started.
+                    code: KOLLAT_IDENTITY_UNCONFIRMED
+        '403':
+          description: >-
+            No access, the account is not a Venezuela USDT account, or the account is not operative (`ACCOUNT_NOT_OPERATIVE`).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                  - type: object
+                    required: [error, code]
+                    properties:
+                      error:
+                        type: string
+                      code:
+                        type: string
+                        enum: [ACCOUNT_NOT_OPERATIVE]
+              examples:
+                no_access:
+                  summary: Cannot pay from this account
+                  value:
+                    error: You do not have access to this account
+                not_operative:
+                  summary: Account is not operative
+                  value:
+                    error: Account is not operative
+                    code: ACCOUNT_NOT_OPERATIVE
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+                    example: Account not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /ve/transactions/outbound:
+    post:
+      summary: Create outbound transaction (Venezuela)
+      description: |
+        Create a USDT payout. `amount` is a positive decimal string, not a JSON number. Up to 8 fractional digits may be present.
+
+        Required: `accountId`, `amount`, `firstName`, `lastName`, `email`, `documentoIdentidad`, `tipoDocumento`,
+        `prefijoTelefono`, `numeroTelefono`, `direccion`, `ciudad`, `pais` (`VE`), `banco`, `tipoCuenta`, `numeroCuenta`,
+        `nombreTitular`, `apellidoTitular`.
+
+        Optional: `celular`, `webhookUrl`. `celular` is required when `tipoCuenta` is Pago Móvil (`13`, `Pago Móvil`, or `pago_movil`).
+
+        Send `banco`, `tipoCuenta`, and `tipoDocumento` as the catalogue `value` from `GET /ve/banks`. String labels are accepted.
+        `BANK_VALUE` and `ACCOUNT_TYPE_VALUE` in the example are placeholders for those catalogue values.
+
+        `documentoIdentidad` is digits only. The letter belongs in `tipoDocumento` (`V`, `J`, `P`, or `E`). A matching prefix is stripped.
+
+        Insufficient balance returns `409` with `code: INSUFFICIENT_NET_BALANCE`.
+
+        If the recipient still needs identity verification, the response is `201` with `status: pending_kyc`, `kyc_url` when a URL was stored,
+        and `kyc_expires_at` (24 hours from create). That amount and its outbound fee stay reserved. The account balance is not debited.
+        No payout order is created until verification is approved.
+
+        Approved verification with a usable bank account returns `201` with `status: processing`.
+
+        Declined verification, verification that finished without approval, an email whose document does not match, a rejected document,
+        or a rejected bank account does not create a transaction and returns `400` with `code`
+        `KOLLAT_KYC_DECLINED`, `KOLLAT_KYC_NOT_APPROVED`, `KOLLAT_IDENTITY_UNCONFIRMED`, `KOLLAT_INVALID_DOCUMENT`,
+        `KOLLAT_INVALID_BANK`, `missing_cuenta_id`, or `missing_terms`.
+        The `error` string says what to fix for a bank-account or document failure.
+
+        A missing account returns `404`. No access returns `403`. `Bloqueada` or `Cerrada` returns `403` with `code: ACCOUNT_NOT_OPERATIVE`.
+        An unsupported account or a non-USDT currency returns `400`.
+      operationId: createVeOutboundTransaction
+      tags:
+        - Venezuela
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accountId
+                - amount
+                - firstName
+                - lastName
+                - email
+                - documentoIdentidad
+                - tipoDocumento
+                - prefijoTelefono
+                - numeroTelefono
+                - direccion
+                - ciudad
+                - pais
+                - banco
+                - tipoCuenta
+                - numeroCuenta
+                - nombreTitular
+                - apellidoTitular
+              properties:
+                accountId:
+                  type: string
+                  format: uuid
+                  example: YOUR_ACCOUNT_UUID
+                amount:
+                  $ref: '#/components/schemas/VenezuelaUsdtAmount'
+                firstName:
+                  type: string
+                  example: Ada
+                lastName:
+                  type: string
+                  example: Example
+                email:
+                  type: string
+                  format: email
+                  example: payer@example.com
+                documentoIdentidad:
+                  type: string
+                  example: "00000000"
+                tipoDocumento:
+                  type: string
+                  description: Catalogue `value` from `country.documentTypes`.
+                  example: V
+                prefijoTelefono:
+                  type: string
+                  example: "+58"
+                numeroTelefono:
+                  type: string
+                  example: "0000000000"
+                direccion:
+                  type: string
+                  example: Example street
+                ciudad:
+                  type: string
+                  example: Example city
+                pais:
+                  type: string
+                  enum: [VE]
+                banco:
+                  description: Catalogue `value` from `country.banks`. Placeholder `BANK_VALUE`.
+                  oneOf:
+                    - type: string
+                    - type: integer
+                      minimum: 1
+                  example: BANK_VALUE
+                tipoCuenta:
+                  description: >-
+                    Catalogue `value` from `country.accountTypes`. Placeholder `ACCOUNT_TYPE_VALUE`.
+                    `celular` is required for Pago Móvil (`13`, `Pago Móvil`, or `pago_movil`).
+                  oneOf:
+                    - type: string
+                    - type: integer
+                      minimum: 1
+                  example: ACCOUNT_TYPE_VALUE
+                numeroCuenta:
+                  type: string
+                  example: "00000000000000000000"
+                nombreTitular:
+                  type: string
+                  example: Ada
+                apellidoTitular:
+                  type: string
+                  example: Example
+                celular:
+                  type: string
+                  description: Required for Pago Móvil. Placeholder `+580000000000`.
+                  example: "+580000000000"
+                webhookUrl:
+                  type: string
+                  format: uri
+            example:
+              accountId: YOUR_ACCOUNT_UUID
+              amount: "25.5"
+              firstName: Ada
+              lastName: Example
+              email: payer@example.com
+              documentoIdentidad: "00000000"
+              tipoDocumento: V
+              prefijoTelefono: "+58"
+              numeroTelefono: "0000000000"
+              direccion: Example street
+              ciudad: Example city
+              pais: VE
+              banco: BANK_VALUE
+              tipoCuenta: ACCOUNT_TYPE_VALUE
+              numeroCuenta: "00000000000000000000"
+              nombreTitular: Ada
+              apellidoTitular: Example
+      responses:
+        '201':
+          description: >-
+            `processing` when verification is approved and a bank account is usable.
+            `pending_kyc` when verification is still required. The amount and outbound fee stay reserved.
+            The balance is not debited and no payout order is created until verification is approved.
+            `kyc_expires_at` is 24 hours from create.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaOutboundCreated'
+              examples:
+                processing:
+                  summary: Payout accepted
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    status: processing
+                pending_kyc:
+                  summary: Held for identity verification
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    status: pending_kyc
+                    kyc_url: https://example.com/verify
+                    kyc_expires_at: "2026-01-02T00:00:00.000Z"
+        '400':
+          description: >-
+            Validation failed, the account is not a Venezuela USDT account, or the recipient was rejected
+            before a transaction was created.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VenezuelaValidationError'
+                  - $ref: '#/components/schemas/VenezuelaPreflightError'
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+              examples:
+                kyc_declined:
+                  value:
+                    error: The recipient identity verification was declined. This payout was not created.
+                    code: KOLLAT_KYC_DECLINED
+                kyc_not_approved:
+                  value:
+                    error: The recipient completed identity verification but it was not approved. This payout was not created.
+                    code: KOLLAT_KYC_NOT_APPROVED
+                identity:
+                  value:
+                    error: The document does not match the email.
+                    code: KOLLAT_IDENTITY_UNCONFIRMED
+                invalid_document:
+                  value:
+                    error: Send digits only. The letter belongs in tipoDocumento (V, J, P, or E). A matching prefix such as V- is removed.
+                    code: KOLLAT_INVALID_DOCUMENT
+                invalid_bank:
+                  value:
+                    error: The payout account was rejected. Check banco, tipoCuenta, numeroCuenta, and the account holder name and identity document, then retry.
+                    code: KOLLAT_INVALID_BANK
+                missing_cuenta_id:
+                  value:
+                    error: No id was returned for this payout account. Confirm numeroCuenta and retry.
+                    code: missing_cuenta_id
+                missing_terms:
+                  value:
+                    error: Terms could not be loaded, so the recipient was not registered. Retry shortly.
+                    code: missing_terms
+        '403':
+          description: No access, or the account is `Bloqueada` or `Cerrada`
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                  - type: object
+                    required: [error, code]
+                    properties:
+                      error:
+                        type: string
+                      code:
+                        type: string
+                        enum: [ACCOUNT_NOT_OPERATIVE]
+              examples:
+                no_access:
+                  value:
+                    error: You do not have access to this account
+                not_operative:
+                  value:
+                    error: Account is not operative
+                    code: ACCOUNT_NOT_OPERATIVE
+        '404':
+          description: Account not found
+        '409':
+          description: Insufficient net balance for the amount and the outbound fee
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaInsufficientNetBalance'
+        '401':
+          description: Unauthorized
+        '500':
+          description: >-
+            Internal server error. A payout that was stored as `processing` can return
+            `Failed to enqueue outbound processing` when dispatch could not be queued.
+
+  /ve/transactions/{id}/status:
+    get:
+      summary: Get transaction status (Venezuela)
+      description: |
+        Read inbound or outbound status. `amount` is a USDT decimal string. `status` includes `pending_kyc`.
+
+        Optional fields, only when present: `orden_id`, `montoFiat`, `tasaCompra`, inbound-only `banco` and `numero_cuenta`,
+        outbound `kyc_url`, and `kyc_expires_at` while a `pending_kyc` hold is open.
+
+        For an outbound cancelled because identity verification was required, `kyc_url` is included only when a non-empty URL was stored.
+        `cancelledReason` is included only for `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED`, or `KOLLAT_KYC_REQUIRED`.
+        Other cancellation reasons are omitted.
+
+        The merchant `status_change` webhook includes `cancelledReason` only for those same three codes.
+
+        A transaction that is not a Venezuela movement returns `400`.
+      operationId: getVeTransactionStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - Venezuela
+      responses:
+        '200':
+          description: Transaction status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaTransactionStatus'
+              examples:
+                inbound:
+                  summary: Cash-in with pay-in instructions
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    externalID: "1000"
+                    status: pending
+                    direction: Inbound
+                    amount: "100.5"
+                    currency: USDT
+                    orden_id: 1000
+                    banco: ONRAMP_BANK_NAME
+                    numero_cuenta: "00000000000000000000"
+                pending_kyc:
+                  summary: Payout held for identity verification
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    externalID: "ve-out-example"
+                    status: pending_kyc
+                    direction: Outbound
+                    amount: "25.5"
+                    currency: USDT
+                    kyc_url: https://example.com/verify
+                    kyc_expires_at: "2026-01-02T00:00:00.000Z"
+                cancelled:
+                  summary: Payout cancelled for a public reason
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    externalID: "ve-out-example"
+                    status: cancelled
+                    direction: Outbound
+                    amount: "25.5"
+                    currency: USDT
+                    cancelledReason: KOLLAT_KYC_EXPIRED
+        '400':
+          description: Missing transaction id, or the transaction is not supported for status polling
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+              examples:
+                unsupported:
+                  value:
+                    error: Transaction is not supported for status polling
+                missing_id:
+                  value:
+                    error: Transaction ID is required
+        '401':
+          description: Unauthorized
+        '404':
+          description: Transaction not found
+        '500':
+          description: Internal server error
+
   /transactions/{id}/receipt:
     get:
       summary: Get Transaction Receipt
@@ -3094,6 +4122,8 @@ webhooks:
         When the movement has a stored fee snapshot, the body includes optional `feeBreakdown` (client percentage, flat fee, and collected amount). The field is omitted when there is no breakdown. Webhook `flatFee` includes `amount` only.
 
         When a Brazil PIX movement stores an end-to-end identifier, the body includes optional `endToEndId`. The field is omitted when it is absent or empty. A later update that newly stores the identifier sends one `status_change` when that update did not already notify you. An identifier that is already stored does not trigger another delivery by itself.
+
+        On a Venezuela payout `status_change`, optional `cancelledReason` is included only for `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED`, or `KOLLAT_KYC_REQUIRED`. Other cancellation reasons are omitted.
       operationId: accountMovementWebhook
       tags:
         - Webhooks
@@ -3300,6 +4330,8 @@ tags:
     description: "QR cash-in and ACH payouts for Bolivia (BOB)"
   - name: Colombia
     description: "Hosted checkout cash-in and bank, Bre-B key, or Bre-B QR payouts for Colombia (COP)"
+  - name: Venezuela
+    description: "USDT cash-in and payouts for Venezuela"
   - name: Checkouts
     description: "Hosted checkout sessions for AR, BR, CL, BO, and CO"
   - name: Claims

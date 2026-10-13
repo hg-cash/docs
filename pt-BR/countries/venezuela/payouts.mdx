@@ -1,0 +1,138 @@
+---
+title: "Payouts"
+description: "Payouts em USDT a partir de contas da Venezuela"
+icon: "arrow-up-from-bracket"
+---
+
+## Visão geral
+
+Crie um payout a partir de uma conta **USDT** operativa com `POST /api/v1/ve/transactions/outbound`. Consulte o destinatário antes com `POST /api/v1/ve/recipients/kyc` se quiser o resultado da verificação antes de reservar fundos.
+
+`amount` é uma string decimal USDT positiva. Não envie um número JSON. Até 8 dígitos fracionários podem aparecer. Campos em VES são apenas metadados.
+
+Os valores de banco, tipo de conta e tipo de documento vêm de `GET /api/v1/ve/banks`. Este guia não os lista.
+
+## Pré-requisitos
+
+- Token Bearer que possa pagar a partir da conta USDT
+- Valores do catálogo de `GET /api/v1/ve/banks`
+
+## Bancos
+
+`GET /api/v1/ve/banks` retorna `country` e `onramp`.
+
+`country` inclui `pais`, `nombre`, `moneda`, `banks`, `accountTypes`, `documentTypes` e `phoneCode`. Cada item do catálogo é `{value, label}`.
+
+Os itens de `onramp.banks` são `{id, name}`. Use `name` como `bancoPago` no cash-in. Não envie esse nome como `banco` do payout.
+
+Se o catálogo não estiver configurado, a API retorna `500` com `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`. Uma falha ao buscar o catálogo retorna `502` com `code: VE_BANKS_PROVIDER_ERROR`.
+
+Envie `banco`, `tipoCuenta` e `tipoDocumento` do payout como o `value` do catálogo em `country.banks`, `country.accountTypes` e `country.documentTypes`. Rótulos em texto são aceitos por compatibilidade.
+
+`BANK_VALUE` e `ACCOUNT_TYPE_VALUE` nos exemplos são marcadores. Substitua pelos valores de `GET /api/v1/ve/banks`.
+
+## Verificação do destinatário
+
+`POST /api/v1/ve/recipients/kyc` consulta um destinatário antes de um payout. Não cria uma transação, não reserva USDT e não salva uma conta bancária.
+
+Obrigatórios: `accountId` (conta USDT operativa da qual você pode pagar), `email`, `documentoIdentidad`, `tipoDocumento`.
+
+Opcional: `numeroCuenta`. Quando você envia, `ready` significa que a verificação de identidade está aprovada e essa conta já está registrada. Quando omite, `ready` significa aprovado e que já existe uma conta bancária registrada. `kyc_approved_no_account` significa que a verificação está aprovada e essa conta ainda não está registrada.
+
+`documentoIdentidad` é somente dígitos. A letra fica em `tipoDocumento` (`V`, `J`, `P` ou `E` do catálogo de bancos). Um prefixo correspondente `V-`, `J-`, `P-` ou `E-` é aceito e removido.
+
+Uma conta inexistente retorna `404`. Se você não pode pagar a partir dessa conta, ou ela não é uma conta USDT da Venezuela, a API retorna `403`. Uma conta não operativa retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`.
+
+`firstName`, `lastName`, `prefijoTelefono`, `numeroTelefono`, `direccion` e `ciudad` são obrigatórios somente quando o e-mail ainda não está registrado (`400`, `code: KOLLAT_RECIPIENT_DETAILS_REQUIRED`). Quando esses campos estão presentes e o e-mail continua sem registro, a resposta é `kyc_not_started` sem `empleado_id` e sem `kyc_url`. Esta consulta não registra esse e-mail.
+
+Um documento que não corresponde a um e-mail existente retorna `400` com `code: KOLLAT_IDENTITY_UNCONFIRMED` e não inicia a verificação de identidade.
+
+O `status` de sucesso é `ready`, `kyc_approved_no_account`, `kyc_in_progress`, `kyc_not_started` ou `kyc_declined`.
+
+`kyc_declined` inclui `code: KOLLAT_KYC_DECLINED` e `empleado_id`. Para um destinatário existente, `kyc_not_started` retorna `kyc_url` quando uma URL de sessão foi emitida. `kyc_in_progress` inclui `kyc_url` somente quando o payload de status tem uma, ou quando um payout neste `accountId` já armazenou uma. Não leia essa URL em transações de outra conta.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/recipients/kyc \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "email": "payer@example.com",
+    "documentoIdentidad": "00000000",
+    "tipoDocumento": "V"
+  }'
+```
+
+## Criar um payout
+
+Obrigatórios: `accountId`, `amount`, `firstName`, `lastName`, `email`, `documentoIdentidad`, `tipoDocumento`, `prefijoTelefono`, `numeroTelefono`, `direccion`, `ciudad`, `pais` (`"VE"`), `banco`, `tipoCuenta`, `numeroCuenta`, `nombreTitular`, `apellidoTitular`.
+
+Opcionais: `celular`, `webhookUrl`. `celular` é obrigatório quando `tipoCuenta` é Pago Móvil (`13`, `"Pago Móvil"` ou `pago_movil`). Use `+580000000000` somente como telefone de exemplo.
+
+Se a conta não cobre o valor e a taxa de saída, a API retorna `409` com `code: INSUFFICIENT_NET_BALANCE`.
+
+Se o destinatário ainda precisa de verificação de identidade, a resposta é `201` com `status: pending_kyc`, `kyc_url` quando uma URL foi armazenada, e `kyc_expires_at` (24 horas a partir da criação). Esse valor e a taxa de saída ficam reservados. O saldo da conta não é debitado. Nenhuma ordem de payout é criada até a verificação ser aprovada.
+
+Verificação aprovada com uma conta bancária utilizável retorna `201` com `status: processing`.
+
+Verificação recusada, verificação que terminou sem aprovação, um e-mail cujo documento não corresponde, um documento rejeitado ou uma conta bancária rejeitada não cria uma transação e retorna `400`:
+
+| `code` | Resultado |
+| --- | --- |
+| `KOLLAT_KYC_DECLINED` | A verificação foi recusada |
+| `KOLLAT_KYC_NOT_APPROVED` | A verificação terminou sem aprovação |
+| `KOLLAT_IDENTITY_UNCONFIRMED` | O documento não corresponde ao e-mail |
+| `KOLLAT_INVALID_DOCUMENT` | O documento foi rejeitado. Envie somente dígitos. A letra fica em `tipoDocumento` |
+| `KOLLAT_INVALID_BANK` | A conta bancária foi rejeitada |
+| `missing_cuenta_id` | Nenhum id foi retornado para a conta do payout |
+| `missing_terms` | Os termos não puderam ser carregados, então o destinatário não foi registrado |
+
+A string `error` diz o que corrigir em uma falha de conta bancária ou de documento.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/transactions/outbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "25.5",
+    "firstName": "Ada",
+    "lastName": "Example",
+    "email": "payer@example.com",
+    "documentoIdentidad": "00000000",
+    "tipoDocumento": "V",
+    "prefijoTelefono": "+58",
+    "numeroTelefono": "0000000000",
+    "direccion": "Example street",
+    "ciudad": "Example city",
+    "pais": "VE",
+    "banco": "BANK_VALUE",
+    "tipoCuenta": "ACCOUNT_TYPE_VALUE",
+    "numeroCuenta": "00000000000000000000",
+    "nombreTitular": "Ada",
+    "apellidoTitular": "Example",
+    "webhookUrl": "https://merchant.example/hooks/hg"
+  }'
+```
+
+`BANK_VALUE` e `ACCOUNT_TYPE_VALUE` vêm de `GET /api/v1/ve/banks`. O telefone de exemplo é `+580000000000` (`+58` e `0000000000`).
+
+## Status
+
+`GET /api/v1/ve/transactions/{id}/status` lê o status de entrada ou de saída. `amount` é uma string decimal USDT. `status` inclui `pending_kyc`.
+
+O corpo sempre inclui `id`, `externalID`, `status`, `direction`, `amount` e `currency`. Campos opcionais, somente quando presentes:
+
+- `orden_id`, `montoFiat`, `tasaCompra`
+- `banco` e `numero_cuenta`, somente de entrada
+- `kyc_url` de saída
+- `kyc_expires_at` enquanto a retenção `pending_kyc` continua aberta
+- `feeBreakdown` quando existe um detalhamento de taxa
+
+Em um payout cancelado porque a verificação de identidade era exigida, `kyc_url` entra somente quando uma URL não vazia foi armazenada. `cancelledReason` entra somente para `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED` ou `KOLLAT_KYC_REQUIRED`. Outros motivos de cancelamento são omitidos.
+
+O webhook `status_change` do comerciante inclui `cancelledReason` somente para esses mesmos três códigos. Veja [Movimentação de conta](/api-reference/webhooks/account-movement).
+
+## Status da conta
+
+A conta de origem deve estar **`Operativa`** e em **USDT**. **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`. Uma conta inexistente retorna `404`. Sem acesso retorna `403`. Uma conta incompatível ou uma moeda diferente de USDT retorna `400`.

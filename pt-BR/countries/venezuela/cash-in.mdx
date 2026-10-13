@@ -1,0 +1,76 @@
+---
+title: "Cash-in"
+description: "Receber USDT em contas da Venezuela"
+icon: "arrow-down-to-bracket"
+---
+
+## Visão geral
+
+O cash-in da Venezuela credita uma conta **USDT** operativa. Envie `amount` como string decimal positiva. Não envie um número JSON. Até 8 dígitos fracionários podem aparecer. `montoFiat` e `tasaCompra` são metadados em VES. Não são o valor do ledger.
+
+Não é um checkout hospedado. Crie o cash-in com `POST /api/v1/ve/transactions/inbound`.
+
+## Pré-requisitos
+
+- Token Bearer com acesso à conta USDT
+- Nome opcional do banco do pagador, de `GET /api/v1/ve/banks` (`onramp.banks[].name`)
+
+## Fluxo
+
+1. Chame `GET /api/v1/ve/banks` quando quiser definir o banco do pagador
+2. `POST /api/v1/ve/transactions/inbound` com `accountId` e `amount`
+3. Consulte `GET /api/v1/ve/transactions/{id}/status`, ou defina `webhookUrl` — veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks)
+
+## Requisição
+
+Obrigatórios: `accountId`, `amount`.
+
+Opcionais: `bancoPago`, `webhookUrl`.
+
+`bancoPago` deve ser um `onramp.banks[].name` exato. Não é o id numérico e não é um `country.banks[].label`. Omita para deixar o banco do pagador indefinido. Um nome desconhecido ou um id cru retorna `400` com `code: VE_INBOUND_INVALID_BANCO_PAGO`.
+
+## Exemplo
+
+`ONRAMP_BANK_NAME` é um marcador. Copie o nome exato de `onramp.banks[].name` em `GET /api/v1/ve/banks`.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/transactions/inbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "100.5",
+    "bancoPago": "ONRAMP_BANK_NAME",
+    "webhookUrl": "https://merchant.example/hooks/hg"
+  }'
+```
+
+## Sucesso
+
+`201` retorna `id`, `status: pending`, `amount` (string decimal USDT) e `orden_id`. `montoFiat` e `tasaCompra` entram somente quando a resposta de criação os inclui.
+
+## Status
+
+`GET /api/v1/ve/transactions/{id}/status` lê o status do cash-in e do payout. `amount` é uma string decimal USDT.
+
+Depois que as instruções de pagamento existem, o corpo pode incluir `banco` e `numero_cuenta`, somente de entrada. Esses campos de cobrança nunca voltam em um payout.
+
+Veja [Payouts](/pt-BR/countries/venezuela/payouts) para `pending_kyc`, `kyc_url`, `kyc_expires_at` e `cancelledReason`.
+
+## Erros
+
+| HTTP | Quando |
+| --- | --- |
+| `404` | A conta não existe |
+| `403` | Você não pode usar esta conta |
+| `403` `ACCOUNT_NOT_OPERATIVE` | A conta está `Bloqueada` ou `Cerrada` |
+| `400` | A conta não é compatível com esta operação, ou a moeda não é USDT |
+| `400` `VE_INBOUND_INVALID_BANCO_PAGO` | `bancoPago` não é um nome de banco de entrada |
+| `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | O catálogo de bancos não está configurado |
+| `502` `VE_BANKS_PROVIDER_ERROR` | Não foi possível buscar a lista de bancos de entrada |
+| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | Não foi possível criar o cash-in |
+| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | A resposta de criação não incluiu um id de ordem |
+
+## Status da conta
+
+A conta deve estar **`Operativa`** e em **USDT**. **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`.

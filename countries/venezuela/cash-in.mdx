@@ -1,0 +1,76 @@
+---
+title: "Cash-in"
+description: "Receive USDT on Venezuela accounts"
+icon: "arrow-down-to-bracket"
+---
+
+## Overview
+
+Venezuela cash-in credits an operative **USDT** account. Send `amount` as a positive decimal string. Do not send a JSON number. Up to 8 fractional digits may be present. `montoFiat` and `tasaCompra` are VES metadata. They are not the ledger amount.
+
+This is not a hosted checkout. Create the cash-in with `POST /api/v1/ve/transactions/inbound`.
+
+## Prerequisites
+
+- Bearer API token with access to the USDT account
+- Optional payer-bank name from `GET /api/v1/ve/banks` (`onramp.banks[].name`)
+
+## Flow
+
+1. Call `GET /api/v1/ve/banks` when you want to set the payer bank
+2. `POST /api/v1/ve/transactions/inbound` with `accountId` and `amount`
+3. Poll `GET /api/v1/ve/transactions/{id}/status`, or set `webhookUrl` — see [Receiving webhooks](/developers/receiving-webhooks)
+
+## Request
+
+Required: `accountId`, `amount`.
+
+Optional: `bancoPago`, `webhookUrl`.
+
+`bancoPago` must be an exact `onramp.banks[].name`. It is not the numeric id, and it is not a `country.banks[].label`. Omit it to leave the payer bank unset. An unknown name or a raw id returns `400` with `code: VE_INBOUND_INVALID_BANCO_PAGO`.
+
+## Example
+
+`ONRAMP_BANK_NAME` is a placeholder. Copy the exact name from `onramp.banks[].name` on `GET /api/v1/ve/banks`.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/transactions/inbound \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_UUID",
+    "amount": "100.5",
+    "bancoPago": "ONRAMP_BANK_NAME",
+    "webhookUrl": "https://merchant.example/hooks/hg"
+  }'
+```
+
+## Success
+
+`201` returns `id`, `status: pending`, `amount` (USDT decimal string), and `orden_id`. `montoFiat` and `tasaCompra` are included only when the create response has them.
+
+## Status
+
+`GET /api/v1/ve/transactions/{id}/status` reads cash-in and payout status. `amount` is a USDT decimal string.
+
+After payment instructions exist, the body may include inbound-only `banco` and `numero_cuenta`. Those pay-in fields are never returned for a payout.
+
+See [Payouts](/countries/venezuela/payouts) for `pending_kyc`, `kyc_url`, `kyc_expires_at`, and `cancelledReason`.
+
+## Errors
+
+| HTTP | When |
+| --- | --- |
+| `404` | The account does not exist |
+| `403` | You cannot use this account |
+| `403` `ACCOUNT_NOT_OPERATIVE` | The account is `Bloqueada` or `Cerrada` |
+| `400` | The account is not supported for this operation, or its currency is not USDT |
+| `400` `VE_INBOUND_INVALID_BANCO_PAGO` | `bancoPago` is not an on-ramp bank name |
+| `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | The bank catalogue is not configured |
+| `502` `VE_BANKS_PROVIDER_ERROR` | The on-ramp bank list could not be fetched |
+| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | The cash-in could not be created |
+| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | The create response did not include an order id |
+
+## Account status
+
+The account must be **`Operativa`** and **USDT**. **`Bloqueada`** or **`Cerrada`** returns `403` with `code: ACCOUNT_NOT_OPERATIVE`.

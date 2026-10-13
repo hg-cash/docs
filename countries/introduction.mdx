@@ -10,9 +10,9 @@ HG.Cash operates in several countries. Each market uses its own **currency**, **
 
 Shared concepts—authentication, accounts, balances, and [webhooks](/developers/receiving-webhooks)—work the same everywhere. Country guides focus on **cash-in** (receive funds) and **payouts** (send funds) for that market.
 
-## Account status (Brazil, Chile, Bolivia, Colombia)
+## Account status (Brazil, Chile, Bolivia, Colombia, Venezuela)
 
-Accounts have lifecycle status `Operativa`, `Bloqueada`, or `Cerrada`. For **hosted checkouts** (`POST /api/v1/checkouts`) and direct cash-in or payout APIs in **Brazil**, **Chile**, **Bolivia**, and **Colombia**, only **`Operativa`** accounts can receive or send funds. Blocked or closed accounts return HTTP `403` with `code: ACCOUNT_NOT_OPERATIVE`.
+Accounts have lifecycle status `Operativa`, `Bloqueada`, or `Cerrada`. For **hosted checkouts** (`POST /api/v1/checkouts`) and direct cash-in or payout APIs in **Brazil**, **Chile**, **Bolivia**, and **Colombia**, and for direct cash-in and payout APIs in **Venezuela**, only **`Operativa`** accounts can receive or send funds. Blocked or closed accounts return HTTP `403` with `code: ACCOUNT_NOT_OPERATIVE`.
 
 Use `GET /api/v1/accounts` or `GET /api/v1/account/{id}/balance` to check status before creating a transaction or checkout.
 
@@ -36,8 +36,11 @@ For a **single hosted payment page** across Argentina, Brazil, Chile, Bolivia, a
   <Card title="Colombia" icon="flag" href="/countries/colombia/cash-in">
     **COP** — Hosted checkout for cash-in, and bank, Bre-B key, or Bre-B QR payouts.
   </Card>
+  <Card title="Venezuela" icon="flag" href="/countries/venezuela/cash-in">
+    **USDT** — Cash-in and bank payouts. Amounts are USDT decimal strings.
+  </Card>
 </CardGroup>
 
 ## API reference
 
-Country-specific endpoints are grouped in the [API reference](/api-reference) tab (**Transactions** for Argentina; **Brazil**, **Chile**, and **Bolivia** for direct cash-in and payouts; **Colombia** for bank, Bre-B key, and Bre-B QR payouts). Colombia cash-in uses hosted checkout. Start from the guide for your country, then use the interactive reference for request and response schemas.
+Country-specific endpoints are grouped in the [API reference](/api-reference) tab (**Transactions** for Argentina; **Brazil**, **Chile**, and **Bolivia** for direct cash-in and payouts; **Colombia** for bank, Bre-B key, and Bre-B QR payouts; **Venezuela** for USDT cash-in and payouts). Colombia cash-in uses hosted checkout. Start from the guide for your country, then use the interactive reference for request and response schemas.

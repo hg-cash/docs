@@ -83,6 +83,10 @@
               {
                 "group": "Colombia",
                 "pages": ["countries/colombia/cash-in", "countries/colombia/payouts"]
+              },
+              {
+                "group": "Venezuela",
+                "pages": ["countries/venezuela/cash-in", "countries/venezuela/payouts"]
               }
             ]
           },
@@ -172,6 +176,10 @@
               {
                 "group": "Colombia",
                 "pages": ["es/countries/colombia/cash-in", "es/countries/colombia/payouts"]
+              },
+              {
+                "group": "Venezuela",
+                "pages": ["es/countries/venezuela/cash-in", "es/countries/venezuela/payouts"]
               }
             ]
           },
@@ -261,6 +269,10 @@
               {
                 "group": "Colômbia",
                 "pages": ["pt-BR/countries/colombia/cash-in", "pt-BR/countries/colombia/payouts"]
+              },
+              {
+                "group": "Venezuela",
+                "pages": ["pt-BR/countries/venezuela/cash-in", "pt-BR/countries/venezuela/payouts"]
               }
             ]
           },
