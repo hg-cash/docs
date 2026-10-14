@@ -37,7 +37,7 @@ Envie `banco`, `tipoCuenta` e `tipoDocumento` do payout como o `value` do catál
 
 Obrigatórios: `accountId` (conta USDT operativa da qual você pode pagar), `email`, `documentoIdentidad`, `tipoDocumento`.
 
-Opcional: `numeroCuenta`. Quando você envia, `ready` significa que a verificação de identidade está aprovada e essa conta já está registrada. Quando omite, `ready` significa aprovado e que já existe uma conta bancária registrada. `kyc_approved_no_account` significa que a verificação está aprovada e essa conta ainda não está registrada.
+Opcional: `numeroCuenta`. Quando você envia, `ready` significa que a verificação de identidade está aprovada e essa conta já está registrada. Quando omite, `ready` significa aprovado e que já existe uma conta bancária registrada. Quando você envia `numeroCuenta`, `kyc_approved_no_account` significa que a verificação está aprovada e esse número de conta não está registrado. Quando omite `numeroCuenta`, significa que a verificação está aprovada e nenhuma conta bancária está registrada.
 
 `documentoIdentidad` é somente dígitos. A letra fica em `tipoDocumento` (`V`, `J`, `P` ou `E` do catálogo de bancos). Um prefixo correspondente `V-`, `J-`, `P-` ou `E-` é aceito e removido.
 
@@ -137,4 +137,4 @@ O webhook `status_change` do comerciante inclui `cancelledReason` somente para e
 
 ## Status da conta
 
-A conta de origem deve estar **`Operativa`** e em **USDT**. **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** retorna `403` com `code: RESTRICTED`. Uma conta inexistente retorna `404`. Sem acesso retorna `403`. Uma conta incompatível ou uma moeda diferente de USDT retorna `400`.
+A conta de origem deve estar **`Operativa`** e em **USDT**. **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** retorna `403` com `code: RESTRICTED`. Uma conta inexistente retorna `404`. Sem acesso retorna `403`. `POST /api/v1/ve/transactions/outbound` retorna `400` para uma conta incompatível ou uma moeda diferente de USDT.

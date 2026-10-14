@@ -37,7 +37,7 @@ Envíe `banco`, `tipoCuenta` y `tipoDocumento` del payout como el `value` del ca
 
 Obligatorios: `accountId` (cuenta USDT operativa desde la que puede pagar), `email`, `documentoIdentidad`, `tipoDocumento`.
 
-Opcional: `numeroCuenta`. Si lo envía, `ready` significa que la verificación de identidad está aprobada y esa cuenta ya está registrada. Si lo omite, `ready` significa aprobado y que ya hay una cuenta bancaria registrada. `kyc_approved_no_account` significa que la verificación está aprobada y esa cuenta aún no está registrada.
+Opcional: `numeroCuenta`. Si lo envía, `ready` significa que la verificación de identidad está aprobada y esa cuenta ya está registrada. Si lo omite, `ready` significa aprobado y que ya hay una cuenta bancaria registrada. Si envía `numeroCuenta`, `kyc_approved_no_account` significa que la verificación está aprobada y ese número de cuenta no está registrado. Si omite `numeroCuenta`, significa que la verificación está aprobada y no hay ninguna cuenta bancaria registrada.
 
 `documentoIdentidad` es solo dígitos. La letra va en `tipoDocumento` (`V`, `J`, `P` o `E` del catálogo de bancos). Se acepta y se quita un prefijo coincidente `V-`, `J-`, `P-` o `E-`.
 
@@ -137,4 +137,4 @@ El webhook `status_change` del comercio incluye `cancelledReason` solo para esos
 
 ## Estado de la cuenta
 
-La cuenta de origen debe estar **`Operativa`** y en **USDT**. **`Bloqueada`** o **`Cerrada`** devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** devuelve `403` con `code: RESTRICTED`. Una cuenta inexistente devuelve `404`. Sin acceso devuelve `403`. Una cuenta no admitida o una moneda distinta de USDT devuelve `400`.
+La cuenta de origen debe estar **`Operativa`** y en **USDT**. **`Bloqueada`** o **`Cerrada`** devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** devuelve `403` con `code: RESTRICTED`. Una cuenta inexistente devuelve `404`. Sin acceso devuelve `403`. `POST /api/v1/ve/transactions/outbound` devuelve `400` para una cuenta no admitida o una moneda distinta de USDT.
