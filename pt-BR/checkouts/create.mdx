@@ -61,10 +61,15 @@ Para **BR**, **CL**, **BO** e **CO**, se você informar um `accountId` explícit
 
 ### Colômbia (`CO`)
 
-- Nome, documento e e-mail do pagador não são obrigatórios. Veja [Cash-in Colômbia](/pt-BR/countries/colombia/cash-in).
-- A conta deve ser **COP** e **`Operativa`**. Os meios de pagamento são configurados na conta. A requisição de criação não os escolhe.
+- Somente checkout hospedado. Não existe `POST /api/v1/co/transactions/inbound`. Veja [Cash-in Colômbia](/pt-BR/countries/colombia/cash-in).
+- Obrigatório: `country: "CO"`, `amount` e `successUrl`. Sem nome, documento ou e-mail do pagador.
+- A HG configura os meios de pagamento disponíveis. A requisição de criação não os escolhe.
+- A conta deve ser **COP** e **`Operativa`**.
 - Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
-- A resposta inclui **`checkoutUrl`**. O pagador abre essa página da HG, paga na página hospedada e volta à página de sucesso da HG. Sua `successUrl` é usada somente depois que o pagamento é confirmado.
+- A resposta inclui **`checkoutUrl`** e omite **`checkoutUrlProvider`**.
+- `GET /api/v1/checkouts`, `GET /api/v1/checkouts/{id}` e `POST /api/v1/checkouts/{id}/cancel` omitem `providerData` para a Colômbia.
+- O pagador abre `checkoutUrl`, conclui o pagamento e volta à página de sucesso da HG. Sua `successUrl` é usada somente depois que o pagamento é confirmado.
+- **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** retorna `403` com `code: RESTRICTED`. Uma conta que não está pronta para o checkout retorna `400` com `error: "Account is not ready for checkout"`.
 
 ## Exemplo (Brasil)
 
@@ -120,7 +125,7 @@ curl -X POST https://hg.cash/api/v1/checkouts \
   }'
 ```
 
-A resposta inclui **`checkoutUrl`** — envie essa URL ao pagador. Não há endpoint de transação de entrada para a Colômbia.
+A resposta inclui **`checkoutUrl`** e omite **`checkoutUrlProvider`**. Envie `checkoutUrl` ao pagador. Não há endpoint de transação de entrada para a Colômbia.
 
 ## Exemplo (Argentina)
 

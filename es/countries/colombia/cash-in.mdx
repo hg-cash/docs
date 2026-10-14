@@ -8,9 +8,15 @@ icon: "arrow-down-to-bracket"
 
 El cash-in en Colombia usa solo **checkout hospedado**. No existe `POST /api/v1/co/transactions/inbound`.
 
-Cree una sesión con `POST /api/v1/checkouts` y `country: "CO"`. La respuesta incluye `checkoutUrl`. El pagador abre esa página de HG, paga en la página hospedada y vuelve a la página de éxito de HG. Su `successUrl` se usa solo después de confirmar el pago.
+Cree una sesión con `POST /api/v1/checkouts`, `country: "CO"`, `amount` y `successUrl`. La respuesta incluye `checkoutUrl` y omite `checkoutUrlProvider`.
 
-La cuenta debe usar moneda **COP** y estar **`Operativa`**. Los medios de pago se configuran en la cuenta. La solicitud de creación no los elige.
+El pagador abre `checkoutUrl`, completa el pago y vuelve a la página de éxito de HG. Su `successUrl` se usa solo después de confirmar el pago.
+
+HG configura los medios de pago disponibles. La solicitud de creación no los elige. Colombia no exige nombre, documento ni email del pagador.
+
+La cuenta debe usar moneda **COP** y estar **`Operativa`**.
+
+`GET /api/v1/checkouts`, `GET /api/v1/checkouts/{id}` y `POST /api/v1/checkouts/{id}/cancel` omiten `providerData` para Colombia.
 
 ## Requisitos
 
@@ -33,7 +39,7 @@ Opcional, igual que en otros países: `accountId`, `cancelUrl`, `webhookUrl`, `m
 
 1. `POST /api/v1/checkouts` con `country: "CO"`, `amount` y `successUrl`
 2. Envíe el `checkoutUrl` de la respuesta al pagador
-3. El pagador paga en la página hospedada de HG y llega a la página de éxito de HG
+3. El pagador abre `checkoutUrl`, completa el pago y vuelve a la página de éxito de HG
 4. Después de confirmar el pago, HG.Cash redirige al pagador a su `successUrl`
 5. Opcional: `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks) y [Crear checkouts](/es/checkouts/create)
 
@@ -58,4 +64,4 @@ El checkout inicia en `pending` y pasa a `completed` cuando se confirma el pago.
 
 ## Estado de la cuenta
 
-La cuenta debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`. Una cuenta **`Restringida`** devuelve `403` con `code: RESTRICTED`.
+La cuenta debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`. Una cuenta **`Restringida`** devuelve `403` con `code: RESTRICTED`. Una cuenta que no está lista para el checkout devuelve `400` con `error: "Account is not ready for checkout"`.

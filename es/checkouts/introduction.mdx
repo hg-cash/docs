@@ -25,7 +25,7 @@ También podés integrar solo con la **API REST** (`POST /api/v1/checkouts` y en
 | **BR** | PIX QR / copia-e-cola | Transacción entrante del proveedor + webhook; el pagador ve el QR en la página hospedada |
 | **CL** | Iframe PayRetailers | URL del proveedor; completado vía webhook del proveedor |
 | **BO** | Pago QR | Transacción entrante del proveedor + webhook; el pagador ve el QR en la página hospedada |
-| **CO** | Checkout hospedado | El pagador paga en la página de HG. La `successUrl` del comercio se usa solo después de la confirmación. Los medios de pago se configuran en la cuenta |
+| **CO** | Checkout hospedado | El pagador abre `checkoutUrl`, completa el pago y vuelve a la página de éxito de HG. `successUrl` se usa solo después de confirmar el pago. HG configura los medios de pago disponibles |
 
 Los pagadores **no inician sesión** en HG.Cash en la página pública. Tu backend (o el panel) usa el mismo **token Bearer API** que el resto de v1.
 

@@ -25,7 +25,7 @@ You can also integrate entirely via the **REST API** (`POST /api/v1/checkouts` a
 | **BR** | PIX QR / copia-e-cola | Provider inbound transaction + webhook; payer sees QR on hosted page |
 | **CL** | PayRetailers hosted iframe | Provider checkout URL; completion via provider webhook |
 | **BO** | QR payment | Provider inbound transaction + webhook; payer sees QR on hosted page |
-| **CO** | Hosted checkout | Payer pays on the HG page. Merchant `successUrl` is used only after confirmation. Payment rails are configured on the account |
+| **CO** | Hosted checkout | The payer opens `checkoutUrl`, completes payment, and returns to the HG success page. `successUrl` is used only after payment is confirmed. HG configures the available payment methods |
 
 Payers **do not log in** to HG.cash on the public page. Your backend (or dashboard) uses the same **Bearer API token** as other v1 endpoints.
 
