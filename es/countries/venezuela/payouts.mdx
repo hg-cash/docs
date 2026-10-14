@@ -8,7 +8,7 @@ icon: "arrow-up-from-bracket"
 
 Cree un payout desde una cuenta **USDT** operativa con `POST /api/v1/ve/transactions/outbound`. Consulte al destinatario antes con `POST /api/v1/ve/recipients/kyc` si quiere el resultado de la verificación antes de reservar fondos.
 
-`amount` es una cadena decimal USDT positiva. No envíe un número JSON. Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. Los campos en VES son solo metadatos.
+`amount` es una cadena decimal USDT positiva. No envíe un número JSON. Un `amount` de la solicitud con más de 8 dígitos fraccionarios se redondea hacia abajo a 8 y no se rechaza por los dígitos extra. Si ese valor redondeado no es mayor que cero, la creación de cash-in y de payout devuelve `400` con `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`. Los campos en VES son solo metadatos.
 
 Los valores de banco, tipo de cuenta y tipo de documento salen de `GET /api/v1/ve/banks`. Esta guía no los enumera.
 
@@ -25,7 +25,7 @@ Los valores de banco, tipo de cuenta y tipo de documento salen de `GET /api/v1/v
 
 Los ítems de `onramp.banks` son `{id, name}`. Use `name` como `bancoPago` en el cash-in. No envíe ese nombre como `banco` del payout.
 
-Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`. Un fallo al obtener la lista de bancos devuelve `502` con `code: VE_BANKS_PROVIDER_ERROR`.
+Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`. Un fallo al obtener la lista de bancos devuelve `502` con `code: VE_BANKS_PROVIDER_ERROR`. Esas respuestas del catálogo de bancos incluyen `error`, `code` y `type`.
 
 Envíe `banco`, `tipoCuenta` y `tipoDocumento` del payout como el `value` del catálogo en `country.banks`, `country.accountTypes` y `country.documentTypes`. Las etiquetas de texto se aceptan por compatibilidad.
 
@@ -69,11 +69,13 @@ Obligatorios: `accountId`, `amount`, `firstName`, `lastName`, `email`, `document
 
 Opcionales: `celular`, `webhookUrl`. `celular` es obligatorio cuando `tipoCuenta` es Pago Móvil (`13`, `"Pago Móvil"` o `pago_movil`). Use `+580000000000` solo como teléfono de ejemplo.
 
-Si la cuenta no cubre el monto y la comisión de salida, la API devuelve `409` con `{ error, code }` y `code: INSUFFICIENT_NET_BALANCE`.
+Un token Bearer ausente o inválido es `401`. Cualquier otro fallo de validación es `400` con `{ error: "Validation failed", details: [{ field, message }] }`.
+
+El USDT disponible es el libro menos las demás filas de salida en `processing` o `pending_kyc` y las comisiones de salida de esas filas. El monto de este payout más su propia comisión de salida debe caber en lo que queda. Si no cabe, la respuesta es `409` con `{ error, code }` solamente y `code: INSUFFICIENT_NET_BALANCE`. No se inserta ninguna fila de payout. `details` no se devuelve.
 
 Si el destinatario aún necesita verificación de identidad, la respuesta es `201` con `status: pending_kyc`, `kyc_url` cuando se guardó una URL, y `kyc_expires_at` (24 horas desde la creación). Ese monto y su comisión de salida quedan reservados. El saldo de la cuenta no se debita. No se crea una orden de payout hasta que la verificación esté aprobada.
 
-Una verificación aprobada con una cuenta bancaria usable devuelve `201` con `status: processing`.
+Una verificación aprobada con una cuenta bancaria usable devuelve `201` con `status: processing`. Cuando una fila `processing` ya fue insertada y no se pudo encolar el envío del payout, la respuesta es `500` con `{ error: "Failed to enqueue outbound processing" }`. La fila permanece en `processing`. Una creación `pending_kyc` no encola y no usa esta respuesta.
 
 Una verificación rechazada, una verificación que terminó sin aprobación, un correo cuyo documento no coincide, un documento rechazado o una cuenta bancaria rechazada no crea una transacción y devuelve `400`:
 

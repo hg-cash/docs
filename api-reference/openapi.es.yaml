@@ -1384,7 +1384,12 @@ components:
 
     VenezuelaUsdtAmount:
       type: string
-      description: Cadena decimal USDT positiva. No es un número JSON. Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. Los montos en VES no son este campo.
+      description: >-
+        Cadena decimal USDT positiva. No es un número JSON. Un `amount` de la solicitud con más de 8 dígitos fraccionarios
+        se redondea hacia abajo a 8 y no se rechaza por los dígitos extra. Si ese valor redondeado no es mayor que cero,
+        la creación de cash-in y de payout devuelve `400` con
+        `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`.
+        Los montos en VES no son este campo.
       pattern: "^\\d+(\\.\\d+)?$"
       example: "100.5"
 
@@ -2914,7 +2919,7 @@ paths:
       summary: Crear transacción de entrada (Venezuela)
       description: |
         Acredita una cuenta USDT operativa. `amount` es una cadena decimal positiva, no un número JSON.
-        Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. `montoFiat` y `tasaCompra` son metadatos en VES.
+        Un `amount` de la solicitud con más de 8 dígitos fraccionarios se redondea hacia abajo a 8 y no se rechaza por los dígitos extra. Si ese valor redondeado no es mayor que cero, la creación devuelve `400` con `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`. `montoFiat` y `tasaCompra` son metadatos en VES.
 
         Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`, incluso cuando se omite `bancoPago`, y no se crea una transacción.
         `502` `VE_BANKS_PROVIDER_ERROR` ocurre solo cuando se envía `bancoPago`. La lista de bancos se comprueba antes de que exista una fila de transacción. Esa respuesta no crea una fila y no cancela ninguna.
@@ -3252,7 +3257,7 @@ paths:
     post:
       summary: Crear transacción de salida (Venezuela)
       description: |
-        Crea un payout en USDT. `amount` es una cadena decimal positiva, no un número JSON. Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan.
+        Crea un payout en USDT. `amount` es una cadena decimal positiva, no un número JSON. Un `amount` de la solicitud con más de 8 dígitos fraccionarios se redondea hacia abajo a 8 y no se rechaza por los dígitos extra. Si ese valor redondeado no es mayor que cero, la creación devuelve `400` con `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`.
         
         Obligatorios: `accountId`, `amount`, `firstName`, `lastName`, `email`, `documentoIdentidad`, `tipoDocumento`,
         `prefijoTelefono`, `numeroTelefono`, `direccion`, `ciudad`, `pais` (`VE`), `banco`, `tipoCuenta`, `numeroCuenta`,
@@ -3265,13 +3270,14 @@ paths:
         
         `documentoIdentidad` es solo dígitos. La letra va en `tipoDocumento` (`V`, `J`, `P` o `E`). Un prefijo coincidente se quita.
         
-        Saldo insuficiente devuelve `409` con `{ error, code }` y `code: INSUFFICIENT_NET_BALANCE`.
+        El USDT disponible es el libro menos las demás filas de salida en `processing` o `pending_kyc` y las comisiones de salida de esas filas. El monto de este payout más su propia comisión de salida debe caber en lo que queda. Si no cabe, la respuesta es `409` con `{ error, code }` solamente y `code: INSUFFICIENT_NET_BALANCE`. No se inserta ninguna fila de payout. `details` no se devuelve.
         
         Si el destinatario aún necesita verificación de identidad, la respuesta es `201` con `status: pending_kyc`, `kyc_url` cuando se guardó una URL,
         y `kyc_expires_at` (24 horas desde la creación). Ese monto y su comisión de salida quedan reservados. El saldo de la cuenta no se debita.
         No se crea una orden de payout hasta que la verificación esté aprobada.
         
         Una verificación aprobada con una cuenta bancaria usable devuelve `201` con `status: processing`.
+        Cuando una fila `processing` ya fue insertada y no se pudo encolar el envío del payout, la respuesta es `500` con `{ error: "Failed to enqueue outbound processing" }`. La fila permanece en `processing`. Una creación `pending_kyc` no encola y no usa esta respuesta.
         
         Una verificación rechazada, una verificación que terminó sin aprobación, un correo cuyo documento no coincide, un documento rechazado
         o una cuenta bancaria rechazada no crea una transacción y devuelve `400` con `code`
@@ -3495,7 +3501,10 @@ paths:
         '404':
           description: Cuenta no encontrada
         '409':
-          description: Saldo neto insuficiente para el monto y la comisión de salida
+          description: >-
+            El USDT disponible es el libro menos las demás filas de salida en `processing` o `pending_kyc` y las comisiones de salida de esas filas.
+            El monto de este payout más su propia comisión de salida debe caber en lo que queda. El cuerpo es `{ error, code }` solamente, con `code: INSUFFICIENT_NET_BALANCE`.
+            No se inserta ninguna fila de payout. `details` no se devuelve.
           content:
             application/json:
               schema:
@@ -3503,7 +3512,10 @@ paths:
         '401':
           description: No autorizado
         '500':
-          description: "Error interno del servidor. Un payout guardado como `processing` puede devolver `Failed to enqueue outbound processing` si no se pudo encolar el envío."
+          description: >-
+            Error interno del servidor. Cuando una fila `processing` ya fue insertada y no se pudo encolar el envío del payout,
+            la respuesta es `{ error: "Failed to enqueue outbound processing" }`. La fila permanece en `processing`.
+            Una creación `pending_kyc` no encola y no usa esta respuesta.
 
   /ve/transactions/{id}/status:
     get:
