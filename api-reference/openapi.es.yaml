@@ -2917,7 +2917,8 @@ paths:
         Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. `montoFiat` y `tasaCompra` son metadatos en VES.
 
         Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`, incluso cuando se omite `bancoPago`, y no se crea una transacción.
-        Una creación que falla después de que la fila existe cancela esa fila y devuelve `502`.
+        `502` `VE_BANKS_PROVIDER_ERROR` ocurre solo cuando se envía `bancoPago`. La lista de bancos se comprueba antes de que exista una fila de transacción. Esa respuesta no crea una fila y no cancela ninguna.
+        `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` y `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` significan que la fila ya existe, esa fila se cancela y la respuesta es `502`.
         
         Obligatorios: `accountId`, `amount`. Opcionales: `bancoPago`, `webhookUrl`.
         
@@ -3056,7 +3057,7 @@ paths:
                 code: VE_BANKS_PROVIDER_NOT_CONFIGURED
                 type: provider_error
         '502':
-          description: "Una creación que falla después de que la fila existe cancela esa fila y devuelve 502. La fila se cancela si no se pudo crear el cash-in, si la respuesta no trajo un id de orden, o si no se pudo obtener la lista de bancos de entrada después de que la fila existía."
+          description: "`VE_BANKS_PROVIDER_ERROR` ocurre solo cuando se envía `bancoPago`. La lista de bancos se comprueba antes de que exista una fila de transacción. Esa respuesta no crea una fila y no cancela ninguna. `VE_INBOUND_PROVIDER_CREATE_FAILED` y `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` significan que la fila ya existe, esa fila se cancela y la respuesta es 502."
           content:
             application/json:
               schema:
@@ -3075,7 +3076,7 @@ paths:
                     code: VE_INBOUND_PROVIDER_MISSING_ORDEN_ID
                     type: provider_invalid_response
                 banks_failed:
-                  summary: No se pudo obtener la lista de bancos de entrada
+                  summary: La lista de bancos de entrada falló antes de existir una fila, solo si se envió bancoPago
                   value:
                     error: Unable to fetch banks from the payment provider.
                     code: VE_BANKS_PROVIDER_ERROR
@@ -3276,6 +3277,8 @@ paths:
         o una cuenta bancaria rechazada no crea una transacción y devuelve `400` con `code`
         `VE_KYC_DECLINED`, `VE_KYC_NOT_APPROVED`, `VE_IDENTITY_UNCONFIRMED`, `VE_INVALID_DOCUMENT`,
         `VE_INVALID_BANK`, `missing_cuenta_id` o `missing_terms`.
+        `missing_cuenta_id` significa que no se pudo guardar la cuenta del payout. Revise `numeroCuenta` y reintente.
+        `missing_terms` significa que no se pudo preparar al destinatario. Reintente en breve.
         La cadena `error` indica qué corregir cuando falla la cuenta bancaria o el documento.
         
         Una cuenta inexistente devuelve `404`. Sin acceso devuelve `403`. `Bloqueada` o `Cerrada` devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`.
@@ -3451,11 +3454,11 @@ paths:
                     code: VE_INVALID_BANK
                 missing_cuenta_id:
                   value:
-                    error: No id was returned for this payout account. Confirm numeroCuenta and retry.
+                    error: The payout account could not be saved. Check numeroCuenta and retry.
                     code: missing_cuenta_id
                 missing_terms:
                   value:
-                    error: Terms could not be loaded, so the recipient was not registered. Retry shortly.
+                    error: The recipient could not be prepared. Retry shortly.
                     code: missing_terms
         '403':
           description: "Sin acceso, la cuenta está `Bloqueada` o `Cerrada`, o la cuenta está `Restringida`"

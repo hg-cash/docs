@@ -84,8 +84,8 @@ Verificação recusada, verificação que terminou sem aprovação, um e-mail cu
 | `VE_IDENTITY_UNCONFIRMED` | O documento não corresponde ao e-mail |
 | `VE_INVALID_DOCUMENT` | O documento foi rejeitado. Envie somente dígitos. A letra fica em `tipoDocumento` |
 | `VE_INVALID_BANK` | A conta bancária foi rejeitada |
-| `missing_cuenta_id` | Nenhum id foi retornado para a conta do payout |
-| `missing_terms` | Os termos não puderam ser carregados, então o destinatário não foi registrado |
+| `missing_cuenta_id` | Não foi possível salvar a conta do payout. Confira `numeroCuenta` e tente de novo |
+| `missing_terms` | Não foi possível preparar o destinatário. Tente novamente em breve |
 
 A string `error` diz o que corrigir em uma falha de conta bancária ou de documento.
 
