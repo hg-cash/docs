@@ -63,7 +63,7 @@ En **`checkout.completed`**, el objeto **`transaction`** anidado usa los mismos 
 
 En este ejemplo el monto del movimiento es **12.000**. El porcentaje del cliente es **1%** (`120`) más una comisión fija de **15**, así que **`collectedAmount`** es **135**. El porcentaje de plataforma (**0,5%**, `60`) queda registrado aparte.
 
-`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status` devuelve el mismo desglose cuando existe, e incluye **`flatFee.source`** (`account` o `platform`). `GET /transaction/{id}/status` es el estado de una solicitud de transacción y no incluye **`feeBreakdown`**.
+`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status` devuelve el mismo desglose cuando existe, e incluye **`flatFee.source`** (`account` o `platform`). El estado de Venezuela omite **`flatFee.source`**. `GET /transaction/{id}/status` es el estado de una solicitud de transacción y no incluye **`feeBreakdown`**.
 
 ## Identificador end-to-end PIX
 

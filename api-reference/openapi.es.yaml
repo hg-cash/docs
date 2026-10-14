@@ -492,12 +492,12 @@ components:
           type: string
           description: >-
             En un `status_change` de un payout de Venezuela, se incluye solo para
-            `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED` o `KOLLAT_KYC_REQUIRED`.
+            `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`.
             Los demás motivos de cancelación se omiten.
           enum:
-            - KOLLAT_KYC_EXPIRED
-            - KOLLAT_KYC_DECLINED
-            - KOLLAT_KYC_REQUIRED
+            - VE_KYC_EXPIRED
+            - VE_KYC_DECLINED
+            - VE_KYC_REQUIRED
         feeBreakdown:
           $ref: '#/components/schemas/WebhookFeeBreakdown'
 
@@ -1384,7 +1384,7 @@ components:
 
     VenezuelaUsdtAmount:
       type: string
-      description: Cadena decimal USDT positiva. No es un número JSON. Pueden aparecer hasta 8 dígitos fraccionarios. Los montos en VES no son este campo.
+      description: Cadena decimal USDT positiva. No es un número JSON. Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. Los montos en VES no son este campo.
       pattern: "^\\d+(\\.\\d+)?$"
       example: "100.5"
 
@@ -1399,9 +1399,6 @@ components:
             - type: number
         label:
           type: string
-        id:
-          type: integer
-          description: Presente cuando el ítem del catálogo incluye un id
 
     VenezuelaBanksResponse:
       type: object
@@ -1483,12 +1480,12 @@ components:
         code:
           type: string
           enum:
-            - KOLLAT_RECIPIENT_DETAILS_REQUIRED
-            - KOLLAT_IDENTITY_UNCONFIRMED
-            - KOLLAT_KYC_DECLINED
-            - KOLLAT_KYC_NOT_APPROVED
-            - KOLLAT_INVALID_DOCUMENT
-            - KOLLAT_INVALID_BANK
+            - VE_RECIPIENT_DETAILS_REQUIRED
+            - VE_IDENTITY_UNCONFIRMED
+            - VE_KYC_DECLINED
+            - VE_KYC_NOT_APPROVED
+            - VE_INVALID_DOCUMENT
+            - VE_INVALID_BANK
             - missing_cuenta_id
             - missing_terms
 
@@ -1502,30 +1499,6 @@ components:
         code:
           type: string
           enum: [INSUFFICIENT_NET_BALANCE]
-        details:
-          type: object
-          description: Los montos son cadenas decimales USDT.
-          properties:
-            accountId:
-              type: string
-              format: uuid
-            currency:
-              type: string
-              example: USDT
-            amount:
-              type: string
-            feeAmount:
-              type: string
-            totalRequired:
-              type: string
-            balance:
-              type: string
-            pendingOutboundSum:
-              type: string
-            pendingOutboundFeeReserve:
-              type: string
-            remainingAfterPending:
-              type: string
 
     VenezuelaValidationError:
       type: object
@@ -1572,16 +1545,13 @@ components:
         status:
           type: string
           enum: [ready, kyc_approved_no_account, kyc_in_progress, kyc_not_started, kyc_declined]
-        empleado_id:
-          type: integer
-          description: "Se omite cuando el correo no está registrado. Se incluye para un destinatario existente, también en `kyc_declined`."
         kyc_url:
           type: string
           format: uri
-          description: "Para un destinatario existente, `kyc_not_started` incluye esto cuando se emitió una URL de sesión. `kyc_in_progress` lo incluye solo cuando el payload de estado lo trae, o cuando un payout de este `accountId` ya guardó uno. Nunca se toma de transacciones de otra cuenta. Se omite en `kyc_not_started` si el correo no está registrado."
+          description: "Para un correo que ya está registrado y no tiene sesión, esta llamada puede iniciar la verificación y devolver esta URL. Para un destinatario existente, `kyc_not_started` incluye esto cuando se emitió una URL de sesión. `kyc_in_progress` lo incluye solo cuando el payload de estado lo trae, o cuando un payout de este `accountId` ya guardó uno. Nunca se toma de transacciones de otra cuenta. Se omite en `kyc_not_started` si el correo no está registrado."
         code:
           type: string
-          enum: [KOLLAT_KYC_DECLINED]
+          enum: [VE_KYC_DECLINED]
           description: "Presente solo cuando `status` es `kyc_declined`."
 
     VenezuelaOutboundCreated:
@@ -1605,13 +1575,14 @@ components:
 
     VenezuelaTransactionStatus:
       type: object
-      required: [id, externalID, status, direction, amount, currency]
+      required: [id, status, direction, amount, currency]
       properties:
         id:
           type: string
           format: uuid
         externalID:
           type: string
+          description: "Se omite hasta que existe el id de orden. Se devuelve cuando ya es ese id de orden."
         status:
           type: string
           description: "Estado actual del libro. Incluye `pending` para el cash-in, `processing` cuando se acepta un payout, `pending_kyc` mientras la verificación de identidad retiene un payout, `done` y `cancelled`."
@@ -1647,13 +1618,13 @@ components:
           description: "Se incluye mientras la retención `pending_kyc` sigue abierta."
         cancelledReason:
           type: string
-          description: "Se incluye solo para `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED` o `KOLLAT_KYC_REQUIRED`. Los demás motivos de cancelación se omiten."
+          description: "Se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`. Los demás motivos de cancelación se omiten."
           enum:
-            - KOLLAT_KYC_EXPIRED
-            - KOLLAT_KYC_DECLINED
-            - KOLLAT_KYC_REQUIRED
+            - VE_KYC_EXPIRED
+            - VE_KYC_DECLINED
+            - VE_KYC_REQUIRED
         feeBreakdown:
-          $ref: '#/components/schemas/FeeBreakdown'
+          $ref: '#/components/schemas/VenezuelaStatusFeeBreakdown'
 
     OutboundTransactionRequest:
       type: object
@@ -1736,6 +1707,37 @@ components:
           type: string
         feeBreakdown:
           $ref: '#/components/schemas/FeeBreakdown'
+
+    VenezuelaStatusFeeBreakdown:
+      type: object
+      description: >-
+        Desglose de comisión opcional en el estado de Venezuela. Los montos y las tasas son
+        cadenas decimales. Se omite cuando no hay desglose. `flatFee` incluye solo `amount`.
+        Esta respuesta no incluye `flatFee.source`.
+      properties:
+        platformFee:
+          type: object
+          properties:
+            amount:
+              type: string
+            rate:
+              type: string
+              nullable: true
+        transactionFee:
+          type: object
+          properties:
+            amount:
+              type: string
+            rate:
+              type: string
+              nullable: true
+        flatFee:
+          type: object
+          properties:
+            amount:
+              type: string
+        collectedAmount:
+          type: string
 
     FeeBreakdown:
       type: object
@@ -2872,8 +2874,8 @@ paths:
         Los ítems de `onramp.banks` son `{id, name}`. El `bancoPago` del cash-in debe coincidir exactamente con `name`.
         El payout envía `banco`, `tipoCuenta` y `tipoDocumento` como el `value` del catálogo. Las etiquetas de texto se aceptan por compatibilidad.
         
-        Si el catálogo no está configurado, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`.
-        Un fallo al obtener el catálogo devuelve `502` con `code: VE_BANKS_PROVIDER_ERROR`.
+        Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`.
+        Un fallo al obtener la lista de bancos devuelve `502` con `code: VE_BANKS_PROVIDER_ERROR`.
       operationId: listVeBanks
       tags:
         - Venezuela
@@ -2887,17 +2889,17 @@ paths:
         '401':
           description: No autorizado
         '500':
-          description: El catálogo no está configurado
+          description: La integración de pago no está configurada
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/VenezuelaProviderError'
               example:
-                error: The payment provider is not configured.
+                error: The payment integration is not configured.
                 code: VE_BANKS_PROVIDER_NOT_CONFIGURED
                 type: provider_error
         '502':
-          description: Falló la obtención del catálogo
+          description: No se pudo obtener la lista de bancos
           content:
             application/json:
               schema:
@@ -2912,7 +2914,10 @@ paths:
       summary: Crear transacción de entrada (Venezuela)
       description: |
         Acredita una cuenta USDT operativa. `amount` es una cadena decimal positiva, no un número JSON.
-        Pueden aparecer hasta 8 dígitos fraccionarios. `montoFiat` y `tasaCompra` son metadatos en VES.
+        Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. `montoFiat` y `tasaCompra` son metadatos en VES.
+
+        Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`, incluso cuando se omite `bancoPago`, y no se crea una transacción.
+        Una creación que falla después de que la fila existe cancela esa fila y devuelve `502`.
         
         Obligatorios: `accountId`, `amount`. Opcionales: `bancoPago`, `webhookUrl`.
         
@@ -2923,6 +2928,7 @@ paths:
         El éxito es `201` con `id`, `status: pending`, `amount`, `orden_id`, y `montoFiat` / `tasaCompra` solo cuando la respuesta de creación los incluye.
         
         Una cuenta inexistente devuelve `404`. Sin acceso devuelve `403`. `Bloqueada` o `Cerrada` devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`.
+        `Restringida` devuelve `403` con `code: RESTRICTED`.
         Una cuenta no admitida o una moneda distinta de USDT devuelve `400`.
       operationId: createVeInboundTransaction
       tags:
@@ -2993,7 +2999,7 @@ paths:
                   value:
                     error: Account currency must be USDT for this operation
         '403':
-          description: "Sin acceso, o la cuenta está `Bloqueada` o `Cerrada`"
+          description: "Sin acceso, la cuenta está `Bloqueada` o `Cerrada`, o la cuenta está `Restringida`"
           content:
             application/json:
               schema:
@@ -3010,7 +3016,7 @@ paths:
                         type: string
                       code:
                         type: string
-                        enum: [ACCOUNT_NOT_OPERATIVE]
+                        enum: [ACCOUNT_NOT_OPERATIVE, RESTRICTED]
               examples:
                 no_access:
                   summary: Sin acceso
@@ -3021,6 +3027,11 @@ paths:
                   value:
                     error: Account is not operative
                     code: ACCOUNT_NOT_OPERATIVE
+                restricted:
+                  summary: Account is restricted
+                  value:
+                    error: Account is restricted
+                    code: RESTRICTED
         '404':
           description: Cuenta no encontrada
           content:
@@ -3035,17 +3046,17 @@ paths:
         '401':
           description: No autorizado
         '500':
-          description: "El catálogo no está configurado, o un error interno"
+          description: "La integración de pago no está configurada, o un error interno"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/VenezuelaProviderError'
               example:
-                error: The payment provider is not configured.
+                error: The payment integration is not configured.
                 code: VE_BANKS_PROVIDER_NOT_CONFIGURED
                 type: provider_error
         '502':
-          description: "No se pudo crear el cash-in, faltó el id de orden, o no se pudo obtener la lista de bancos de entrada"
+          description: "Una creación que falla después de que la fila existe cancela esa fila y devuelve 502. La fila se cancela si no se pudo crear el cash-in, si la respuesta no trajo un id de orden, o si no se pudo obtener la lista de bancos de entrada después de que la fila existía."
           content:
             application/json:
               schema:
@@ -3084,16 +3095,17 @@ paths:
         Se acepta y se quita un prefijo coincidente `V-`, `J-`, `P-` o `E-`.
         
         Una cuenta inexistente devuelve `404`. Quien no puede pagar desde esa cuenta, o una cuenta que no es USDT de Venezuela, devuelve `403`.
-        Una cuenta no operativa devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`.
+        Una cuenta no operativa devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. `Restringida` devuelve `403` con `code: RESTRICTED`.
         
         `firstName`, `lastName`, `prefijoTelefono`, `numeroTelefono`, `direccion` y `ciudad` son obligatorios solo cuando el correo aún no está registrado
-        (`400`, `code: KOLLAT_RECIPIENT_DETAILS_REQUIRED`). Si esos campos están presentes y el correo sigue sin estar registrado, la respuesta es
-        `kyc_not_started` sin `empleado_id` y sin `kyc_url`.
+        (`400`, `code: VE_RECIPIENT_DETAILS_REQUIRED`). Si esos campos están presentes y el correo sigue sin estar registrado, la respuesta es
+        `kyc_not_started` sin `kyc_url`. Esta llamada no registra ese correo.
         
-        Un documento que no coincide con un correo existente devuelve `400` con `code: KOLLAT_IDENTITY_UNCONFIRMED` y no inicia la verificación de identidad.
+        Un documento que no coincide con un correo existente devuelve `400` con `code: VE_IDENTITY_UNCONFIRMED` y no inicia la verificación de identidad.
         
         El `status` de éxito es `ready`, `kyc_approved_no_account`, `kyc_in_progress`, `kyc_not_started` o `kyc_declined`.
-        `kyc_declined` incluye `code: KOLLAT_KYC_DECLINED` y `empleado_id`.
+        `kyc_declined` incluye `code: VE_KYC_DECLINED`.
+        Para un correo que ya está registrado y no tiene sesión, esta llamada puede iniciar la verificación y devolver `kyc_url`.
         Para un destinatario existente, `kyc_not_started` devuelve `kyc_url` cuando se emitió una URL de sesión.
         `kyc_in_progress` incluye `kyc_url` solo cuando el payload de estado la trae, o cuando un payout de este `accountId` ya guardó una.
         No lea esa URL desde transacciones de otra cuenta.
@@ -3157,7 +3169,6 @@ paths:
                   summary: Aprobado y hay una cuenta bancaria registrada
                   value:
                     status: ready
-                    empleado_id: 1000
                 not_registered:
                   summary: El correo no está registrado
                   value:
@@ -3166,10 +3177,9 @@ paths:
                   summary: Verificación rechazada
                   value:
                     status: kyc_declined
-                    empleado_id: 1000
-                    code: KOLLAT_KYC_DECLINED
+                    code: VE_KYC_DECLINED
         '400':
-          description: "Falló la validación, faltan datos del destinatario (`KOLLAT_RECIPIENT_DETAILS_REQUIRED`), o el documento no coincide con el correo (`KOLLAT_IDENTITY_UNCONFIRMED`)."
+          description: "Falló la validación, faltan datos del destinatario (`VE_RECIPIENT_DETAILS_REQUIRED`), o el documento no coincide con el correo (`VE_IDENTITY_UNCONFIRMED`)."
           content:
             application/json:
               schema:
@@ -3181,14 +3191,14 @@ paths:
                   summary: "Un correo nuevo no tiene nombre, teléfono, dirección o ciudad"
                   value:
                     error: Name, phone, address, and city are required to register a new recipient.
-                    code: KOLLAT_RECIPIENT_DETAILS_REQUIRED
+                    code: VE_RECIPIENT_DETAILS_REQUIRED
                 identity:
                   summary: El documento no coincide con el correo
                   value:
                     error: The document does not match the email. Verification was not started.
-                    code: KOLLAT_IDENTITY_UNCONFIRMED
+                    code: VE_IDENTITY_UNCONFIRMED
         '403':
-          description: "Sin acceso, la cuenta no es USDT de Venezuela, o la cuenta no está operativa (`ACCOUNT_NOT_OPERATIVE`)."
+          description: "Sin acceso, la cuenta no es USDT de Venezuela, la cuenta no está operativa (`ACCOUNT_NOT_OPERATIVE`), o la cuenta está `Restringida` (`RESTRICTED`)."
           content:
             application/json:
               schema:
@@ -3205,7 +3215,7 @@ paths:
                         type: string
                       code:
                         type: string
-                        enum: [ACCOUNT_NOT_OPERATIVE]
+                        enum: [ACCOUNT_NOT_OPERATIVE, RESTRICTED]
               examples:
                 no_access:
                   summary: No puede pagar desde esta cuenta
@@ -3216,6 +3226,11 @@ paths:
                   value:
                     error: Account is not operative
                     code: ACCOUNT_NOT_OPERATIVE
+                restricted:
+                  summary: Account is restricted
+                  value:
+                    error: Account is restricted
+                    code: RESTRICTED
         '404':
           description: Cuenta no encontrada
           content:
@@ -3236,7 +3251,7 @@ paths:
     post:
       summary: Crear transacción de salida (Venezuela)
       description: |
-        Crea un payout en USDT. `amount` es una cadena decimal positiva, no un número JSON. Pueden aparecer hasta 8 dígitos fraccionarios.
+        Crea un payout en USDT. `amount` es una cadena decimal positiva, no un número JSON. Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan.
         
         Obligatorios: `accountId`, `amount`, `firstName`, `lastName`, `email`, `documentoIdentidad`, `tipoDocumento`,
         `prefijoTelefono`, `numeroTelefono`, `direccion`, `ciudad`, `pais` (`VE`), `banco`, `tipoCuenta`, `numeroCuenta`,
@@ -3249,7 +3264,7 @@ paths:
         
         `documentoIdentidad` es solo dígitos. La letra va en `tipoDocumento` (`V`, `J`, `P` o `E`). Un prefijo coincidente se quita.
         
-        Saldo insuficiente devuelve `409` con `code: INSUFFICIENT_NET_BALANCE`.
+        Saldo insuficiente devuelve `409` con `{ error, code }` y `code: INSUFFICIENT_NET_BALANCE`.
         
         Si el destinatario aún necesita verificación de identidad, la respuesta es `201` con `status: pending_kyc`, `kyc_url` cuando se guardó una URL,
         y `kyc_expires_at` (24 horas desde la creación). Ese monto y su comisión de salida quedan reservados. El saldo de la cuenta no se debita.
@@ -3259,11 +3274,12 @@ paths:
         
         Una verificación rechazada, una verificación que terminó sin aprobación, un correo cuyo documento no coincide, un documento rechazado
         o una cuenta bancaria rechazada no crea una transacción y devuelve `400` con `code`
-        `KOLLAT_KYC_DECLINED`, `KOLLAT_KYC_NOT_APPROVED`, `KOLLAT_IDENTITY_UNCONFIRMED`, `KOLLAT_INVALID_DOCUMENT`,
-        `KOLLAT_INVALID_BANK`, `missing_cuenta_id` o `missing_terms`.
+        `VE_KYC_DECLINED`, `VE_KYC_NOT_APPROVED`, `VE_IDENTITY_UNCONFIRMED`, `VE_INVALID_DOCUMENT`,
+        `VE_INVALID_BANK`, `missing_cuenta_id` o `missing_terms`.
         La cadena `error` indica qué corregir cuando falla la cuenta bancaria o el documento.
         
         Una cuenta inexistente devuelve `404`. Sin acceso devuelve `403`. `Bloqueada` o `Cerrada` devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`.
+        `Restringida` devuelve `403` con `code: RESTRICTED`.
         Una cuenta no admitida o una moneda distinta de USDT devuelve `400`.
       operationId: createVeOutboundTransaction
       tags:
@@ -3416,23 +3432,23 @@ paths:
                 kyc_declined:
                   value:
                     error: The recipient identity verification was declined. This payout was not created.
-                    code: KOLLAT_KYC_DECLINED
+                    code: VE_KYC_DECLINED
                 kyc_not_approved:
                   value:
                     error: The recipient completed identity verification but it was not approved. This payout was not created.
-                    code: KOLLAT_KYC_NOT_APPROVED
+                    code: VE_KYC_NOT_APPROVED
                 identity:
                   value:
                     error: The document does not match the email.
-                    code: KOLLAT_IDENTITY_UNCONFIRMED
+                    code: VE_IDENTITY_UNCONFIRMED
                 invalid_document:
                   value:
                     error: Send digits only. The letter belongs in tipoDocumento (V, J, P, or E). A matching prefix such as V- is removed.
-                    code: KOLLAT_INVALID_DOCUMENT
+                    code: VE_INVALID_DOCUMENT
                 invalid_bank:
                   value:
                     error: The payout account was rejected. Check banco, tipoCuenta, numeroCuenta, and the account holder name and identity document, then retry.
-                    code: KOLLAT_INVALID_BANK
+                    code: VE_INVALID_BANK
                 missing_cuenta_id:
                   value:
                     error: No id was returned for this payout account. Confirm numeroCuenta and retry.
@@ -3442,7 +3458,7 @@ paths:
                     error: Terms could not be loaded, so the recipient was not registered. Retry shortly.
                     code: missing_terms
         '403':
-          description: "Sin acceso, o la cuenta está `Bloqueada` o `Cerrada`"
+          description: "Sin acceso, la cuenta está `Bloqueada` o `Cerrada`, o la cuenta está `Restringida`"
           content:
             application/json:
               schema:
@@ -3459,7 +3475,7 @@ paths:
                         type: string
                       code:
                         type: string
-                        enum: [ACCOUNT_NOT_OPERATIVE]
+                        enum: [ACCOUNT_NOT_OPERATIVE, RESTRICTED]
               examples:
                 no_access:
                   value:
@@ -3468,6 +3484,11 @@ paths:
                   value:
                     error: Account is not operative
                     code: ACCOUNT_NOT_OPERATIVE
+                restricted:
+                  summary: Account is restricted
+                  value:
+                    error: Account is restricted
+                    code: RESTRICTED
         '404':
           description: Cuenta no encontrada
         '409':
@@ -3486,12 +3507,14 @@ paths:
       summary: Obtener estado de la transacción (Venezuela)
       description: |
         Lee el estado de entrada o de salida. `amount` es una cadena decimal USDT. `status` incluye `pending_kyc`.
+        `externalID` se omite hasta que existe el id de orden, y entonces se devuelve.
         
         Campos opcionales, solo cuando están presentes: `orden_id`, `montoFiat`, `tasaCompra`, `banco` y `numero_cuenta` solo de entrada,
         `kyc_url` de salida, y `kyc_expires_at` mientras la retención `pending_kyc` sigue abierta.
+        `feeBreakdown`, cuando existe un desglose, omite `flatFee.source`.
         
         En un payout cancelado porque se requería verificación de identidad, `kyc_url` se incluye solo cuando se guardó una URL no vacía.
-        `cancelledReason` se incluye solo para `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED` o `KOLLAT_KYC_REQUIRED`.
+        `cancelledReason` se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`.
         Los demás motivos de cancelación se omiten.
         
         El webhook `status_change` del comercio incluye `cancelledReason` solo para esos mismos tres códigos.
@@ -3531,7 +3554,6 @@ paths:
                   summary: Payout retenido por verificación de identidad
                   value:
                     id: "550e8400-e29b-41d4-a716-446655440000"
-                    externalID: "ve-out-example"
                     status: pending_kyc
                     direction: Outbound
                     amount: "25.5"
@@ -3542,12 +3564,11 @@ paths:
                   summary: Payout cancelado por un motivo público
                   value:
                     id: "550e8400-e29b-41d4-a716-446655440000"
-                    externalID: "ve-out-example"
                     status: cancelled
                     direction: Outbound
                     amount: "25.5"
                     currency: USDT
-                    cancelledReason: KOLLAT_KYC_EXPIRED
+                    cancelledReason: VE_KYC_EXPIRED
         '400':
           description: "Falta el id de la transacción, o la transacción no admite consulta de estado"
           content:
@@ -4097,7 +4118,7 @@ webhooks:
 
         Cuando un movimiento PIX de Brasil almacena un identificador end-to-end, el cuerpo incluye `endToEndId` opcional. El campo se omite si está ausente o vacío. Una actualización posterior que almacena el identificador por primera vez envía un `status_change` si esa actualización aún no lo notificó. Un identificador que ya estaba almacenado no genera otra entrega por sí solo.
 
-        En un `status_change` de un payout de Venezuela, `cancelledReason` opcional se incluye solo para `KOLLAT_KYC_EXPIRED`, `KOLLAT_KYC_DECLINED` o `KOLLAT_KYC_REQUIRED`. Los demás motivos de cancelación se omiten.
+        En un `status_change` de un payout de Venezuela, `cancelledReason` opcional se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`. Los demás motivos de cancelación se omiten.
       operationId: accountMovementWebhook
       tags:
         - Webhooks

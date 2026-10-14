@@ -6,7 +6,7 @@ icon: "arrow-down-to-bracket"
 
 ## Visão geral
 
-O cash-in da Venezuela credita uma conta **USDT** operativa. Envie `amount` como string decimal positiva. Não envie um número JSON. Até 8 dígitos fracionários podem aparecer. `montoFiat` e `tasaCompra` são metadados em VES. Não são o valor do ledger.
+O cash-in da Venezuela credita uma conta **USDT** operativa. Envie `amount` como string decimal positiva. Não envie um número JSON. Mais de 8 dígitos fracionários são arredondados para baixo até 8 e não são rejeitados. `montoFiat` e `tasaCompra` são metadados em VES. Não são o valor do ledger.
 
 Não é um checkout hospedado. Crie o cash-in com `POST /api/v1/ve/transactions/inbound`.
 
@@ -64,13 +64,16 @@ Veja [Payouts](/pt-BR/countries/venezuela/payouts) para `pending_kyc`, `kyc_url`
 | `404` | A conta não existe |
 | `403` | Você não pode usar esta conta |
 | `403` `ACCOUNT_NOT_OPERATIVE` | A conta está `Bloqueada` ou `Cerrada` |
+| `403` `RESTRICTED` | A conta está `Restringida` |
 | `400` | A conta não é compatível com esta operação, ou a moeda não é USDT |
 | `400` `VE_INBOUND_INVALID_BANCO_PAGO` | `bancoPago` não é um nome de banco de entrada |
-| `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | O catálogo de bancos não está configurado |
+| `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | A integração de pagamento não está configurada. Nenhuma transação é criada, inclusive quando `bancoPago` é omitido |
 | `502` `VE_BANKS_PROVIDER_ERROR` | Não foi possível buscar a lista de bancos de entrada |
-| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | Não foi possível criar o cash-in |
-| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | A resposta de criação não incluiu um id de ordem |
+| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | Não foi possível criar o cash-in. Se a linha já existe, ela é cancelada |
+| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | A resposta de criação não incluiu um id de ordem. Se a linha já existe, ela é cancelada |
+
+Quando a integração de pagamento não está configurada, a API retorna `500` com `code: VE_BANKS_PROVIDER_NOT_CONFIGURED` e não cria uma transação. Uma criação que falha depois que a linha existe cancela essa linha e retorna `502`.
 
 ## Status da conta
 
-A conta deve estar **`Operativa`** e em **USDT**. **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`.
+A conta deve estar **`Operativa`** e em **USDT**. **`Bloqueada`** ou **`Cerrada`** retorna `403` com `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** retorna `403` com `code: RESTRICTED`.
