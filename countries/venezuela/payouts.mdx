@@ -84,8 +84,8 @@ Declined verification, verification that finished without approval, an email who
 | `VE_IDENTITY_UNCONFIRMED` | The document does not match the email |
 | `VE_INVALID_DOCUMENT` | The document was rejected. Send digits only. The letter belongs in `tipoDocumento` |
 | `VE_INVALID_BANK` | The bank account was rejected |
-| `missing_cuenta_id` | No id was returned for the payout account |
-| `missing_terms` | Terms could not be loaded, so the recipient was not registered |
+| `missing_cuenta_id` | The payout account could not be saved. Check `numeroCuenta` and retry |
+| `missing_terms` | The recipient could not be prepared. Retry shortly |
 
 The `error` string says what to fix for a bank-account or document failure.
 

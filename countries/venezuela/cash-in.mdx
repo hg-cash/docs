@@ -68,11 +68,11 @@ See [Payouts](/countries/venezuela/payouts) for `pending_kyc`, `kyc_url`, `kyc_e
 | `400` | The account is not supported for this operation, or its currency is not USDT |
 | `400` `VE_INBOUND_INVALID_BANCO_PAGO` | `bancoPago` is not an on-ramp bank name |
 | `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | The payment integration is not configured. No transaction is created, including when `bancoPago` is omitted |
-| `502` `VE_BANKS_PROVIDER_ERROR` | The on-ramp bank list could not be fetched |
-| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | The cash-in could not be created. If the row already exists, it is cancelled |
-| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | The create response did not include an order id. If the row already exists, it is cancelled |
+| `502` `VE_BANKS_PROVIDER_ERROR` | Only when `bancoPago` is sent. The bank list is checked before a row exists. No row is created or cancelled |
+| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | The cash-in could not be created. The row already exists and is cancelled |
+| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | The create response did not include an order id. The row already exists and is cancelled |
 
-When the payment integration is not configured, the API returns `500` with `code: VE_BANKS_PROVIDER_NOT_CONFIGURED` and does not create a transaction. A create that fails after the row exists cancels that row and returns `502`.
+When the payment integration is not configured, the API returns `500` with `code: VE_BANKS_PROVIDER_NOT_CONFIGURED` and does not create a transaction. `502` `VE_BANKS_PROVIDER_ERROR` happens only when `bancoPago` is sent. The bank list is checked before a transaction row exists. That response does not create a row and does not cancel one. `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` and `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` mean a row already exists, that row is cancelled, and the response is `502`.
 
 ## Account status
 

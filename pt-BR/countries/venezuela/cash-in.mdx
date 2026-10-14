@@ -68,11 +68,11 @@ Veja [Payouts](/pt-BR/countries/venezuela/payouts) para `pending_kyc`, `kyc_url`
 | `400` | A conta não é compatível com esta operação, ou a moeda não é USDT |
 | `400` `VE_INBOUND_INVALID_BANCO_PAGO` | `bancoPago` não é um nome de banco de entrada |
 | `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | A integração de pagamento não está configurada. Nenhuma transação é criada, inclusive quando `bancoPago` é omitido |
-| `502` `VE_BANKS_PROVIDER_ERROR` | Não foi possível buscar a lista de bancos de entrada |
-| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | Não foi possível criar o cash-in. Se a linha já existe, ela é cancelada |
-| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | A resposta de criação não incluiu um id de ordem. Se a linha já existe, ela é cancelada |
+| `502` `VE_BANKS_PROVIDER_ERROR` | Somente quando `bancoPago` é enviado. A lista de bancos é conferida antes de existir uma linha. Nenhuma linha é criada ou cancelada |
+| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | Não foi possível criar o cash-in. A linha já existe e é cancelada |
+| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | A resposta de criação não incluiu um id de ordem. A linha já existe e é cancelada |
 
-Quando a integração de pagamento não está configurada, a API retorna `500` com `code: VE_BANKS_PROVIDER_NOT_CONFIGURED` e não cria uma transação. Uma criação que falha depois que a linha existe cancela essa linha e retorna `502`.
+Quando a integração de pagamento não está configurada, a API retorna `500` com `code: VE_BANKS_PROVIDER_NOT_CONFIGURED` e não cria uma transação. `502` `VE_BANKS_PROVIDER_ERROR` ocorre somente quando `bancoPago` é enviado. A lista de bancos é conferida antes de existir uma linha de transação. Essa resposta não cria uma linha e não cancela nenhuma. `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` e `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` significam que a linha já existe, essa linha é cancelada e a resposta é `502`.
 
 ## Status da conta
 
