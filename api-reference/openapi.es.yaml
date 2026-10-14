@@ -672,6 +672,7 @@ components:
           format: uri
         expiresInSeconds:
           type: integer
+          description: Opcional. El valor predeterminado es 86400 segundos. El máximo es 604800 segundos.
         idempotencyKey:
           type: string
         locale:
@@ -1254,7 +1255,8 @@ components:
         Banco exige `accountType`, `bankCode`, `accountNumber` (máx. 20), `beneficiaryFullName`, `documentType` y `documentNumber`.
         El banco debe admitir Fast Pay o ACH y el tipo de cuenta elegido.
         `breb_key` exige `keyValue`, `beneficiaryFullName`, `documentType` y `documentNumber`. No envíe campos bancarios.
-        `breb_qr` exige `qrValue` (EMV o base64). Beneficiario y documento son opcionales.
+        `breb_qr` exige `qrValue` (EMV o base64). El nombre del beneficiario es opcional.
+        Envíe `documentType` y `documentNumber` juntos, u omita ambos. Enviar solo uno responde `400`.
         Si el QR trae un monto fijo, `amount` debe coincidir o la API responde `400` con `code: BREB_QR_AMOUNT_MISMATCH`.
       required: [accountId, amount]
       properties:
@@ -2051,7 +2053,9 @@ paths:
         Colombia exige `country: "CO"`, `amount` y `successUrl`. No exige nombre, documento ni email del pagador. HG configura los medios de pago disponibles; la solicitud de creación no los elige.
         El pagador abre `checkoutUrl`, completa el pago y vuelve a la página de éxito de HG. `successUrl` se usa solo después de confirmar el pago.
         La respuesta de creación de Colombia incluye `checkoutUrl` y omite `checkoutUrlProvider`. Las respuestas de consulta, listado y cancelación de Colombia omiten `providerData`. La creación de Chile incluye `checkoutUrlProvider`.
-        Una cuenta `Bloqueada` o `Cerrada` devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. Una cuenta `Restringida` devuelve `403` con `code: RESTRICTED`. Una cuenta COP que no está lista para el checkout devuelve `400` con `error: "Account is not ready for checkout"`.
+        `expiresInSeconds` es opcional. El valor predeterminado es 86400 segundos. El máximo es 604800 segundos.
+        Una cuenta `Bloqueada` o `Cerrada` devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. Una cuenta `Restringida` devuelve `403` con `code: RESTRICTED`. Una cuenta COP que no está lista para el checkout devuelve `400` con `error: "Account is not ready for checkout"`. Una cuenta que no es una cuenta de checkout en COP devuelve `400` con `error: "Account is not supported for this checkout country"`.
+        Si no se puede crear la sesión hospedada, la API devuelve `502` con `error: "Failed to create CO payment with provider"`.
       operationId: createCheckout
       tags: [Checkouts]
       requestBody:
@@ -2068,11 +2072,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateCheckoutResponse'
         '400':
-          description: Error de validación, o la cuenta COP no está lista para el checkout (`Account is not ready for checkout`)
+          description: Error de validación, la cuenta COP no está lista para el checkout (`Account is not ready for checkout`), o la cuenta no es una cuenta de checkout en COP (`Account is not supported for this checkout country`)
         '401':
           description: No autorizado
         '403':
           description: Prohibido — la cuenta no está operativa (`Bloqueada` o `Cerrada`, código `ACCOUNT_NOT_OPERATIVE`), está restringida (`Restringida`, código `RESTRICTED`), o quien llama no tiene acceso
+        '502':
+          description: Una sesión hospedada que no se puede crear devuelve 502.
         '500':
           description: Error interno del servidor
     get:
@@ -2694,6 +2700,8 @@ paths:
         Una cuenta que no es COP responde `400`.
         `Bloqueada` o `Cerrada` responde `403` con `code: ACCOUNT_NOT_OPERATIVE`.
         `Restringida` responde `403` con `code: RESTRICTED`.
+        `502` responde `error`, `code: CO_OUTBOUND_PROVIDER_CREATE_FAILED` y `type: provider_error`. El cuerpo no incluye `id`. El `error` público es `Unable to complete this payout with the payment provider.` Si la cuenta no puede iniciar el payout, o el destino no se puede registrar, la transacción queda `cancelled`. Si el payout se envió y el resultado no está confirmado, la transacción sigue en `processing`.
+        Un monto de QR que no coincide (`code: BREB_QR_AMOUNT_MISMATCH`) deja una fila de transacción `cancelled` y no devuelve `id`.
       operationId: createCoOutboundTransaction
       tags:
         - Colombia
@@ -2745,7 +2753,7 @@ paths:
                 status: processing
         '400':
           description: |
-            Validación fallida, la moneda de la cuenta no es COP, la cuenta no admite esta operación, o el monto del QR Bre-B no coincide (`code: BREB_QR_AMOUNT_MISMATCH`).
+            Validación fallida, la moneda de la cuenta no es COP, la cuenta no admite esta operación, o el monto del QR Bre-B no coincide (`code: BREB_QR_AMOUNT_MISMATCH`). Un monto de QR que no coincide deja una fila de transacción `cancelled` y no devuelve `id`.
           content:
             application/json:
               schema:
@@ -2786,7 +2794,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ColombiaInsufficientNetBalance'
         '502':
-          description: No se pudo completar este payout con el proveedor de pago
+          description: |
+            No se pudo completar este payout con el proveedor de pago. El cuerpo es `error`, `code: CO_OUTBOUND_PROVIDER_CREATE_FAILED` y `type: provider_error`. No incluye `id`. Si la cuenta no puede iniciar el payout, o el destino no se puede registrar, la transacción queda `cancelled`. Si el payout se envió y el resultado no está confirmado, la transacción sigue en `processing`.
           content:
             application/json:
               schema:
@@ -2804,6 +2813,7 @@ paths:
       description: |
         Solo payouts salientes de Colombia.
         Devuelve `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` y `providerStatus` cuando hubo una actualización.
+        La respuesta también incluye `feeBreakdown` cuando hay un desglose de comisión guardado: `platformFee`, `transactionFee`, `flatFee` (incluido `source`) y `collectedAmount`. El objeto se omite cuando no hay desglose.
         Una transacción que no es un payout saliente devuelve `400`.
         Un fallo de actualización devuelve `502` con `error`, `code` y `type`.
       operationId: getCoTransactionStatus

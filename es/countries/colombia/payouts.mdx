@@ -43,7 +43,7 @@ Obligatorio: `accountId`, `amount` (hasta 2 decimales), `accountType`, `bankCode
 
 ### QR Bre-B
 
-`destinationType: breb_qr`, más `qrValue` (EMV o base64). `beneficiaryFullName`, `documentType` y `documentNumber` son opcionales. Si el QR trae un monto fijo, `amount` debe coincidir o la API responde `400` con `code: BREB_QR_AMOUNT_MISMATCH`.
+`destinationType: breb_qr`, más `qrValue` (EMV o base64). `beneficiaryFullName` es opcional. Omita `documentType` y `documentNumber` juntos, o envíe ambos. Enviar solo uno es `400`. Si el QR trae un monto fijo, `amount` debe coincidir o la API responde `400` con `code: BREB_QR_AMOUNT_MISMATCH`. Ese cuerpo incluye `details.qrAmountCents` y `details.requestedAmountCents`. No incluye `id`. Queda una fila de transacción en `cancelled`.
 
 ## Tipos de documento
 
@@ -72,7 +72,7 @@ En los tres destinos: `phone` (E.164), `email`, `description` (máx. 40 caracter
 2. `POST /api/v1/co/transactions/outbound`
 3. Consulte `GET /api/v1/co/transactions/{id}/status` o defina `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
 
-La consulta de estado es **solo saliente**. Devuelve `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` y `providerStatus` cuando hubo una actualización. Una transacción que no es un payout saliente devuelve `400`. Un fallo de actualización devuelve `502` con `error`, `code` y `type`.
+La consulta de estado es **solo saliente**. Devuelve `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` y `providerStatus` cuando hubo una actualización. También incluye `feeBreakdown` cuando hay un desglose de comisión guardado: `platformFee`, `transactionFee`, `flatFee` (incluido `source`) y `collectedAmount`. La respuesta omite `feeBreakdown` cuando no hay desglose. Una transacción que no es un payout saliente devuelve `400`. Un fallo de actualización devuelve `502` con `error`, `code` y `type`.
 
 ## Ejemplo (banco)
 
@@ -149,6 +149,8 @@ El banco `1507` admite ahorros (`ch`) y depósito electrónico (`dp`).
 ## Ciclo del payout
 
 El payout inicia en `processing` y pasa a `done` cuando se liquida, o a `cancelled` cuando se rechaza.
+
+`POST /api/v1/co/transactions/outbound` puede responder `502` con `error`, `code: CO_OUTBOUND_PROVIDER_CREATE_FAILED` y `type: provider_error`. El cuerpo no incluye `id`. El `error` público es `Unable to complete this payout with the payment provider.` Si la cuenta no puede iniciar el payout, o el destino no se puede registrar, la transacción queda `cancelled`. Si el payout se envió y el resultado no está confirmado, la transacción sigue en `processing`.
 
 Si la cuenta no cubre el monto y la comisión de salida, la API responde `409` con `code: INSUFFICIENT_NET_BALANCE`.
 
