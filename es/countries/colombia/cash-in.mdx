@@ -33,7 +33,9 @@ Obligatorio:
 
 Colombia no exige nombre, documento ni email del pagador.
 
-Opcional, igual que en otros países: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
+Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `expiresInSeconds` y `locale`.
+
+`expiresInSeconds` es opcional. El valor predeterminado es 86400 segundos. El máximo es 604800 segundos. `locale` es opcional y solo admite `es` o `en`.
 
 ## Flujo
 
@@ -62,6 +64,10 @@ curl -X POST https://hg.cash/api/v1/checkouts \
 
 El checkout inicia en `pending` y pasa a `completed` cuando se confirma el pago.
 
+Después de `expiresAt`, el get y el list del comercio siguen devolviendo `status: pending`. La sesión del pagador informa `expired`. Cancelar un checkout pendiente sigue dejando `cancelled`.
+
+Si no se puede crear la sesión hospedada, la API devuelve `502` con `error: "Failed to create CO payment with provider"`.
+
 ## Estado de la cuenta
 
-La cuenta debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`. Una cuenta **`Restringida`** devuelve `403` con `code: RESTRICTED`. Una cuenta que no está lista para el checkout devuelve `400` con `error: "Account is not ready for checkout"`.
+La cuenta debe estar **`Operativa`**. Las solicitudes contra cuentas **`Bloqueada`** o **`Cerrada`** devuelven `403` con `code: ACCOUNT_NOT_OPERATIVE`. Una cuenta **`Restringida`** devuelve `403` con `code: RESTRICTED`. Una cuenta que no está lista para el checkout devuelve `400` con `error: "Account is not ready for checkout"`. Una cuenta que no es una cuenta de checkout en COP devuelve `400` con `error: "Account is not supported for this checkout country"`. Eso es distinto del `400` con `error: "Account is not ready for checkout"`.

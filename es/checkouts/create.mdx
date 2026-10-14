@@ -65,11 +65,15 @@ Para **BR**, **CL**, **BO** y **CO**, si indicás un `accountId` explícito que 
 - Obligatorio: `country: "CO"`, `amount` y `successUrl`. Sin nombre, documento ni email del pagador.
 - HG configura los medios de pago disponibles. La solicitud de creación no los elige.
 - La cuenta debe ser **COP** y **`Operativa`**.
-- Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
+- Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `expiresInSeconds` y `locale`.
+- `expiresInSeconds` es opcional. El valor predeterminado es 86400 segundos. El máximo es 604800 segundos. `locale` es opcional y solo admite `es` o `en`.
 - La respuesta incluye **`checkoutUrl`** y omite **`checkoutUrlProvider`**.
 - `GET /api/v1/checkouts`, `GET /api/v1/checkouts/{id}` y `POST /api/v1/checkouts/{id}/cancel` omiten `providerData` para Colombia.
 - El pagador abre `checkoutUrl`, completa el pago y vuelve a la página de éxito de HG. Tu `successUrl` se usa solo después de confirmar el pago.
+- Después de `expiresAt`, el get y el list del comercio siguen devolviendo `status: pending`. La sesión del pagador informa `expired`. Cancelar un checkout pendiente sigue dejando `cancelled`.
 - **`Bloqueada`** o **`Cerrada`** devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** devuelve `403` con `code: RESTRICTED`. Una cuenta que no está lista para el checkout devuelve `400` con `error: "Account is not ready for checkout"`.
+- Una cuenta que no es una cuenta de checkout en COP devuelve `400` con `error: "Account is not supported for this checkout country"`. Eso es distinto del `400` con `error: "Account is not ready for checkout"`.
+- Si no se puede crear la sesión hospedada, la API devuelve `502` con `error: "Failed to create CO payment with provider"`.
 
 ## Ejemplo (Brasil)
 

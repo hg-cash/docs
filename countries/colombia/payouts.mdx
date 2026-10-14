@@ -43,7 +43,7 @@ Required: `accountId`, `amount` (up to 2 decimal places), `accountType`, `bankCo
 
 ### Bre-B QR
 
-`destinationType: breb_qr`, plus `qrValue` (EMV or base64). `beneficiaryFullName`, `documentType`, and `documentNumber` are optional. If the QR encodes a fixed amount, `amount` must match or the API returns `400` with `code: BREB_QR_AMOUNT_MISMATCH`.
+`destinationType: breb_qr`, plus `qrValue` (EMV or base64). `beneficiaryFullName` is optional. Omit `documentType` and `documentNumber` together, or send both. Sending only one is `400`. If the QR encodes a fixed amount, `amount` must match or the API returns `400` with `code: BREB_QR_AMOUNT_MISMATCH`. That body includes `details.qrAmountCents` and `details.requestedAmountCents`. It does not include `id`. A cancelled transaction row remains.
 
 ## Document types
 
@@ -72,7 +72,7 @@ On all three destinations: `phone` (E.164), `email`, `description` (max 40 chara
 2. `POST /api/v1/co/transactions/outbound`
 3. Poll `GET /api/v1/co/transactions/{id}/status` or set `webhookUrl` — see [Receiving webhooks](/developers/receiving-webhooks)
 
-Status polling is **outbound only**. It returns `id`, `externalID`, `status`, `direction`, `amount` (string), `currency`, and `providerStatus` when a refresh happened. A transaction that is not an outbound payout returns `400`. A refresh failure returns `502` with `error`, `code`, and `type`.
+Status polling is **outbound only**. It returns `id`, `externalID`, `status`, `direction`, `amount` (string), `currency`, and `providerStatus` when a refresh happened. It also includes `feeBreakdown` when a fee snapshot is stored: `platformFee`, `transactionFee`, `flatFee` (including `source`), and `collectedAmount`. The response omits `feeBreakdown` when there is no snapshot. A transaction that is not an outbound payout returns `400`. A refresh failure returns `502` with `error`, `code`, and `type`.
 
 ## Example (bank)
 
@@ -149,6 +149,8 @@ Bank `1507` accepts savings (`ch`) and electronic deposit (`dp`).
 ## Payout lifecycle
 
 The payout starts in `processing` and moves to `done` when it settles, or `cancelled` when it is rejected.
+
+`POST /api/v1/co/transactions/outbound` can return `502` with `error`, `code: CO_OUTBOUND_PROVIDER_CREATE_FAILED`, and `type: provider_error`. The body does not include `id`. The public `error` string is `Unable to complete this payout with the payment provider.` If the account cannot start the payout, or the destination cannot be registered, the transaction is `cancelled`. If the payout was submitted and the result is not confirmed, the transaction stays `processing`.
 
 If the account cannot cover the amount and the outbound fee, the API returns `409` with `code: INSUFFICIENT_NET_BALANCE`.
 
