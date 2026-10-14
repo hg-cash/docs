@@ -1283,7 +1283,10 @@ components:
           format: uuid
           example: YOUR_ACCOUNT_UUID
         amount:
-          description: Valor positivo. Strings aceitam no máximo 2 casas decimais.
+          description: |
+            Valor positivo. Uma string aceita no máximo 2 casas decimais. Mais de 2 casas decimais retorna `400` com `details` do campo `amount` (`Invalid amount format`).
+            Um número JSON com mais de 2 casas decimais é truncado em direção a zero para 2 casas decimais (`1.239` vira `1.23`).
+            Se o valor truncado não for maior que zero, a API retorna `400` com `error: "Validation failed"` e `details` do campo `amount`.
           oneOf:
             - type: number
               exclusiveMinimum: 0
@@ -2704,7 +2707,7 @@ paths:
     get:
       summary: Listar bancos (Colômbia)
       description: |
-        Retorna as instituições disponíveis para payouts bancários na Colômbia.
+        Retorna `{ banks: [...] }` para payouts bancários na Colômbia.
         Cada banco inclui `code`, `name`, `accountTypes`, `fastPay` e `ach`.
       operationId: listCoBanks
       tags:

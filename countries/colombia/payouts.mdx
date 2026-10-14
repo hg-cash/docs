@@ -19,15 +19,23 @@ The amount plus the outbound fee must fit the **net balance**. A successful crea
 
 ## List banks
 
-`GET /api/v1/co/banks` returns `code`, `name`, `accountTypes`, `fastPay`, and `ach` for each institution.
+`GET /api/v1/co/banks` returns `{ "banks": [...] }`. Each bank has `code`, `name`, `accountTypes`, `fastPay`, and `ach`.
 
 `bankCode` is the 4-digit `code`. The bank must support Fast Pay or ACH, and it must list the `accountType` you send.
+
+## Amount
+
+`amount` is required for every destination.
+
+Send `amount` as a string with at most 2 decimal places. A string with more than 2 decimal places returns `400` with `error: "Validation failed"` and `details` for field `amount` (`Invalid amount format`).
+
+A JSON number with more than 2 decimal places is accepted and truncated toward zero to 2 decimal places. `1.239` becomes `1.23`. If the truncated value is not greater than zero, the API returns `400` with `error: "Validation failed"` and `details` for field `amount` (`Amount must be positive`).
 
 ## Destinations
 
 ### Bank (Fast Pay / ACH)
 
-Required: `accountId`, `amount` (up to 2 decimal places), `accountType`, `bankCode`, `accountNumber` (max 20 characters), `beneficiaryFullName`, `documentType`, `documentNumber`.
+Required: `accountId`, `amount`, `accountType`, `bankCode`, `accountNumber` (max 20 characters), `beneficiaryFullName`, `documentType`, `documentNumber`.
 
 `accountType`:
 
