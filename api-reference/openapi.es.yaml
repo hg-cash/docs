@@ -493,7 +493,8 @@ components:
           description: >-
             En un `status_change` de un payout de Venezuela, se incluye solo para
             `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`.
-            Los demás motivos de cancelación se omiten.
+            Los demás motivos de cancelación se omiten. Un payout en `processing`
+            que pasa a `cancelled` no envía este webhook.
           enum:
             - VE_KYC_EXPIRED
             - VE_KYC_DECLINED
@@ -504,38 +505,13 @@ components:
     WebhookFeeBreakdown:
       type: object
       description: >-
-        Desglose de comisión opcional en un webhook de transacción. Los montos y las tasas
-        son cadenas decimales. Se omite cuando el movimiento no tiene desglose.
-        `collectedAmount` es la comisión porcentual más la comisión fija. `platformFee` es
-        el costo de billetera registrado y no se suma a `collectedAmount`. `flatFee` incluye
-        solo el monto: los webhooks no envían `flatFee.source`.
+        Desglose de comisión opcional en un webhook de transacción. Los montos son cadenas
+        decimales. Se omite cuando el movimiento no tiene desglose. `collectedAmount` es la
+        comisión combinada: el porcentaje cobrado al cliente más la comisión fija. `flatFee`
+        es solo ese monto fijo. `platformFee` y `transactionFee` no se envían aquí; quedan
+        en el estado REST (`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status`).
+        Los webhooks no incluyen `flatFee.source`.
       properties:
-        platformFee:
-          type: object
-          description: Porcentaje de billetera registrado. No se suma a `collectedAmount`.
-          properties:
-            amount:
-              type: string
-              description: Comisión porcentual de plataforma como cadena decimal
-              example: "60"
-            rate:
-              type: string
-              nullable: true
-              description: Tasa porcentual de plataforma como cadena decimal (`0.005` es 0,5%)
-              example: "0.005"
-        transactionFee:
-          type: object
-          description: Porcentaje cobrado al cliente.
-          properties:
-            amount:
-              type: string
-              description: Comisión porcentual del cliente como cadena decimal
-              example: "120"
-            rate:
-              type: string
-              nullable: true
-              description: Tasa porcentual del cliente como cadena decimal (`0.01` es 1%)
-              example: "0.01"
         flatFee:
           type: object
           description: Monto absoluto cobrado además del porcentaje. Los webhooks incluyen solo `amount`.
@@ -546,7 +522,7 @@ components:
               example: "15"
         collectedAmount:
           type: string
-          description: "`transactionFee.amount` más `flatFee.amount`"
+          description: Porcentaje cobrado al cliente más `flatFee.amount`.
           example: "135"
 
     AccountMovementWebhook:
@@ -3107,8 +3083,10 @@ paths:
         Opcional: `numeroCuenta`. Si se envía, `ready` significa que la verificación de identidad está aprobada y esa cuenta ya está registrada.
         Si se omite, `ready` significa aprobado y que ya hay una cuenta bancaria registrada.
         
-        `documentoIdentidad` es solo dígitos. La letra va en `tipoDocumento` (`V`, `J`, `P` o `E` de `GET /ve/banks`).
-        Se acepta y se quita un prefijo coincidente `V-`, `J-`, `P-` o `E-`.
+        Envíe `documentoIdentidad` en dígitos. La letra va en `tipoDocumento` (`V`, `J`, `P` o `E` de `GET /ve/banks`).
+        Se acepta y se quita un prefijo coincidente `V-`, `J-`, `P-` o `E-` antes del registro.
+        Esta consulta acepta cualquier cadena no vacía. Un correo no registrado puede devolver `kyc_not_started` aunque el documento no sea solo dígitos.
+        La creación del payout devuelve `400` con `code: VE_INVALID_DOCUMENT` cuando el proveedor rechaza ese documento.
         
         Una cuenta inexistente devuelve `404`. Quien no puede pagar desde esa cuenta, o una cuenta que no es USDT de Venezuela, devuelve `403`.
         Una cuenta no operativa devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. `Restringida` devuelve `403` con `code: RESTRICTED`.
@@ -3146,7 +3124,9 @@ paths:
                   example: payer@example.com
                 documentoIdentidad:
                   type: string
-                  description: "Solo dígitos. Se quita un prefijo coincidente `V-`, `J-`, `P-` o `E-`."
+                  description: >-
+                    Cualquier cadena no vacía. Envíe dígitos. Se quita un prefijo coincidente `V-`, `J-`, `P-` o `E-` antes del registro.
+                    Esta consulta no rechaza un valor que no sea solo dígitos. La creación del payout devuelve `VE_INVALID_DOCUMENT` cuando el proveedor lo rechaza.
                   example: "00000000"
                 tipoDocumento:
                   type: string
@@ -3278,7 +3258,7 @@ paths:
         Envíe `banco`, `tipoCuenta` y `tipoDocumento` como el `value` del catálogo de `GET /ve/banks`. Las etiquetas de texto se aceptan.
         `BANK_VALUE` y `ACCOUNT_TYPE_VALUE` en el ejemplo son marcadores de esos valores.
         
-        `documentoIdentidad` es solo dígitos. La letra va en `tipoDocumento` (`V`, `J`, `P` o `E`). Un prefijo coincidente se quita.
+        Envíe `documentoIdentidad` en dígitos. La letra va en `tipoDocumento` (`V`, `J`, `P` o `E`). Un prefijo coincidente se quita antes del registro. La solicitud acepta cualquier cadena no vacía. Un documento que el proveedor rechaza devuelve `400` con `code: VE_INVALID_DOCUMENT`.
         
         El USDT disponible es el libro menos las demás filas de salida en `processing` o `pending_kyc` y las comisiones de salida de esas filas. El monto de este payout más su propia comisión de salida debe caber en lo que queda. Si no cabe, la respuesta es `409` con `{ error, code }` solamente y `code: INSUFFICIENT_NET_BALANCE`. No se inserta ninguna fila de payout. `details` no se devuelve.
         
@@ -3542,7 +3522,11 @@ paths:
         `cancelledReason` se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`.
         Los demás motivos de cancelación se omiten.
         
-        El webhook `status_change` del comercio incluye `cancelledReason` solo para esos mismos tres códigos.
+        `webhookUrl` envía `TRANSACTION` / `status_change` cuando el payout llega a `done`.
+        También envía ese webhook cuando una retención `pending_kyc` pasa a `processing`, y cuando esa retención se cancela.
+        Un payout en `processing` que pasa a `cancelled` no envía ese webhook. Eso incluye un rechazo del proveedor.
+        Consulte este endpoint para esa cancelación.
+        Cuando se envía un webhook de cancelación, `cancelledReason` se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`.
         
         Una transacción que no es un movimiento de Venezuela devuelve `400`.
       operationId: getVeTransactionStatus
@@ -4139,11 +4123,11 @@ webhooks:
         
         Úselo para mantener sus saldos internos y libros contables sincronizados con HG.Cash.
 
-        Cuando el movimiento tiene un desglose de comisión guardado, el cuerpo incluye `feeBreakdown` opcional (porcentaje del cliente, comisión fija y monto cobrado). El campo se omite cuando no hay desglose. En el webhook, `flatFee` incluye solo `amount`.
+        Cuando el movimiento tiene un desglose de comisión guardado, el cuerpo incluye `feeBreakdown` opcional con `flatFee.amount` y `collectedAmount`. `collectedAmount` es el porcentaje cobrado al cliente más la comisión fija. El campo se omite cuando no hay desglose. Los webhooks no incluyen `platformFee`, `transactionFee` ni `flatFee.source`.
 
         Cuando un movimiento PIX de Brasil almacena un identificador end-to-end, el cuerpo incluye `endToEndId` opcional. El campo se omite si está ausente o vacío. Una actualización posterior que almacena el identificador por primera vez envía un `status_change` si esa actualización aún no lo notificó. Un identificador que ya estaba almacenado no genera otra entrega por sí solo.
 
-        En un `status_change` de un payout de Venezuela, `cancelledReason` opcional se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`. Los demás motivos de cancelación se omiten.
+        En un payout de Venezuela, `status_change` se envía cuando el payout llega a `done`, cuando una retención `pending_kyc` pasa a `processing` y cuando esa retención se cancela. Un payout en `processing` que pasa a `cancelled` no envía este webhook. Eso incluye un rechazo del proveedor. Cuando se envía un webhook de cancelación, `cancelledReason` opcional se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`. Los demás motivos de cancelación se omiten.
       operationId: accountMovementWebhook
       tags:
         - Webhooks
@@ -4158,7 +4142,7 @@ webhooks:
             examples:
               with_fee_breakdown:
                 summary: Movimiento de cuenta con desglose de comisión
-                description: Movimiento que guardó una comisión porcentual más una comisión fija. `collectedAmount` es `120` + `15`.
+                description: Movimiento que guardó una comisión porcentual más una comisión fija. `collectedAmount` es ese porcentaje más `15`. `platformFee` y `transactionFee` quedan en la respuesta de estado.
                 value:
                   topic: "TRANSACTION"
                   eventType: "created"
@@ -4180,12 +4164,6 @@ webhooks:
                   coelsaCode: "67REZ8NPQDQ460QK94KVGO"
                   accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
                   feeBreakdown:
-                    platformFee:
-                      amount: "60"
-                      rate: "0.005"
-                    transactionFee:
-                      amount: "120"
-                      rate: "0.01"
                     flatFee:
                       amount: "15"
                     collectedAmount: "135"
@@ -4284,12 +4262,6 @@ webhooks:
                     coelsaCode: "67REZ8NPQDQ460QK94KVGO"
                     accountId: "843d9d8b-6db8-47a2-8c22-23b198e99c15"
                     feeBreakdown:
-                      platformFee:
-                        amount: "60"
-                        rate: "0.005"
-                      transactionFee:
-                        amount: "120"
-                        rate: "0.01"
                       flatFee:
                         amount: "15"
                       collectedAmount: "135"

@@ -39,7 +39,7 @@ Required: `accountId` (an operative USDT account you can pay from), `email`, `do
 
 Optional: `numeroCuenta`. When you send it, `ready` means identity verification is approved and that account is already on file. When you omit it, `ready` means approved and a bank account is already on file. When you send `numeroCuenta`, `kyc_approved_no_account` means verification is approved and that account number is not on file. When you omit `numeroCuenta`, it means verification is approved and no bank account is on file.
 
-`documentoIdentidad` is digits only. The letter belongs in `tipoDocumento` (`V`, `J`, `P`, or `E` from the banks catalogue). A matching `V-`, `J-`, `P-`, or `E-` prefix is accepted and stripped.
+Send `documentoIdentidad` as digits. The letter belongs in `tipoDocumento` (`V`, `J`, `P`, or `E` from the banks catalogue). A matching `V-`, `J-`, `P-`, or `E-` prefix is accepted and stripped before registration. This check accepts any non-empty string. An unregistered email can still return `kyc_not_started` when the document is not digits. Payout create returns `400` with `code: VE_INVALID_DOCUMENT` when the provider rejects that document.
 
 A missing account returns `404`. If you cannot pay from that account, or it is not a Venezuela USDT account, the API returns `403`. A non-operative account returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** returns `403` with `code: RESTRICTED`.
 
@@ -133,7 +133,7 @@ The body always includes `id`, `status`, `direction`, `amount`, and `currency`. 
 
 For an outbound cancelled because identity verification was required, `kyc_url` is included only when a non-empty URL was stored. `cancelledReason` is included only for `VE_KYC_EXPIRED`, `VE_KYC_DECLINED`, or `VE_KYC_REQUIRED`. Other cancellation reasons are omitted.
 
-The merchant `status_change` webhook includes `cancelledReason` only for those same three codes. See [Account movement](/api-reference/webhooks/account-movement).
+`webhookUrl` sends `TRANSACTION` / `status_change` when the payout reaches `done`. It also sends that webhook when a `pending_kyc` hold moves to `processing`, and when that hold is cancelled. A `processing` payout that becomes `cancelled` does not send that webhook. That includes a provider rejection. Poll this status endpoint for that cancellation. When a cancellation webhook is sent, `cancelledReason` is included only for `VE_KYC_EXPIRED`, `VE_KYC_DECLINED`, or `VE_KYC_REQUIRED`. See [Account movement](/api-reference/webhooks/account-movement).
 
 ## Account status
 
