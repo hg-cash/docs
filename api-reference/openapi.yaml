@@ -707,7 +707,10 @@ components:
           description: Present for AR (CVU, alias, holder)
         qrCode: { type: string }
         pixCopiaECola: { type: string }
-        checkoutUrlProvider: { type: string, format: uri }
+        checkoutUrlProvider:
+          type: string
+          format: uri
+          description: Present for Chile. Omitted for Colombia.
 
     CreateClaimRequest:
       type: object
@@ -2056,9 +2059,11 @@ paths:
     post:
       summary: Create checkout session
       description: |
-        Creates a hosted checkout for AR (transfer + DNI match), BR (PIX QR), CL (provider iframe), BO (QR payment), or CO (hosted payment page).
-        Colombia does not require payer name, document, or email. The payer opens `checkoutUrl`, pays on the HG page, and `successUrl` is used only after payment is confirmed. Payment rails are configured on the account.
-        Returns `checkoutUrl` for the payer and optional provider fields (QR, iframe URL).
+        Creates a hosted checkout for AR (transfer + DNI match), BR (PIX QR), CL (hosted iframe), BO (Bolivia QR), or CO (hosted checkout).
+        Colombia requires `country: "CO"`, `amount`, and `successUrl`. It does not require payer name, document, or email. HG configures the available payment methods; the create request does not choose them.
+        The payer opens `checkoutUrl`, completes payment, and returns to the HG success page. `successUrl` is used only after payment is confirmed.
+        Colombia create responses include `checkoutUrl` and omit `checkoutUrlProvider`. Colombia get, list, and cancel responses omit `providerData`. Chile create responses include `checkoutUrlProvider`.
+        A `Bloqueada` or `Cerrada` account returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. A `Restringida` account returns `403` with `code: RESTRICTED`. A COP account that is not ready for checkout returns `400` with `error: "Account is not ready for checkout"`.
       operationId: createCheckout
       tags: [Checkouts]
       requestBody:
@@ -2075,15 +2080,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateCheckoutResponse'
         '400':
-          description: Validation error
+          description: Validation error, or the COP account is not ready for checkout (`Account is not ready for checkout`)
         '401':
           description: Unauthorized
         '403':
-          $ref: '#/components/responses/AccountNotOperative'
+          description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`, code `ACCOUNT_NOT_OPERATIVE`), is restricted (`Restringida`, code `RESTRICTED`), or caller lacks access
         '500':
           description: Internal Server Error
     get:
       summary: List checkouts
+      description: Lists checkout sessions. Colombia responses omit `providerData`.
       operationId: listCheckouts
       tags: [Checkouts]
       parameters:
@@ -2115,6 +2121,7 @@ paths:
   /checkouts/{id}:
     get:
       summary: Get checkout
+      description: Returns one checkout. Colombia responses omit `providerData`.
       operationId: getCheckout
       tags: [Checkouts]
       parameters:
@@ -2133,6 +2140,7 @@ paths:
   /checkouts/{id}/cancel:
     post:
       summary: Cancel pending checkout
+      description: Cancels a pending checkout. Colombia responses omit `providerData`.
       operationId: cancelCheckout
       tags: [Checkouts]
       parameters:

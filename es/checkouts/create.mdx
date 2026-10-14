@@ -61,10 +61,15 @@ Para **BR**, **CL**, **BO** y **CO**, si indicás un `accountId` explícito que 
 
 ### Colombia (`CO`)
 
-- No hace falta nombre, documento ni email del pagador. Ver [Cash-in Colombia](/es/countries/colombia/cash-in).
-- La cuenta debe ser **COP** y **`Operativa`**. Los medios de pago se configuran en la cuenta. La solicitud de creación no los elige.
+- Solo checkout hospedado. No existe `POST /api/v1/co/transactions/inbound`. Ver [Cash-in Colombia](/es/countries/colombia/cash-in).
+- Obligatorio: `country: "CO"`, `amount` y `successUrl`. Sin nombre, documento ni email del pagador.
+- HG configura los medios de pago disponibles. La solicitud de creación no los elige.
+- La cuenta debe ser **COP** y **`Operativa`**.
 - Opcional: `accountId`, `cancelUrl`, `webhookUrl`, `metadata`, `reference`, `idempotencyKey`, `locale`.
-- La respuesta incluye **`checkoutUrl`**. El pagador abre esa página de HG, paga en la página hospedada y vuelve a la página de éxito de HG. Tu `successUrl` se usa solo después de confirmar el pago.
+- La respuesta incluye **`checkoutUrl`** y omite **`checkoutUrlProvider`**.
+- `GET /api/v1/checkouts`, `GET /api/v1/checkouts/{id}` y `POST /api/v1/checkouts/{id}/cancel` omiten `providerData` para Colombia.
+- El pagador abre `checkoutUrl`, completa el pago y vuelve a la página de éxito de HG. Tu `successUrl` se usa solo después de confirmar el pago.
+- **`Bloqueada`** o **`Cerrada`** devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** devuelve `403` con `code: RESTRICTED`. Una cuenta que no está lista para el checkout devuelve `400` con `error: "Account is not ready for checkout"`.
 
 ## Ejemplo (Brasil)
 
@@ -120,7 +125,7 @@ curl -X POST https://hg.cash/api/v1/checkouts \
   }'
 ```
 
-La respuesta incluye **`checkoutUrl`** — enviá esa URL al pagador. No hay un endpoint de transacción entrante para Colombia.
+La respuesta incluye **`checkoutUrl`** y omite **`checkoutUrlProvider`**. Enviá `checkoutUrl` al pagador. No hay un endpoint de transacción entrante para Colombia.
 
 ## Ejemplo (Argentina)
 
