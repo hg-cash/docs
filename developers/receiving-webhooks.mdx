@@ -46,24 +46,22 @@ When a ledger **transaction row** is ingested from webhooks/API and your resolve
 
 Account movement webhooks (`topic` **`TRANSACTION`**, `eventType` **`created`** or **`status_change`**) include optional **`feeBreakdown`** when HG.Cash stored a fee snapshot on the movement. The field is omitted when there is no breakdown. Internal fee rows do not send a webhook.
 
-Amounts and rates are decimal strings. A rate of **`0.01`** is 1%. **`collectedAmount`** is the percentage charged to you plus one flat fee per transaction. **`platformFee`** is the recorded wallet cost and is not added to **`collectedAmount`**. Webhooks send **`flatFee.amount`** only. They do not include **`flatFee.source`**.
+The webhook object has two fields. **`flatFee.amount`** is the flat fee. **`collectedAmount`** is the percentage charged to you plus that flat fee. Webhooks do not include **`platformFee`**, **`transactionFee`**, or **`flatFee.source`**.
 
 On **`checkout.completed`**, the nested **`transaction`** object uses the same fields, including **`feeBreakdown`** when the linked movement has a snapshot.
 
 ```json
 {
   "feeBreakdown": {
-    "platformFee": { "amount": "60", "rate": "0.005" },
-    "transactionFee": { "amount": "120", "rate": "0.01" },
     "flatFee": { "amount": "15" },
     "collectedAmount": "135"
   }
 }
 ```
 
-In this example the movement amount is **12,000**. The client percentage is **1%** (`120`) plus a flat fee of **15**, so **`collectedAmount`** is **135**. The platform percentage (**0.5%**, `60`) is recorded separately.
+In this example the movement amount is **12,000**. The client percentage is **1%** (`120`) plus a flat fee of **15**, so **`collectedAmount`** is **135**. Those percentage amounts stay on the status response. They are not on the webhook.
 
-`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status` returns the same snapshot when one is stored, and includes **`flatFee.source`** (`account` or `platform`). Venezuela status omits **`flatFee.source`**. `GET /transaction/{id}/status` is a transaction-request status and does not include **`feeBreakdown`**.
+`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status` returns **`platformFee`**, **`transactionFee`**, **`flatFee`** (including **`source`**: `account` or `platform`), and **`collectedAmount`** when a snapshot is stored. Venezuela status returns the same amounts and omits **`flatFee.source`**. `GET /transaction/{id}/status` is a transaction-request status and does not include **`feeBreakdown`**.
 
 ## PIX end-to-end id
 

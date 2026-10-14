@@ -46,24 +46,22 @@ Cuando una fila de **transacción** del libro se ingesta desde webhooks/API y ap
 
 Los webhooks de movimiento de cuenta (`topic` **`TRANSACTION`**, `eventType` **`created`** o **`status_change`**) incluyen **`feeBreakdown`** opcional cuando HG.Cash guardó un desglose de comisión en el movimiento. El campo se omite cuando no hay desglose. Las filas internas de comisión no envían un webhook.
 
-Los montos y las tasas son cadenas decimales. Una tasa de **`0.01`** es 1%. **`collectedAmount`** es el porcentaje cobrado más una comisión fija por transacción. **`platformFee`** es el costo de billetera registrado y no se suma a **`collectedAmount`**. Los webhooks envían solo **`flatFee.amount`**. No incluyen **`flatFee.source`**.
+El objeto del webhook tiene dos campos. **`flatFee.amount`** es la comisión fija. **`collectedAmount`** es el porcentaje cobrado más esa comisión fija. Los webhooks no incluyen **`platformFee`**, **`transactionFee`** ni **`flatFee.source`**.
 
 En **`checkout.completed`**, el objeto **`transaction`** anidado usa los mismos campos, incluido **`feeBreakdown`** cuando el movimiento vinculado tiene un desglose.
 
 ```json
 {
   "feeBreakdown": {
-    "platformFee": { "amount": "60", "rate": "0.005" },
-    "transactionFee": { "amount": "120", "rate": "0.01" },
     "flatFee": { "amount": "15" },
     "collectedAmount": "135"
   }
 }
 ```
 
-En este ejemplo el monto del movimiento es **12.000**. El porcentaje del cliente es **1%** (`120`) más una comisión fija de **15**, así que **`collectedAmount`** es **135**. El porcentaje de plataforma (**0,5%**, `60`) queda registrado aparte.
+En este ejemplo el monto del movimiento es **12.000**. El porcentaje del cliente es **1%** (`120`) más una comisión fija de **15**, así que **`collectedAmount`** es **135**. Esos montos porcentuales quedan en la respuesta de estado. No van en el webhook.
 
-`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status` devuelve el mismo desglose cuando existe, e incluye **`flatFee.source`** (`account` o `platform`). El estado de Venezuela omite **`flatFee.source`**. `GET /transaction/{id}/status` es el estado de una solicitud de transacción y no incluye **`feeBreakdown`**.
+`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status` devuelve **`platformFee`**, **`transactionFee`**, **`flatFee`** (incluido **`source`**: `account` o `platform`) y **`collectedAmount`** cuando existe un desglose. El estado de Venezuela devuelve los mismos montos y omite **`flatFee.source`**. `GET /transaction/{id}/status` es el estado de una solicitud de transacción y no incluye **`feeBreakdown`**.
 
 ## Identificador end-to-end PIX
 
