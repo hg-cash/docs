@@ -2095,7 +2095,7 @@ paths:
         '403':
           description: Forbidden — account is not operative (`Bloqueada` or `Cerrada`, code `ACCOUNT_NOT_OPERATIVE`), is restricted (`Restringida`, code `RESTRICTED`), or caller lacks access
         '502':
-          description: 'The hosted session could not be created (`error: "Failed to create CO payment with provider"`)'
+          description: A hosted session that cannot be created returns 502.
         '500':
           description: Internal Server Error
     get:

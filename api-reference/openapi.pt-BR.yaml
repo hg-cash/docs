@@ -2107,7 +2107,7 @@ paths:
         '403':
           description: Proibido — a conta não está operativa (`Bloqueada` ou `Cerrada`, código `ACCOUNT_NOT_OPERATIVE`), está restrita (`Restringida`, código `RESTRICTED`), ou quem chama não tem acesso
         '502':
-          description: 'Não foi possível criar a sessão hospedada (`error: "Failed to create CO payment with provider"`)'
+          description: Uma sessão hospedada que não puder ser criada retorna 502.
         '500':
           description: Erro interno do servidor
     get:
