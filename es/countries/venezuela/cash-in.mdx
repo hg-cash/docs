@@ -6,7 +6,7 @@ icon: "arrow-down-to-bracket"
 
 ## Resumen
 
-El cash-in de Venezuela acredita una cuenta **USDT** operativa. Envíe `amount` como cadena decimal positiva. No envíe un número JSON. Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. `montoFiat` y `tasaCompra` son metadatos en VES. No son el monto del libro.
+El cash-in de Venezuela acredita una cuenta **USDT** operativa. Envíe `amount` como cadena decimal positiva. No envíe un número JSON. Un `amount` de la solicitud con más de 8 dígitos fraccionarios se redondea hacia abajo a 8 y no se rechaza por los dígitos extra. Si ese valor redondeado no es mayor que cero, la creación de cash-in y de payout devuelve `400` con `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`. `montoFiat` y `tasaCompra` son metadatos en VES. No son el monto del libro.
 
 No es un checkout hospedado. Cree el cash-in con `POST /api/v1/ve/transactions/inbound`.
 
@@ -73,6 +73,8 @@ Vea [Payouts](/es/countries/venezuela/payouts) para `pending_kyc`, `kyc_url`, `k
 | `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | La respuesta de creación no incluyó un id de orden. La fila ya existe y se cancela |
 
 Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED` y no crea una transacción. `502` `VE_BANKS_PROVIDER_ERROR` ocurre solo cuando se envía `bancoPago`. La lista de bancos se comprueba antes de que exista una fila de transacción. Esa respuesta no crea una fila y no cancela ninguna. `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` y `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` significan que la fila ya existe, esa fila se cancela y la respuesta es `502`.
+
+Un token Bearer ausente o inválido es `401`. Cualquier otro fallo de validación es `400` con `{ error: "Validation failed", details: [{ field, message }] }`. Los errores de cash-in que ya devuelven `error` y `code` para `VE_INBOUND_INVALID_BANCO_PAGO`, `VE_BANKS_PROVIDER_NOT_CONFIGURED`, `VE_BANKS_PROVIDER_ERROR`, `VE_INBOUND_PROVIDER_CREATE_FAILED` o `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` también incluyen `type`. Los errores del catálogo de bancos con esos mismos cuerpos de `error` y `code` incluyen `type`.
 
 ## Estado de la cuenta
 

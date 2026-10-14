@@ -1385,8 +1385,11 @@ components:
     VenezuelaUsdtAmount:
       type: string
       description: >-
-        Positive USDT decimal string. Not a JSON number. More than 8 fractional
-        digits are rounded down to 8 and are not rejected. VES amounts are not this field.
+        Positive USDT decimal string. Not a JSON number. A request `amount` with more than 8 fractional
+        digits is rounded down to 8 and is not rejected for the extra digits. If that rounded value is not
+        greater than zero, both cash-in and payout create return `400` with
+        `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`.
+        VES amounts are not this field.
       pattern: "^\\d+(\\.\\d+)?$"
       example: "100.5"
 
@@ -2933,7 +2936,7 @@ paths:
       summary: Create inbound transaction (Venezuela)
       description: |
         Credit an operative USDT account. `amount` is a positive decimal string, not a JSON number.
-        More than 8 fractional digits are rounded down to 8 and are not rejected. `montoFiat` and `tasaCompra` are VES metadata.
+        A request `amount` with more than 8 fractional digits is rounded down to 8 and is not rejected for the extra digits. If that rounded value is not greater than zero, create returns `400` with `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`. `montoFiat` and `tasaCompra` are VES metadata.
 
         When the payment integration is not configured, the API returns `500` with `code: VE_BANKS_PROVIDER_NOT_CONFIGURED`, including when `bancoPago` is omitted, and no transaction is created.
         `502` `VE_BANKS_PROVIDER_ERROR` happens only when `bancoPago` is sent. The bank list is checked before a transaction row exists. That response does not create a row and does not cancel one.
@@ -3279,7 +3282,7 @@ paths:
     post:
       summary: Create outbound transaction (Venezuela)
       description: |
-        Create a USDT payout. `amount` is a positive decimal string, not a JSON number. More than 8 fractional digits are rounded down to 8 and are not rejected.
+        Create a USDT payout. `amount` is a positive decimal string, not a JSON number. A request `amount` with more than 8 fractional digits is rounded down to 8 and is not rejected for the extra digits. If that rounded value is not greater than zero, create returns `400` with `{ error: "Validation failed", details: [{ field: "amount", message: "Amount must be positive" }] }`.
 
         Required: `accountId`, `amount`, `firstName`, `lastName`, `email`, `documentoIdentidad`, `tipoDocumento`,
         `prefijoTelefono`, `numeroTelefono`, `direccion`, `ciudad`, `pais` (`VE`), `banco`, `tipoCuenta`, `numeroCuenta`,
@@ -3292,13 +3295,14 @@ paths:
 
         `documentoIdentidad` is digits only. The letter belongs in `tipoDocumento` (`V`, `J`, `P`, or `E`). A matching prefix is stripped.
 
-        Insufficient balance returns `409` with `{ error, code }` and `code: INSUFFICIENT_NET_BALANCE`.
+        Available USDT is the ledger minus other outbound rows in `processing` or `pending_kyc` and the outbound fees on those rows. This payout's amount plus its own outbound fee must fit in what remains. If it does not, the response is `409` with `{ error, code }` only and `code: INSUFFICIENT_NET_BALANCE`. No payout row is inserted. `details` is not returned.
 
         If the recipient still needs identity verification, the response is `201` with `status: pending_kyc`, `kyc_url` when a URL was stored,
         and `kyc_expires_at` (24 hours from create). That amount and its outbound fee stay reserved. The account balance is not debited.
         No payout order is created until verification is approved.
 
         Approved verification with a usable bank account returns `201` with `status: processing`.
+        When a `processing` row was already inserted and payout dispatch could not be enqueued, the response is `500` with `{ error: "Failed to enqueue outbound processing" }`. The row stays `processing`. A `pending_kyc` create does not enqueue and does not use this response.
 
         Declined verification, verification that finished without approval, an email whose document does not match, a rejected document,
         or a rejected bank account does not create a transaction and returns `400` with `code`
@@ -3530,7 +3534,10 @@ paths:
         '404':
           description: Account not found
         '409':
-          description: Insufficient net balance for the amount and the outbound fee
+          description: >-
+            Available USDT is the ledger minus other outbound rows in `processing` or `pending_kyc` and the outbound fees on those rows.
+            This payout's amount plus its own outbound fee must fit in what remains. The body is `{ error, code }` only, with `code: INSUFFICIENT_NET_BALANCE`.
+            No payout row is inserted. `details` is not returned.
           content:
             application/json:
               schema:
@@ -3539,8 +3546,9 @@ paths:
           description: Unauthorized
         '500':
           description: >-
-            Internal server error. A payout that was stored as `processing` can return
-            `Failed to enqueue outbound processing` when dispatch could not be queued.
+            Internal server error. When a `processing` row was already inserted and payout dispatch could not be enqueued,
+            the response is `{ error: "Failed to enqueue outbound processing" }`. The row stays `processing`.
+            A `pending_kyc` create does not enqueue and does not use this response.
 
   /ve/transactions/{id}/status:
     get:
