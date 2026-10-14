@@ -63,7 +63,7 @@ On **`checkout.completed`**, the nested **`transaction`** object uses the same f
 
 In this example the movement amount is **12,000**. The client percentage is **1%** (`120`) plus a flat fee of **15**, so **`collectedAmount`** is **135**. The platform percentage (**0.5%**, `60`) is recorded separately.
 
-`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status` returns the same snapshot when one is stored, and includes **`flatFee.source`** (`account` or `platform`). `GET /transaction/{id}/status` is a transaction-request status and does not include **`feeBreakdown`**.
+`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status` returns the same snapshot when one is stored, and includes **`flatFee.source`** (`account` or `platform`). Venezuela status omits **`flatFee.source`**. `GET /transaction/{id}/status` is a transaction-request status and does not include **`feeBreakdown`**.
 
 ## PIX end-to-end id
 

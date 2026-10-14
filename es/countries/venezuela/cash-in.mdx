@@ -6,7 +6,7 @@ icon: "arrow-down-to-bracket"
 
 ## Resumen
 
-El cash-in de Venezuela acredita una cuenta **USDT** operativa. Envíe `amount` como cadena decimal positiva. No envíe un número JSON. Pueden aparecer hasta 8 dígitos fraccionarios. `montoFiat` y `tasaCompra` son metadatos en VES. No son el monto del libro.
+El cash-in de Venezuela acredita una cuenta **USDT** operativa. Envíe `amount` como cadena decimal positiva. No envíe un número JSON. Más de 8 dígitos fraccionarios se redondean hacia abajo a 8 y no se rechazan. `montoFiat` y `tasaCompra` son metadatos en VES. No son el monto del libro.
 
 No es un checkout hospedado. Cree el cash-in con `POST /api/v1/ve/transactions/inbound`.
 
@@ -64,13 +64,16 @@ Vea [Payouts](/es/countries/venezuela/payouts) para `pending_kyc`, `kyc_url`, `k
 | `404` | La cuenta no existe |
 | `403` | No puede usar esta cuenta |
 | `403` `ACCOUNT_NOT_OPERATIVE` | La cuenta está `Bloqueada` o `Cerrada` |
+| `403` `RESTRICTED` | La cuenta está `Restringida` |
 | `400` | La cuenta no admite esta operación, o su moneda no es USDT |
 | `400` `VE_INBOUND_INVALID_BANCO_PAGO` | `bancoPago` no es un nombre de banco de entrada |
-| `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | El catálogo de bancos no está configurado |
+| `500` `VE_BANKS_PROVIDER_NOT_CONFIGURED` | La integración de pago no está configurada. No se crea una transacción, incluso si se omite `bancoPago` |
 | `502` `VE_BANKS_PROVIDER_ERROR` | No se pudo obtener la lista de bancos de entrada |
-| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | No se pudo crear el cash-in |
-| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | La respuesta de creación no incluyó un id de orden |
+| `502` `VE_INBOUND_PROVIDER_CREATE_FAILED` | No se pudo crear el cash-in. Si la fila ya existe, se cancela |
+| `502` `VE_INBOUND_PROVIDER_MISSING_ORDEN_ID` | La respuesta de creación no incluyó un id de orden. Si la fila ya existe, se cancela |
+
+Si la integración de pago no está configurada, la API devuelve `500` con `code: VE_BANKS_PROVIDER_NOT_CONFIGURED` y no crea una transacción. Una creación que falla después de que la fila existe cancela esa fila y devuelve `502`.
 
 ## Estado de la cuenta
 
-La cuenta debe estar **`Operativa`** y en **USDT**. **`Bloqueada`** o **`Cerrada`** devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`.
+La cuenta debe estar **`Operativa`** y en **USDT**. **`Bloqueada`** o **`Cerrada`** devuelve `403` con `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** devuelve `403` con `code: RESTRICTED`.

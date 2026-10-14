@@ -63,7 +63,7 @@ Em **`checkout.completed`**, o objeto **`transaction`** aninhado usa os mesmos c
 
 Neste exemplo o valor da movimentação é **12.000**. O percentual do cliente é **1%** (`120`) mais uma taxa fixa de **15**, então **`collectedAmount`** é **135**. O percentual da plataforma (**0,5%**, `60`) fica registrado à parte.
 
-`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status` devolve o mesmo detalhamento quando ele existe, e inclui **`flatFee.source`** (`account` ou `platform`). `GET /transaction/{id}/status` é o status de uma solicitação de transação e não inclui **`feeBreakdown`**.
+`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status` devolve o mesmo detalhamento quando ele existe, e inclui **`flatFee.source`** (`account` ou `platform`). O status da Venezuela omite **`flatFee.source`**. `GET /transaction/{id}/status` é o status de uma solicitação de transação e não inclui **`feeBreakdown`**.
 
 ## Identificador end-to-end PIX
 
