@@ -19,7 +19,9 @@ This is not a hosted checkout. Create the cash-in with `POST /api/v1/ve/transact
 
 1. Call `GET /api/v1/ve/banks` when you want to set the payer bank
 2. `POST /api/v1/ve/transactions/inbound` with `accountId` and `amount`
-3. Poll `GET /api/v1/ve/transactions/{id}/status`, or set `webhookUrl` — see [Receiving webhooks](/developers/receiving-webhooks)
+3. Poll `GET /api/v1/ve/transactions/{id}/status` to read pay-in instructions and cancellation
+
+`webhookUrl` sends `TRANSACTION` / `status_change` when the cash-in reaches `done`. That webhook is not sent when pay-in instructions are stored. It is not sent when the cash-in becomes `cancelled`. `banco` and `numero_cuenta` stay on `GET /api/v1/ve/transactions/{id}/status`. They are not on that webhook. See [Receiving webhooks](/developers/receiving-webhooks).
 
 ## Request
 

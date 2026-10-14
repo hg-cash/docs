@@ -37,7 +37,7 @@ Send payout `banco`, `tipoCuenta`, and `tipoDocumento` as the catalogue `value` 
 
 Required: `accountId` (an operative USDT account you can pay from), `email`, `documentoIdentidad`, `tipoDocumento`.
 
-Optional: `numeroCuenta`. When you send it, `ready` means identity verification is approved and that account is already on file. When you omit it, `ready` means approved and a bank account is already on file. `kyc_approved_no_account` means verification is approved and that account is not on file yet.
+Optional: `numeroCuenta`. When you send it, `ready` means identity verification is approved and that account is already on file. When you omit it, `ready` means approved and a bank account is already on file. When you send `numeroCuenta`, `kyc_approved_no_account` means verification is approved and that account number is not on file. When you omit `numeroCuenta`, it means verification is approved and no bank account is on file.
 
 `documentoIdentidad` is digits only. The letter belongs in `tipoDocumento` (`V`, `J`, `P`, or `E` from the banks catalogue). A matching `V-`, `J-`, `P-`, or `E-` prefix is accepted and stripped.
 
@@ -137,4 +137,4 @@ The merchant `status_change` webhook includes `cancelledReason` only for those s
 
 ## Account status
 
-The source account must be **`Operativa`** and **USDT**. **`Bloqueada`** or **`Cerrada`** returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** returns `403` with `code: RESTRICTED`. A missing account returns `404`. No access returns `403`. An unsupported account or a non-USDT currency returns `400`.
+The source account must be **`Operativa`** and **USDT**. **`Bloqueada`** or **`Cerrada`** returns `403` with `code: ACCOUNT_NOT_OPERATIVE`. **`Restringida`** returns `403` with `code: RESTRICTED`. A missing account returns `404`. No access returns `403`. `POST /api/v1/ve/transactions/outbound` returns `400` for an unsupported account or a non-USDT currency.
