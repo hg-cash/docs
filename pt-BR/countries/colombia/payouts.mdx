@@ -19,15 +19,23 @@ O valor mais a taxa de saída precisa caber no **saldo líquido**. Uma criação
 
 ## Listar bancos
 
-`GET /api/v1/co/banks` retorna `code`, `name`, `accountTypes`, `fastPay` e `ach` de cada instituição.
+`GET /api/v1/co/banks` retorna `{ "banks": [...] }`. Cada banco tem `code`, `name`, `accountTypes`, `fastPay` e `ach`.
 
 `bankCode` é o `code` de 4 dígitos. O banco precisa aceitar Fast Pay ou ACH e listar o `accountType` enviado.
+
+## Valor
+
+`amount` é obrigatório em todos os destinos.
+
+Envie `amount` como string com no máximo 2 casas decimais. Uma string com mais de 2 casas decimais retorna `400` com `error: "Validation failed"` e `details` do campo `amount` (`Invalid amount format`).
+
+Um número JSON com mais de 2 casas decimais é aceito e truncado em direção a zero para 2 casas decimais. `1.239` vira `1.23`. Se o valor truncado não for maior que zero, a API retorna `400` com `error: "Validation failed"` e `details` do campo `amount` (`Amount must be positive`).
 
 ## Destinos
 
 ### Banco (Fast Pay / ACH)
 
-Obrigatório: `accountId`, `amount` (até 2 casas decimais), `accountType`, `bankCode`, `accountNumber` (máx. 20 caracteres), `beneficiaryFullName`, `documentType`, `documentNumber`.
+Obrigatório: `accountId`, `amount`, `accountType`, `bankCode`, `accountNumber` (máx. 20 caracteres), `beneficiaryFullName`, `documentType`, `documentNumber`.
 
 `accountType`:
 

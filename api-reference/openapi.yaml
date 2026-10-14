@@ -1246,7 +1246,10 @@ components:
           format: uuid
           example: YOUR_ACCOUNT_UUID
         amount:
-          description: Positive amount. String values allow at most 2 decimal places.
+          description: |
+            Positive amount. A string allows at most 2 decimal places. More than 2 decimal places returns `400` with `details` for field `amount` (`Invalid amount format`).
+            A JSON number with more than 2 decimal places is truncated toward zero to 2 decimal places (`1.239` becomes `1.23`).
+            If the truncated value is not greater than zero, the API returns `400` with `error: "Validation failed"` and `details` for field `amount`.
           oneOf:
             - type: number
               exclusiveMinimum: 0
@@ -2665,7 +2668,7 @@ paths:
     get:
       summary: List banks (Colombia)
       description: |
-        Returns institutions available for Colombia bank payouts.
+        Returns `{ banks: [...] }` for Colombia bank payouts.
         Each bank includes `code`, `name`, `accountTypes`, `fastPay`, and `ach`.
       operationId: listCoBanks
       tags:
