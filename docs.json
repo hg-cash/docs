@@ -53,7 +53,6 @@
                 "group": "Teams",
                 "pages": [
                   "teams/introduction",
-                  "teams/switcher",
                   "teams/people",
                   "teams/permissions",
                   "teams/my-access"
@@ -156,7 +155,6 @@
                 "group": "Equipos",
                 "pages": [
                   "es/teams/introduction",
-                  "es/teams/switcher",
                   "es/teams/people",
                   "es/teams/permissions",
                   "es/teams/my-access"
@@ -259,7 +257,6 @@
                 "group": "Equipes",
                 "pages": [
                   "pt-BR/teams/introduction",
-                  "pt-BR/teams/switcher",
                   "pt-BR/teams/people",
                   "pt-BR/teams/permissions",
                   "pt-BR/teams/my-access"
