@@ -53,7 +53,8 @@
                 "group": "Teams",
                 "pages": [
                   "teams/introduction",
-                  "teams/switcher"
+                  "teams/switcher",
+                  "teams/people"
                 ]
               },
               {
@@ -153,7 +154,8 @@
                 "group": "Equipos",
                 "pages": [
                   "es/teams/introduction",
-                  "es/teams/switcher"
+                  "es/teams/switcher",
+                  "es/teams/people"
                 ]
               },
               {
@@ -253,7 +255,8 @@
                 "group": "Equipes",
                 "pages": [
                   "pt-BR/teams/introduction",
-                  "pt-BR/teams/switcher"
+                  "pt-BR/teams/switcher",
+                  "pt-BR/teams/people"
                 ]
               },
               {

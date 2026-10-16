@@ -1,0 +1,41 @@
+---
+title: "Personas"
+description: "Invitá a una persona al equipo activo"
+icon: "user-plus"
+---
+
+**Personas** es por equipo. En **Todos** la pantalla pide **Seleccioná un equipo**.
+
+<Frame caption="Personas en Acme Corp, con Invitar miembro">
+  <img
+    src="/images/teams/people-list.png"
+    alt="Lista de Personas en Acme Corp, con María e Invitar miembro"
+  />
+</Frame>
+
+**Propietario** y **Admin (equipo)** ven **Invitar miembro**. **Usuario** y **Desarrollador** no.
+
+El diálogo pide email y rol. Los roles son **Propietario**, **Admin (equipo)**, **Usuario** y **Desarrollador**. La opción **Propietario** solo la ofrece un **Propietario**.
+
+- **Propietario.** Control total del equipo: invitar y sacar miembros, editar todos los permisos y tokens API.
+- **Admin (equipo).** Invitar miembros y editar permisos de cuentas. Sin acceso a funciones de plataforma (solo Propietario).
+- **Usuario.** Opera solo con los permisos asignados. No puede invitar ni editar a otros.
+- **Desarrollador.** Igual que Usuario; orientado a integraciones con acceso API.
+
+<Frame caption="Diálogo Invitar miembro">
+  <img
+    src="/images/teams/invite-dialog.png"
+    alt="Diálogo Invitar miembro, con email y rol"
+  />
+</Frame>
+
+Después de enviar, la invitación queda en **Invitaciones pendientes**, con **Cancelar**.
+
+Quien abre el enlace ve **Invitación al equipo** y **Aceptar invitación**. Si no tiene cuenta, ve **Crear cuenta** o **Iniciar sesión**, con el correo invitado.
+
+<Frame caption="Invitación al equipo para quien no tiene cuenta">
+  <img
+    src="/images/teams/invite-landing.png"
+    alt="Página Invitación al equipo, con Crear cuenta e Iniciar sesión"
+  />
+</Frame>
