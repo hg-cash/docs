@@ -54,7 +54,8 @@
                 "pages": [
                   "teams/introduction",
                   "teams/switcher",
-                  "teams/people"
+                  "teams/people",
+                  "teams/permissions"
                 ]
               },
               {
@@ -155,7 +156,8 @@
                 "pages": [
                   "es/teams/introduction",
                   "es/teams/switcher",
-                  "es/teams/people"
+                  "es/teams/people",
+                  "es/teams/permissions"
                 ]
               },
               {
@@ -256,7 +258,8 @@
                 "pages": [
                   "pt-BR/teams/introduction",
                   "pt-BR/teams/switcher",
-                  "pt-BR/teams/people"
+                  "pt-BR/teams/people",
+                  "pt-BR/teams/permissions"
                 ]
               },
               {
