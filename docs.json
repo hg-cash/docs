@@ -50,6 +50,12 @@
                 ]
               },
               {
+                "group": "Teams",
+                "pages": [
+                  "teams/introduction"
+                ]
+              },
+              {
                 "group": "Developers",
                 "pages": [
                   "developers/introduction",
@@ -143,6 +149,12 @@
                 ]
               },
               {
+                "group": "Equipos",
+                "pages": [
+                  "es/teams/introduction"
+                ]
+              },
+              {
                 "group": "Desarrolladores",
                 "pages": [
                   "es/developers/introduction",
@@ -233,6 +245,12 @@
                 "group": "Reclamações",
                 "pages": [
                   "pt-BR/claims/introduction"
+                ]
+              },
+              {
+                "group": "Equipes",
+                "pages": [
+                  "pt-BR/teams/introduction"
                 ]
               },
               {
