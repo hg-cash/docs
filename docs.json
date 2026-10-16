@@ -55,7 +55,8 @@
                   "teams/introduction",
                   "teams/switcher",
                   "teams/people",
-                  "teams/permissions"
+                  "teams/permissions",
+                  "teams/my-access"
                 ]
               },
               {
@@ -157,7 +158,8 @@
                   "es/teams/introduction",
                   "es/teams/switcher",
                   "es/teams/people",
-                  "es/teams/permissions"
+                  "es/teams/permissions",
+                  "es/teams/my-access"
                 ]
               },
               {
@@ -259,7 +261,8 @@
                   "pt-BR/teams/introduction",
                   "pt-BR/teams/switcher",
                   "pt-BR/teams/people",
-                  "pt-BR/teams/permissions"
+                  "pt-BR/teams/permissions",
+                  "pt-BR/teams/my-access"
                 ]
               },
               {
