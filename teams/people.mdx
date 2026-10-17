@@ -1,0 +1,41 @@
+---
+title: "Invite members"
+description: "Invite a person to the active team"
+icon: "user-plus"
+---
+
+**People** is per team. On **All**, the screen asks you to **Select a Team**.
+
+<Frame caption="People on Acme Corp, with Invite member">
+  <img
+    src="/images/teams/people-list.png"
+    alt="People list in Spanish for Acme Corp, with María and Invite member"
+  />
+</Frame>
+
+**Owner** and **Admin (Team)** see **Invite member**. **User** and **Developer** do not.
+
+The dialog asks for an email and a role. The roles are **Owner**, **Admin (Team)**, **User**, and **Developer**. Only an **Owner** is offered the **Owner** option.
+
+- **Owner.** Full control of the team: invite and remove members, and edit all permissions and API tokens.
+- **Admin (Team).** Invite members and edit account permissions. No access to platform features (Owner only).
+- **User.** Works only with the assigned permissions. Cannot invite or edit others.
+- **Developer.** Same as User; aimed at integrations with API access.
+
+<Frame caption="Invite member dialog">
+  <img
+    src="/images/teams/invite-dialog.png"
+    alt="Invite member dialog in Spanish, asking for an email and a role"
+  />
+</Frame>
+
+After you send the invite, it stays under **Pending invites**, with **Cancel**.
+
+The person who opens the link sees **Team invitation** and **Accept invitation**. Without an account, they see **Create account** or **Sign in**, using the invited email.
+
+<Frame caption="Team invitation for someone without an account">
+  <img
+    src="/images/teams/invite-landing.png"
+    alt="Team invitation page in Spanish, with Create account and Sign in"
+  />
+</Frame>

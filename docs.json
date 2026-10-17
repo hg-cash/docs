@@ -50,6 +50,15 @@
                 ]
               },
               {
+                "group": "Teams",
+                "pages": [
+                  "teams/introduction",
+                  "teams/people",
+                  "teams/permissions",
+                  "teams/my-access"
+                ]
+              },
+              {
                 "group": "Developers",
                 "pages": [
                   "developers/introduction",
@@ -143,6 +152,15 @@
                 ]
               },
               {
+                "group": "Equipos",
+                "pages": [
+                  "es/teams/introduction",
+                  "es/teams/people",
+                  "es/teams/permissions",
+                  "es/teams/my-access"
+                ]
+              },
+              {
                 "group": "Desarrolladores",
                 "pages": [
                   "es/developers/introduction",
@@ -233,6 +251,15 @@
                 "group": "Reclamações",
                 "pages": [
                   "pt-BR/claims/introduction"
+                ]
+              },
+              {
+                "group": "Equipes",
+                "pages": [
+                  "pt-BR/teams/introduction",
+                  "pt-BR/teams/people",
+                  "pt-BR/teams/permissions",
+                  "pt-BR/teams/my-access"
                 ]
               },
               {
