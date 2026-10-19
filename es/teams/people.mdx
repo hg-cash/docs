@@ -4,7 +4,7 @@ description: "Invitá a una persona al equipo activo"
 icon: "user-plus"
 ---
 
-**Personas** es por equipo. En **Todos** la pantalla pide **Seleccioná un equipo**.
+La pantalla **Personas** muestra los miembros del equipo que tenés activo en el encabezado. Si el selector está en **Todos**, la app no lista miembros: te pide **Seleccioná un equipo** para continuar.
 
 <Frame caption="Personas en Acme Corp, con Invitar miembro">
   <img
@@ -13,9 +13,11 @@ icon: "user-plus"
   />
 </Frame>
 
-**Propietario** y **Admin (equipo)** ven **Invitar miembro**. **Usuario** y **Desarrollador** no.
+El botón **Invitar miembro** solo aparece si sos **Propietario** o **Admin (equipo)** de ese equipo activo. Quienes tienen rol **Usuario** o **Desarrollador** no pueden invitar.
 
-El diálogo pide email y rol. Los roles son **Propietario**, **Admin (equipo)**, **Usuario** y **Desarrollador**. La opción **Propietario** solo la ofrece un **Propietario**.
+Por ejemplo, María (maria@acme.com) es **Propietario** de Acme Corp y **Usuario** de Partner X. Con Acme Corp activo ve el botón. Con Partner X, o con **Todos**, no aparece.
+
+Al hacer clic se abre un diálogo con el email y el rol de la persona invitada. Los roles son **Propietario**, **Admin (equipo)**, **Usuario** y **Desarrollador**. La opción **Propietario** solo la ofrece quien ya es **Propietario** del equipo.
 
 - **Propietario.** Control total del equipo: invitar y sacar miembros, editar todos los permisos y tokens API.
 - **Admin (equipo).** Invitar miembros y editar permisos de cuentas. Sin acceso a funciones de plataforma (solo Propietario).
@@ -29,9 +31,9 @@ El diálogo pide email y rol. Los roles son **Propietario**, **Admin (equipo)**,
   />
 </Frame>
 
-Después de enviar, la invitación queda en **Invitaciones pendientes**, con **Cancelar**.
+Cuando enviás la invitación, queda en **Invitaciones pendientes**. Desde ahí podés **Cancelar** una que todavía no se aceptó.
 
-Quien abre el enlace ve **Invitación al equipo** y **Aceptar invitación**. Si no tiene cuenta, ve **Crear cuenta** o **Iniciar sesión**, con el correo invitado.
+La persona invitada abre el enlace del correo y ve **Invitación al equipo**. Si ya tiene cuenta, puede **Aceptar invitación**. Si no, elige **Crear cuenta** o **Iniciar sesión** con el mismo correo de la invitación.
 
 <Frame caption="Invitación al equipo para quien no tiene cuenta">
   <img

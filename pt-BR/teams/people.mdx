@@ -4,7 +4,7 @@ description: "Convide uma pessoa para a equipe ativa"
 icon: "user-plus"
 ---
 
-**Pessoas** é por equipe. Em **Todos**, a tela pede **Selecione uma equipe**.
+A tela **Pessoas** mostra os membros da equipe que está ativa no cabeçalho. Se o seletor estiver em **Todos**, o app não lista membros: pede **Selecione uma equipe** para continuar.
 
 <Frame caption="Pessoas na Acme Corp, com Convidar membro">
   <img
@@ -13,9 +13,11 @@ icon: "user-plus"
   />
 </Frame>
 
-**Proprietário** e **Admin (equipe)** veem **Convidar membro**. **Usuário** e **Desenvolvedor** não.
+O botão **Convidar membro** só aparece se você for **Proprietário** ou **Admin (equipe)** dessa equipe ativa. Quem tem o papel **Usuário** ou **Desenvolvedor** não pode convidar.
 
-O diálogo pede e-mail e papel. Os papéis são **Proprietário**, **Admin (equipe)**, **Usuário** e **Desenvolvedor**. A opção **Proprietário** só aparece para um **Proprietário**.
+Por exemplo, María (maria@acme.com) é **Proprietário** da Acme Corp e **Usuário** da Partner X. Com a Acme Corp ativa, ela vê o botão. Com a Partner X, ou em **Todos**, ele não aparece.
+
+Ao clicar, abre-se um diálogo com o e-mail e o papel da pessoa convidada. Os papéis são **Proprietário**, **Admin (equipe)**, **Usuário** e **Desenvolvedor**. A opção **Proprietário** só aparece para quem já é **Proprietário** da equipe.
 
 - **Proprietário.** Controle total da equipe: convidar e remover membros, editar todas as permissões e tokens API.
 - **Admin (equipe).** Convidar membros e editar permissões de contas. Sem acesso a recursos de plataforma (apenas Proprietário).
@@ -29,9 +31,9 @@ O diálogo pede e-mail e papel. Os papéis são **Proprietário**, **Admin (equi
   />
 </Frame>
 
-Depois de enviar, o convite fica em **Convites pendentes**, com **Cancelar**.
+Depois de enviar, o convite fica em **Convites pendentes**. Dali você pode **Cancelar** um que ainda não foi aceito.
 
-Quem abre o link vê **Convite para equipe** e **Aceitar convite**. Sem conta, vê **Criar conta** ou **Entrar**, com o e-mail convidado.
+A pessoa convidada abre o link do e-mail e vê **Convite para equipe**. Se já tiver conta, pode **Aceitar convite**. Se não, escolhe **Criar conta** ou **Entrar** com o mesmo e-mail do convite.
 
 <Frame caption="Convite para equipe de quem não tem conta">
   <img

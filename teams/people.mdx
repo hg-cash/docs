@@ -4,7 +4,7 @@ description: "Invite a person to the active team"
 icon: "user-plus"
 ---
 
-**People** is per team. On **All**, the screen asks you to **Select a Team**.
+The **People** screen lists the members of the team that is active in the header. If the switcher is on **All**, the app does not list members: it asks you to **Select a Team** before you continue.
 
 <Frame caption="People on Acme Corp, with Invite member">
   <img
@@ -13,9 +13,11 @@ icon: "user-plus"
   />
 </Frame>
 
-**Owner** and **Admin (Team)** see **Invite member**. **User** and **Developer** do not.
+**Invite member** appears only if you are an **Owner** or **Admin (Team)** of that active team. People with the **User** or **Developer** role cannot invite.
 
-The dialog asks for an email and a role. The roles are **Owner**, **Admin (Team)**, **User**, and **Developer**. Only an **Owner** is offered the **Owner** option.
+For example, María (maria@acme.com) is **Owner** of Acme Corp and **User** of Partner X. With Acme Corp active, she sees the button. With Partner X, or on **All**, it is not there.
+
+Clicking it opens a dialog for the invitee’s email and role. The roles are **Owner**, **Admin (Team)**, **User**, and **Developer**. Only someone who is already an **Owner** of the team is offered the **Owner** option.
 
 - **Owner.** Full control of the team: invite and remove members, and edit all permissions and API tokens.
 - **Admin (Team).** Invite members and edit account permissions. No access to platform features (Owner only).
@@ -29,9 +31,9 @@ The dialog asks for an email and a role. The roles are **Owner**, **Admin (Team)
   />
 </Frame>
 
-After you send the invite, it stays under **Pending invites**, with **Cancel**.
+After you send the invite, it stays under **Pending invites**. From there you can **Cancel** one that has not been accepted yet.
 
-The person who opens the link sees **Team invitation** and **Accept invitation**. Without an account, they see **Create account** or **Sign in**, using the invited email.
+The invited person opens the link from the email and sees **Team invitation**. If they already have an account, they can **Accept invitation**. If not, they choose **Create account** or **Sign in** with the same invited email.
 
 <Frame caption="Team invitation for someone without an account">
   <img
