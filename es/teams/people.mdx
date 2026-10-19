@@ -24,6 +24,8 @@ Al hacer clic se abre **Invitar miembro**, donde indicás el email y el rol. Los
 - **Usuario.** Opera solo con los permisos asignados. No puede invitar ni editar a otros.
 - **Desarrollador.** Igual que Usuario; orientado a integraciones con acceso API.
 
+Un **Propietario** puede **Sacar** a un miembro del equipo desde la fila de esa persona. Un **Admin (equipo)** no puede sacar miembros.
+
 <Frame caption="Invitar miembro, con email y rol">
   <img
     src="/images/teams/invite-dialog.png"
@@ -31,7 +33,7 @@ Al hacer clic se abre **Invitar miembro**, donde indicás el email y el rol. Los
   />
 </Frame>
 
-Cuando enviás la invitación, queda en **Invitaciones pendientes**. Desde ahí podés **Cancelar** una que todavía no se aceptó.
+Cuando enviás la invitación, si el rol no es **Propietario**, la app te lleva a **Permisos del miembro** para definir qué podrá hacer esa persona al aceptar. La invitación también queda en **Invitaciones pendientes**, donde podés **Cancelar** una que todavía no se aceptó. Si el rol es **Propietario**, no se configuran permisos uno por uno: al aceptar tiene acceso total.
 
 La persona invitada abre el enlace del correo y ve **Invitación al equipo**. Si ya tiene cuenta, puede **Aceptar invitación**. Si no, elige **Crear cuenta** o **Iniciar sesión** con el mismo correo de la invitación.
 

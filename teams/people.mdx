@@ -24,6 +24,8 @@ Clicking it opens **Invite member**, where you enter the email and role. The rol
 - **User.** Works only with the assigned permissions. Cannot invite or edit others.
 - **Developer.** Same as User; aimed at integrations with API access.
 
+An **Owner** can **Remove** a member from the team from that person’s row. An **Admin (Team)** cannot remove members.
+
 <Frame caption="Invite member, with email and role">
   <img
     src="/images/teams/invite-dialog.png"
@@ -31,7 +33,7 @@ Clicking it opens **Invite member**, where you enter the email and role. The rol
   />
 </Frame>
 
-After you send the invite, it stays under **Pending invites**. From there you can **Cancel** one that has not been accepted yet.
+When you send the invite, if the role is not **Owner**, the app takes you to **Member permissions** so you can define what that person will be able to do when they accept. The invite also stays under **Pending invites**, where you can **Cancel** one that has not been accepted yet. If the role is **Owner**, you do not configure permissions one by one: on accept they have full access.
 
 The invited person opens the link from the email and sees **Team invitation**. If they already have an account, they can **Accept invitation**. If not, they choose **Create account** or **Sign in** with the same invited email.
 
