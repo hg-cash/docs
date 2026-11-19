@@ -2194,7 +2194,7 @@ paths:
           in: query
           schema:
             type: string
-          description: Correspondência sem diferenciar maiúsculas na referência do checkout
+          description: Correspondência de substring sem diferenciar maiúsculas na referência do checkout
       responses:
         '200':
           description: OK
