@@ -23,7 +23,7 @@ Não é um checkout hospedado. Crie o cash-in com `POST /api/v1/ve/transactions/
 4. Depois que o pagador pagar uma dessas opções, envie `POST /api/v1/ve/transactions/{id}/proof`
 5. Continue consultando esse status até `status` ser `done` ou `cancelled`. Enviar o comprovante deixa a linha em `pending`.
 
-`webhookUrl` envia `TRANSACTION` / `status_change` quando o cash-in chega a `done`. Também envia esse webhook quando o provedor expira a ordem (`onramp.expirada`) e o status passa a `cancelled`. Esse webhook não é enviado quando as instruções de pagamento são armazenadas. Não é enviado quando o provedor cancela o cash-in sem expirar a ordem (`onramp.cancelada`). Continue consultando o status para esse cancelamento, inclusive quando `opciones_pago` nunca aparece. `banco`, `numero_cuenta` e `opciones_pago` permanecem em `GET /api/v1/ve/transactions/{id}/status`. Não estão nesse webhook. Veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks).
+`webhookUrl` envia `TRANSACTION` / `status_change` quando o cash-in chega a `done`. Esse webhook não é enviado quando as instruções de pagamento são armazenadas. Não é enviado quando o cash-in passa a `cancelled`. Continue consultando o status para o cancelamento, inclusive quando `opciones_pago` nunca aparece. `banco`, `numero_cuenta` e `opciones_pago` permanecem em `GET /api/v1/ve/transactions/{id}/status`. Não estão nesse webhook. Veja [Recebimento de webhooks](/pt-BR/developers/receiving-webhooks).
 
 ## Requisição
 
