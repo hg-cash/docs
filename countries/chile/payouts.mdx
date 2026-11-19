@@ -24,7 +24,7 @@ Requires sufficient **net balance** (same rules as other outbound APIs). The tra
 
 ## Payout lifecycle
 
-HG.Cash exposes normalized statuses (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling or your webhook handler to react to status changes.
+HG.Cash exposes normalized statuses (`pending`, `processing`, `done`, `expired`, `cancelled`, `reversed`). A Chile payout create can return `processing`, `done`, or `cancelled`. A provider rejection is `cancelled`. Use polling or your webhook handler to react to status changes.
 
 ## Account status
 

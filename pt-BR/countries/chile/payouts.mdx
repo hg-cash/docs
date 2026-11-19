@@ -24,7 +24,7 @@ Exige **saldo líquido** suficiente. A transação inicia em `processing` e conc
 
 ## Ciclo do payout
 
-A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling ou seu webhook para reagir às mudanças.
+A HG.Cash expõe status normalizados (`pending`, `processing`, `done`, `expired`, `cancelled`, `reversed`). A criação de um payout do Chile pode retornar `processing`, `done` ou `cancelled`. Uma rejeição do provedor é `cancelled`. Use polling ou seu webhook para reagir às mudanças.
 
 ## Status da conta
 

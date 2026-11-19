@@ -80,7 +80,7 @@ On all three destinations: `phone` (E.164), `email`, `description` (max 40 chara
 2. `POST /api/v1/co/transactions/outbound`
 3. Poll `GET /api/v1/co/transactions/{id}/status` or set `webhookUrl` — see [Receiving webhooks](/developers/receiving-webhooks)
 
-Status polling is **outbound only**. It returns `id`, `externalID`, `status`, `direction`, `amount` (string), `currency`, and `providerStatus` when a refresh happened. It also includes `feeBreakdown` when a fee snapshot is stored: `platformFee`, `transactionFee`, `flatFee` (including `source`), and `collectedAmount`. The response omits `feeBreakdown` when there is no snapshot. A transaction that is not an outbound payout returns `400`. A refresh failure returns `502` with `error`, `code`, and `type`.
+Status polling is **outbound only**. It returns `id`, `externalID`, `status`, `direction`, `amount` (string), `currency`, and `providerStatus` when a refresh happened. It also includes `feeBreakdown` when a fee snapshot is stored: `transactionFee`, `flatFee` (including `source`), and `collectedAmount`. Stored `platformFee` is not returned. The response omits `feeBreakdown` when there is no snapshot. A transaction that is not an outbound payout returns `400`. A refresh failure returns `502` with `error`, `code`, and `type`.
 
 ## Example (bank)
 

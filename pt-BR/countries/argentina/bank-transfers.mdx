@@ -87,4 +87,4 @@ Use `maxWithdrawableAmount` do erro (ou consulte o endpoint de saldo antes) para
 
 - `GET /api/v1/transaction-requests/{id}/transaction-id` — ID da transação de ledger vinculada (`null` enquanto processa)
 - `GET /api/v1/alias-lookup` — resolver alias para CBU/CVU (se habilitado)
-- `GET /api/v1/transaction-statuses` e `GET /api/v1/transaction-types` — dados de referência (sem autenticação)
+- `GET /api/v1/transaction-statuses` e `GET /api/v1/transaction-types` — dados de referência (token Bearer obrigatório)

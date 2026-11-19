@@ -10,7 +10,7 @@ Argentina is HG.Cash’s primary market for **bank transfers** in **ARS**. HG.Ca
 
 For **cash-outs**, you initiate **instant banking transfers** with the API. For **cash-ins**, you do not create inbound payments through the API; HG.Cash detects movements on your assigned accounts and delivers them to your webhook.
 
-For a **hosted payment page** where the payer transfers to your CVU/alias and enters an 8-digit DNI, use **[Hosted checkout](/developers/checkout)** (`country: AR`) instead of webhook-only detection alone.
+For a **hosted payment page** where the payer transfers to your CVU/alias and enters an 8-digit DNI, use **[Checkouts](/checkouts/introduction)** (`country: AR`) instead of webhook-only detection alone.
 
 ## How it works
 
@@ -91,4 +91,4 @@ Use `maxWithdrawableAmount` from the error (or pre-check with the balance endpoi
 
 - `GET /api/v1/transaction-requests/{id}/transaction-id` — linked ledger transaction ID for a completed cash-out request (`null` while still processing)
 - `GET /api/v1/alias-lookup` — resolve alias to CBU/CVU before sending (when enabled for your account)
-- `GET /api/v1/transaction-statuses` and `GET /api/v1/transaction-types` — reference data (no auth required)
+- `GET /api/v1/transaction-statuses` and `GET /api/v1/transaction-types` — reference data (Bearer token required)

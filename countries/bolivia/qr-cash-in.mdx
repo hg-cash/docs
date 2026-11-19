@@ -10,7 +10,7 @@ Bolivia cash-in creates a **QR charge** for a **BOB** account. The API returns a
 
 Accounts must use currency **BOB** and country **BO**.
 
-You can also collect BOB payments with **[Hosted checkout](/developers/checkout)** (`POST /api/v1/checkouts` with `country: "BO"`). That flow requires `payer.name`, `payer.document`, and `payer.email` at create time and returns `qrCode` in the response.
+You can also collect BOB payments with **[Checkouts](/checkouts/introduction)** (`POST /api/v1/checkouts` with `country: "BO"`). That flow requires `payer.name`, `payer.document`, and `payer.email` at create time and returns `qrCode` in the response.
 
 ## Prerequisites
 

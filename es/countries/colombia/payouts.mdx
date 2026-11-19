@@ -80,7 +80,7 @@ En los tres destinos: `phone` (E.164), `email`, `description` (máx. 40 caracter
 2. `POST /api/v1/co/transactions/outbound`
 3. Consulte `GET /api/v1/co/transactions/{id}/status` o defina `webhookUrl` — ver [Recepción de webhooks](/es/developers/receiving-webhooks)
 
-La consulta de estado es **solo saliente**. Devuelve `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` y `providerStatus` cuando hubo una actualización. También incluye `feeBreakdown` cuando hay un desglose de comisión guardado: `platformFee`, `transactionFee`, `flatFee` (incluido `source`) y `collectedAmount`. La respuesta omite `feeBreakdown` cuando no hay desglose. Una transacción que no es un payout saliente devuelve `400`. Un fallo de actualización devuelve `502` con `error`, `code` y `type`.
+La consulta de estado es **solo saliente**. Devuelve `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` y `providerStatus` cuando hubo una actualización. También incluye `feeBreakdown` cuando hay un desglose de comisión guardado: `transactionFee`, `flatFee` (incluido `source`) y `collectedAmount`. El `platformFee` guardado no se devuelve. La respuesta omite `feeBreakdown` cuando no hay desglose. Una transacción que no es un payout saliente devuelve `400`. Un fallo de actualización devuelve `502` con `error`, `code` y `type`.
 
 ## Ejemplo (banco)
 

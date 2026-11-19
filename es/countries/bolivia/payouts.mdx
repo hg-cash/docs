@@ -55,7 +55,7 @@ curl -X POST https://hg.cash/api/v1/bo/transactions/outbound \
 
 ## Ciclo del payout
 
-HG.Cash expone estados normalizados (`pending`, `processing`, `done`, `cancelled`, `failed`). Use polling o su webhook para reaccionar a los cambios.
+HG.Cash expone estados normalizados (`pending`, `processing`, `done`, `expired`, `cancelled`, `reversed`). Un rechazo del proveedor es `cancelled`. Use polling o su webhook para reaccionar a los cambios.
 
 Si la cuenta no cubre monto y comisión, la API responde `409` con código `INSUFFICIENT_NET_BALANCE`.
 

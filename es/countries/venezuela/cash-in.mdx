@@ -19,9 +19,10 @@ No es un checkout hospedado. Cree el cash-in con `POST /api/v1/ve/transactions/i
 
 1. Llame a `GET /api/v1/ve/banks` si quiere fijar el banco del pagador
 2. `POST /api/v1/ve/transactions/inbound` con `accountId` y `amount`
-3. Consulte `GET /api/v1/ve/transactions/{id}/status` para leer las instrucciones de pago y la cancelación
+3. Consulte `GET /api/v1/ve/transactions/{id}/status` hasta que `opciones_pago` esté presente
+4. Cuando el pagador pague una de esas opciones, envíe `POST /api/v1/ve/transactions/{id}/proof`
 
-`webhookUrl` envía `TRANSACTION` / `status_change` cuando el cash-in llega a `done`. Ese webhook no se envía cuando se guardan las instrucciones de pago. No se envía cuando el cash-in pasa a `cancelled`. `banco` y `numero_cuenta` permanecen en `GET /api/v1/ve/transactions/{id}/status`. No van en ese webhook. Vea [Recepción de webhooks](/es/developers/receiving-webhooks).
+`webhookUrl` envía `TRANSACTION` / `status_change` cuando el cash-in llega a `done`. Ese webhook no se envía cuando se guardan las instrucciones de pago. No se envía cuando el cash-in pasa a `cancelled`. `banco`, `numero_cuenta` y `opciones_pago` permanecen en `GET /api/v1/ve/transactions/{id}/status`. No van en ese webhook. Vea [Recepción de webhooks](/es/developers/receiving-webhooks).
 
 ## Solicitud
 
@@ -55,9 +56,40 @@ curl -X POST https://hg.cash/api/v1/ve/transactions/inbound \
 
 `GET /api/v1/ve/transactions/{id}/status` lee el estado del cash-in y del payout. `amount` es una cadena decimal USDT.
 
-Cuando ya existen las instrucciones de pago, el cuerpo puede incluir `banco` y `numero_cuenta`, solo de entrada. Esos campos de cobro no se devuelven en un payout.
+Cuando ya existen las instrucciones de pago, el cuerpo puede incluir `banco`, `numero_cuenta` y `opciones_pago`, solo de entrada. `opciones_pago` es la lista de opciones guardada desde `onramp.tomada`. Cada ítem puede incluir `instrumento` (`transferencia` o `pago_movil`), `banco`, `titular`, `document_type`, `document`, `numero_cuenta`, `telefono` y `cuenta_id`. Los campos vacíos se omiten. La lista se omite cuando no se guardó ninguna. Esos campos de cobro no se devuelven en un payout. Leer el estado no llama al proveedor de pago.
 
 Vea [Payouts](/es/countries/venezuela/payouts) para `pending_kyc`, `kyc_url`, `kyc_expires_at` y `cancelledReason`.
+
+## Comprobante de pago
+
+Cuando `opciones_pago` está presente, envíe el comprobante de la opción que usó el pagador:
+
+`POST /api/v1/ve/transactions/{id}/proof`
+
+Cuerpo obligatorio, cada uno una cadena no vacía: `referencia`, `cuenta_id`, `instrumento` y `fecha`. `cuenta_id` e `instrumento` deben coincidir con una opción guardada.
+
+Un token `USER` solo puede enviar el comprobante si es dueño de la cuenta. Un acceso de solo lectura o de equipo devuelve `403`. La fila permanece en `pending`. Esta llamada no marca el cash-in como `done`.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/transactions/TRANSACTION_UUID/proof \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "referencia": "123456",
+    "cuenta_id": "cuenta-1",
+    "instrumento": "transferencia",
+    "fecha": "2026-04-01"
+  }'
+```
+
+`200` devuelve `mensaje` cuando la respuesta del proveedor lo incluye.
+
+| HTTP | Cuándo |
+| --- | --- |
+| `400` | Falló la validación, la fila no es una orden de entrada de Venezuela, faltan el id de orden o las opciones guardadas, la opción no coincide, o el estado es `done` o `cancelled` |
+| `403` | El token no es dueño de la cuenta |
+| `404` | La transacción no existe |
+| `500` | La integración de pago no está configurada |
 
 ## Errores
 

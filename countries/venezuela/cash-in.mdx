@@ -19,9 +19,10 @@ This is not a hosted checkout. Create the cash-in with `POST /api/v1/ve/transact
 
 1. Call `GET /api/v1/ve/banks` when you want to set the payer bank
 2. `POST /api/v1/ve/transactions/inbound` with `accountId` and `amount`
-3. Poll `GET /api/v1/ve/transactions/{id}/status` to read pay-in instructions and cancellation
+3. Poll `GET /api/v1/ve/transactions/{id}/status` until `opciones_pago` is present
+4. After the payer pays one of those options, submit `POST /api/v1/ve/transactions/{id}/proof`
 
-`webhookUrl` sends `TRANSACTION` / `status_change` when the cash-in reaches `done`. That webhook is not sent when pay-in instructions are stored. It is not sent when the cash-in becomes `cancelled`. `banco` and `numero_cuenta` stay on `GET /api/v1/ve/transactions/{id}/status`. They are not on that webhook. See [Receiving webhooks](/developers/receiving-webhooks).
+`webhookUrl` sends `TRANSACTION` / `status_change` when the cash-in reaches `done`. That webhook is not sent when pay-in instructions are stored. It is not sent when the cash-in becomes `cancelled`. `banco`, `numero_cuenta`, and `opciones_pago` stay on `GET /api/v1/ve/transactions/{id}/status`. They are not on that webhook. See [Receiving webhooks](/developers/receiving-webhooks).
 
 ## Request
 
@@ -55,9 +56,40 @@ curl -X POST https://hg.cash/api/v1/ve/transactions/inbound \
 
 `GET /api/v1/ve/transactions/{id}/status` reads cash-in and payout status. `amount` is a USDT decimal string.
 
-After payment instructions exist, the body may include inbound-only `banco` and `numero_cuenta`. Those pay-in fields are never returned for a payout.
+After payment instructions exist, the body may include inbound-only `banco`, `numero_cuenta`, and `opciones_pago`. `opciones_pago` is the option list stored from `onramp.tomada`. Each item can include `instrumento` (`transferencia` or `pago_movil`), `banco`, `titular`, `document_type`, `document`, `numero_cuenta`, `telefono`, and `cuenta_id`. Empty fields are omitted. The list is omitted when none were stored. Those pay-in fields are never returned for a payout. Reading status does not call the payment provider.
 
 See [Payouts](/countries/venezuela/payouts) for `pending_kyc`, `kyc_url`, `kyc_expires_at`, and `cancelledReason`.
+
+## Payment proof
+
+When `opciones_pago` is present, submit the proof for the option the payer used:
+
+`POST /api/v1/ve/transactions/{id}/proof`
+
+Required body, each a non-empty string: `referencia`, `cuenta_id`, `instrumento`, and `fecha`. `cuenta_id` and `instrumento` must match one stored option.
+
+A `USER` token can submit only when it owns the account. A view-only grant or team view access returns `403`. The row stays `pending`. This call does not mark the cash-in `done`.
+
+```bash
+curl -X POST https://hg.cash/api/v1/ve/transactions/TRANSACTION_UUID/proof \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "referencia": "123456",
+    "cuenta_id": "cuenta-1",
+    "instrumento": "transferencia",
+    "fecha": "2026-04-01"
+  }'
+```
+
+`200` returns `mensaje` when the provider response includes one.
+
+| HTTP | When |
+| --- | --- |
+| `400` | Validation failed, the row is not an inbound Venezuela order, the order id or stored options are missing, the option does not match, or the status is `done` or `cancelled` |
+| `403` | The token does not own the account |
+| `404` | The transaction does not exist |
+| `500` | The payment integration is not configured |
 
 ## Errors
 
