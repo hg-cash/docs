@@ -10,7 +10,7 @@ Argentina es el mercado principal de HG.Cash para **transferencias bancarias** e
 
 Para **cash-outs**, usted inicia **transferencias bancarias instantáneas** con la API. Para **cash-ins**, no crea pagos entrantes por API; HG.Cash detecta los movimientos en las cuentas asignadas y los envía a su webhook.
 
-Para una **página de pago hospedada** donde el pagador transfiere a su CVU/alias e ingresa un DNI de 8 dígitos, use **[Checkout hospedado](/es/developers/checkout)** (`country: AR`).
+Para una **página de pago hospedada** donde el pagador transfiere a su CVU/alias e ingresa un DNI de 8 dígitos, use **[Checkouts](/es/checkouts/introduction)** (`country: AR`).
 
 ## Cómo funciona
 
@@ -89,4 +89,4 @@ Use `maxWithdrawableAmount` del error (o consulte el endpoint de saldo antes) pa
 
 - `GET /api/v1/transaction-requests/{id}/transaction-id` — ID de transacción de libro vinculada (`null` mientras procesa)
 - `GET /api/v1/alias-lookup` — resolver alias a CBU/CVU (si está habilitado)
-- `GET /api/v1/transaction-statuses` y `GET /api/v1/transaction-types` — datos de referencia (sin autenticación)
+- `GET /api/v1/transaction-statuses` y `GET /api/v1/transaction-types` — datos de referencia (token Bearer obligatorio)

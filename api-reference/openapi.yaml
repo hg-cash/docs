@@ -508,9 +508,10 @@ components:
         Optional fee snapshot on a transaction webhook. Amounts are decimal strings.
         Omitted when the movement has no breakdown. `collectedAmount` is the single
         combined fee: the percentage charged to the client plus the flat fee.
-        `flatFee` is that flat amount only. Stored `platformFee` and `transactionFee`
-        are not sent here; they remain on REST status
-        (`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status`).
+        `flatFee` is that flat amount only. Stored `platformFee` is not sent here
+        and is not returned on REST status. `transactionFee` and `flatFee.source`
+        stay on REST status (`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status`).
+        Venezuela status returns `transactionFee` and omits `flatFee.source`.
         Webhooks do not include `flatFee.source`.
       properties:
         flatFee:
@@ -652,6 +653,10 @@ components:
           description: Optional. The default is 86400 seconds. The maximum is 604800 seconds.
         idempotencyKey:
           type: string
+        reference:
+          type: string
+          maxLength: 128
+          description: Optional merchant or cashier label, for example "Cashier 1"
         locale:
           type: string
           enum: [es, en]
@@ -680,6 +685,9 @@ components:
         checkoutUrl: { type: string, format: uri }
         status: { type: string }
         expiresAt: { type: string, format: date-time }
+        reference:
+          type: string
+          description: Merchant or cashier label when one was set on create
         accountDisplay:
           type: object
           description: Present for AR (CVU, alias, holder)
@@ -1154,7 +1162,10 @@ components:
           format: uuid
         status:
           type: string
-          enum: [processing, cancelled]
+          enum: [processing, done, cancelled]
+          description: >-
+            `processing` while the payout is in flight, `done` when the provider
+            already reports it complete, `cancelled` when the provider rejects it.
 
     ChileProviderError:
       type: object
@@ -1608,6 +1619,15 @@ components:
         numero_cuenta:
           type: string
           description: Inbound pay-in account number. Never returned for a payout.
+        opciones_pago:
+          type: array
+          description: >-
+            Inbound-only payment options stored from `onramp.tomada`.
+            Omitted when none were stored or every item is empty.
+            Never returned for a payout. Empty fields are omitted.
+            Reading status does not call the payment provider.
+          items:
+            $ref: '#/components/schemas/VenezuelaPayInOption'
         kyc_url:
           type: string
           description: >-
@@ -1628,6 +1648,59 @@ components:
             - VE_KYC_REQUIRED
         feeBreakdown:
           $ref: '#/components/schemas/VenezuelaStatusFeeBreakdown'
+
+    VenezuelaPayInOption:
+      type: object
+      description: >-
+        One cash-in option (`transferencia` or `pago_movil`). Field names match
+        the provider. Only non-empty stored fields are present.
+      properties:
+        instrumento:
+          type: string
+          description: '`transferencia` or `pago_movil`'
+        banco:
+          type: string
+        titular:
+          type: string
+        document_type:
+          type: string
+        document:
+          type: string
+        numero_cuenta:
+          type: string
+        telefono:
+          type: string
+        cuenta_id:
+          type: string
+          description: Payment-account id for this option. Send this value on the proof.
+
+    VenezuelaOnRampProofRequest:
+      type: object
+      required: [referencia, cuenta_id, instrumento, fecha]
+      properties:
+        referencia:
+          type: string
+          minLength: 1
+          description: Payment reference
+        cuenta_id:
+          type: string
+          minLength: 1
+          description: Must match `cuenta_id` on one stored `opciones_pago` item
+        instrumento:
+          type: string
+          minLength: 1
+          description: Must match `instrumento` on that same stored option
+        fecha:
+          type: string
+          minLength: 1
+          description: Payment date
+
+    VenezuelaOnRampProofResponse:
+      type: object
+      properties:
+        mensaje:
+          type: string
+          description: Present when the provider proof response includes `mensaje`
 
     OutboundTransactionRequest:
       type: object
@@ -1696,11 +1769,27 @@ components:
             Normalized status of the transaction.
 
             - `processing`: First status of an outbound transaction after it is created. The payout is in flight with the provider.
-            - `pending`: First status of an inbound transaction after it is created, until the payer completes payment.
-            - `done`: Payment or payout completed.
-            - `expired`: Inbound charge expired before payment.
-            - `cancelled`: Transaction was cancelled or the provider rejected it.
-          enum: [processing, pending, done, expired, cancelled]
+            - `pending`: First status of an inbound transaction after it is created, until the payer completes payment. A Bankizi cash-in whose provider status is only `REQUESTED_REFUND` stays `pending` when it was not already `done`.
+            - `done`: Payment or payout completed. A Bankizi cash-in stays `done` while the provider reports `REQUESTED_REFUND`.
+            - `expired`: Inbound charge expired before payment. Bankizi `EXPIRED` maps to this value after an authenticated transaction read.
+            - `cancelled`: Transaction was cancelled or the provider rejected it. Bankizi cash-out `FAILED`, `REJECT`, and `REJECTED` use `cancelled`. A confirmed Bankizi refund does not.
+            - `reversed`: Confirmed Bankizi refund, cash-in or cash-out. Both `REFUNDED` and `PARTIALLY_REFUNDED` use this value after Bankizi's authenticated read. The prior net balance contribution is removed once: the cash-in credit, or the cash-out debit (`amount` plus the collected fee). `PARTIALLY_REFUNDED` does not leave a residual credit or debit.
+          enum: [processing, pending, done, expired, cancelled, reversed]
+        errorKey:
+          type: string
+          description: >-
+            Optional. Present on `GET /br/transactions/{id}/status` when the
+            transaction is a cancelled Bankizi payment and the stored failure
+            maps to a stable HG key (for example `PIX_KEY_INVALID`). Omitted
+            for every other status, for AgilizePay, and when there is nothing
+            to map. Not a provider code. The raw provider body is not returned.
+          example: "PIX_KEY_INVALID"
+        errorDescription:
+          type: string
+          description: >-
+            Optional English description for `errorKey`. Omitted together with
+            `errorKey`. This string is not translated per locale.
+          example: "Invalid PIX Key for type CPF"
         direction:
           type: string
           enum: [Inbound, Outbound]
@@ -1710,22 +1799,21 @@ components:
           type: string
         feeBreakdown:
           $ref: '#/components/schemas/FeeBreakdown'
+          description: >-
+            Optional. Present when the transaction has a stored fee snapshot.
+            Omitted when there is no breakdown. Status responses include
+            `transactionFee`, `flatFee`, and `collectedAmount`. They do not include
+            `platformFee`. Brazil, Chile, Colombia, and Bolivia include
+            `flatFee.source`. `GET /ve/transactions/{id}/status` returns the same
+            amounts and omits `flatFee.source`.
 
     VenezuelaStatusFeeBreakdown:
       type: object
       description: >-
         Optional fee snapshot on a Venezuela status response. Amounts and rates are decimal
         strings. Omitted when there is no breakdown. `flatFee` includes `amount` only.
-        This response does not include `flatFee.source`.
+        This response does not include `platformFee` or `flatFee.source`.
       properties:
-        platformFee:
-          type: object
-          properties:
-            amount:
-              type: string
-            rate:
-              type: string
-              nullable: true
         transactionFee:
           type: object
           properties:
@@ -1748,21 +1836,9 @@ components:
         Optional fee snapshot on a direct transaction status response. Amounts and rates
         are decimal strings. Omitted when the transaction has no breakdown.
         `collectedAmount` is the percentage transaction fee plus the flat fee.
-        `platformFee` is the recorded wallet cost and is not added to `collectedAmount`.
-        Includes `flatFee.source`, which transaction webhooks omit.
+        Stored `platformFee` (wallet cost) is not included and is not added to
+        `collectedAmount`. Includes `flatFee.source`, which transaction webhooks omit.
       properties:
-        platformFee:
-          type: object
-          description: Recorded wallet percentage. Not added to `collectedAmount`.
-          properties:
-            amount:
-              type: string
-              example: "60"
-            rate:
-              type: string
-              nullable: true
-              description: Platform percentage rate as a decimal string (`0.005` is 0.5%)
-              example: "0.005"
         transactionFee:
           type: object
           description: Percentage charged to the client.
@@ -2103,6 +2179,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: reference
+          in: query
+          schema:
+            type: string
+          description: Case-insensitive substring match on the checkout reference
       responses:
         '200':
           description: OK
@@ -2326,7 +2407,8 @@ paths:
         Distinct from `GET /transaction/{id}/status` which returns TransactionRequest status.
 
         An outbound transaction is created in `processing`. An inbound transaction is created in `pending`.
-        Possible `status` values: `processing`, `pending`, `done`, `expired`, and `cancelled`.
+        Possible `status` values: `processing`, `pending`, `done`, `expired`, `cancelled`, and `reversed`.
+        A cancelled Bankizi payment can also include `errorKey` and `errorDescription`. Stored `platformFee` is not returned on `feeBreakdown`.
       operationId: getBrTransactionStatus
       parameters:
         - in: path
@@ -2425,7 +2507,7 @@ paths:
       summary: Create Outbound Transaction (Chile)
       description: |
         Create a bank payout from a Chile CLP account. Requires sufficient net balance.
-        Transaction starts in `processing`.
+        The response is `processing` while the payout is in flight, `done` when the provider already reports it complete, or `cancelled` when the provider rejects it.
       operationId: createClOutboundTransaction
       requestBody:
         required: true
@@ -2810,7 +2892,7 @@ paths:
       description: |
         Outbound Colombia payouts only.
         Returns `id`, `externalID`, `status`, `direction`, `amount` (string), `currency`, and `providerStatus` when a refresh happened.
-        The response also includes `feeBreakdown` when a fee snapshot is stored: `platformFee`, `transactionFee`, `flatFee` (including `source`), and `collectedAmount`. The object is omitted when there is no snapshot.
+        The response also includes `feeBreakdown` when a fee snapshot is stored: `transactionFee`, `flatFee` (including `source`), and `collectedAmount`. Stored `platformFee` is not returned. The object is omitted when there is no snapshot.
         A transaction that is not an outbound payout returns `400`.
         A refresh failure returns `502` with `error`, `code`, and `type`.
       operationId: getCoTransactionStatus
@@ -3551,9 +3633,10 @@ paths:
         Read inbound or outbound status. `amount` is a USDT decimal string. `status` includes `pending_kyc`.
         `externalID` is omitted until the order id exists, then it is returned.
 
-        Optional fields, only when present: `orden_id`, `montoFiat`, `tasaCompra`, inbound-only `banco` and `numero_cuenta`,
+        Optional fields, only when present: `orden_id`, `montoFiat`, `tasaCompra`, inbound-only `banco`, `numero_cuenta`, and `opciones_pago`,
         outbound `kyc_url`, and `kyc_expires_at` while a `pending_kyc` hold is open.
-        `feeBreakdown`, when a snapshot exists, omits `flatFee.source`.
+        `opciones_pago` is the pay-in option list stored from `onramp.tomada`. It is omitted when none were stored, and it is never returned for a payout.
+        `feeBreakdown`, when a snapshot exists, omits `platformFee` and `flatFee.source`.
 
         For an outbound cancelled because identity verification was required, `kyc_url` is included only when a non-empty URL was stored.
         `cancelledReason` is included only for `VE_KYC_EXPIRED`, `VE_KYC_DECLINED`, or `VE_KYC_REQUIRED`.
@@ -3638,6 +3721,80 @@ paths:
           description: Transaction not found
         '500':
           description: Internal server error
+
+  /ve/transactions/{id}/proof:
+    post:
+      summary: Submit Venezuela on-ramp payment proof
+      description: |
+        Submit the payment proof for an inbound Venezuela USDT order.
+        Authentication matches `GET /ve/transactions/{id}/status`. Unlike status, a
+        `USER` token may submit only when it owns the account. A view-only grant
+        or team view access returns `403`. Admin tokens use the admin transaction scope.
+        **Required body:** `referencia`, `cuenta_id`, `instrumento`, and `fecha`,
+        each a non-empty string. `cuenta_id` and `instrumento` must match one
+        `opciones_pago` item already stored from `onramp.tomada`.
+        HG forwards those four fields to the provider and returns `mensaje`
+        when the response includes one. The HG row stays `pending`. This route
+        does not mark the transaction `done`.
+        The request is rejected when the row is not an inbound Venezuela order,
+        the order id is missing, `opciones_pago` was not stored, the
+        `cuenta_id` and `instrumento` pair is not one of the stored options,
+        or the status is `done` or `cancelled`.
+        Payer phone, origin bank, and identity document are not sent.
+      operationId: submitVeOnRampProof
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - Venezuela
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VenezuelaOnRampProofRequest'
+            example:
+              referencia: "123456"
+              cuenta_id: "cuenta-1"
+              instrumento: transferencia
+              fecha: "2026-04-01"
+      responses:
+        '200':
+          description: The provider accepted the proof. The HG transaction stays pending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaOnRampProofResponse'
+              example:
+                mensaje: Proof received
+        '400':
+          description: >-
+            Validation failed, the transaction is not an inbound Venezuela order,
+            the order id or stored payment options are missing, the option does
+            not match, or the order is `done` or `cancelled`.
+        '401':
+          description: Unauthorized
+        '403':
+          description: >-
+            A USER token that does not own the account is rejected, including
+            a view-only grant or team view access.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+                    example: You do not have access to this account
+        '404':
+          description: Transaction not found
+        '500':
+          description: Payment integration is not configured
 
   /transactions/{id}/receipt:
     get:
@@ -3927,9 +4084,12 @@ paths:
         
         ## 📋 Common Statuses
         
+        - **pending**: Transaction is waiting to be processed
         - **processing**: Transaction is being processed
         - **done**: Transaction completed successfully
-        - **failed**: Transaction processing failed
+        - **cancelled**: Transaction was cancelled or rejected
+        - **expired**: Inbound charge expired before payment
+        - **reversed**: A confirmed refund removed the earlier balance movement
         
       operationId: getTransactionStatuses
       tags:
@@ -3959,11 +4119,11 @@ paths:
                         name: "pending"
                         description: "Transaction is pending processing"
                       - id: "550e8400-e29b-41d4-a716-446655440001"
-                        name: "completed"
+                        name: "done"
                         description: "Transaction completed successfully"
                       - id: "550e8400-e29b-41d4-a716-446655440002"
-                        name: "failed"
-                        description: "Transaction processing failed"
+                        name: "cancelled"
+                        description: "Transaction was cancelled or rejected"
         '401':
           description: Unauthorized - Invalid or missing token
           content:
@@ -4179,7 +4339,7 @@ webhooks:
             examples:
               with_fee_breakdown:
                 summary: Account movement with fee breakdown
-                description: Movement that stored a percentage fee plus a flat fee. `collectedAmount` is that percentage plus `15`. `platformFee` and `transactionFee` stay on the status response.
+                description: Movement that stored a percentage fee plus a flat fee. `collectedAmount` is that percentage plus `15`. Status responses return `transactionFee` and omit stored `platformFee`.
                 value:
                   topic: "TRANSACTION"
                   eventType: "created"

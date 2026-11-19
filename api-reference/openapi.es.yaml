@@ -508,8 +508,10 @@ components:
         Desglose de comisión opcional en un webhook de transacción. Los montos son cadenas
         decimales. Se omite cuando el movimiento no tiene desglose. `collectedAmount` es la
         comisión combinada: el porcentaje cobrado al cliente más la comisión fija. `flatFee`
-        es solo ese monto fijo. `platformFee` y `transactionFee` no se envían aquí; quedan
-        en el estado REST (`GET /api/v1/{br,cl,co,ve,bo}/transactions/{id}/status`).
+        es solo ese monto fijo. El `platformFee` guardado no se envía aquí y tampoco
+        se devuelve en el estado REST. `transactionFee` y `flatFee.source` quedan
+        en el estado REST (`GET /api/v1/{br,cl,co,bo}/transactions/{id}/status`).
+        El estado de Venezuela devuelve `transactionFee` y omite `flatFee.source`.
         Los webhooks no incluyen `flatFee.source`.
       properties:
         flatFee:
@@ -651,6 +653,10 @@ components:
           description: Opcional. El valor predeterminado es 86400 segundos. El máximo es 604800 segundos.
         idempotencyKey:
           type: string
+        reference:
+          type: string
+          maxLength: 128
+          description: Etiqueta opcional del comercio o del cajero, por ejemplo "Caja 1"
         locale:
           type: string
           enum: [es, en]
@@ -679,6 +685,9 @@ components:
         checkoutUrl: { type: string, format: uri }
         status: { type: string }
         expiresAt: { type: string, format: date-time }
+        reference:
+          type: string
+          description: Etiqueta del comercio o del cajero cuando se envió al crear
         accountDisplay:
           type: object
           description: Presente para AR (CVU, alias, titular)
@@ -1153,7 +1162,10 @@ components:
           format: uuid
         status:
           type: string
-          enum: [processing, cancelled]
+          enum: [processing, done, cancelled]
+          description: >-
+            `processing` mientras el payout está en curso, `done` cuando el proveedor
+            ya lo informa como completo, `cancelled` cuando el proveedor lo rechaza.
 
     ChileProviderError:
       type: object
@@ -1595,6 +1607,15 @@ components:
         numero_cuenta:
           type: string
           description: "Número de cuenta de cobro, solo de entrada. Nunca se devuelve en un payout."
+        opciones_pago:
+          type: array
+          description: >-
+            Opciones de cobro solo de entrada, guardadas desde `onramp.tomada`.
+            Se omite cuando no se guardó ninguna o todos los ítems están vacíos.
+            Nunca se devuelve en un payout. Los campos vacíos se omiten.
+            Leer el estado no llama al proveedor de pago.
+          items:
+            $ref: '#/components/schemas/VenezuelaPayInOption'
         kyc_url:
           type: string
           description: "Solo de salida. Se incluye cuando se guardó una URL no vacía, también si un payout se canceló porque se requería verificación de identidad."
@@ -1611,6 +1632,59 @@ components:
             - VE_KYC_REQUIRED
         feeBreakdown:
           $ref: '#/components/schemas/VenezuelaStatusFeeBreakdown'
+
+    VenezuelaPayInOption:
+      type: object
+      description: >-
+        Una opción de cobro (`transferencia` o `pago_movil`). Los nombres de campo
+        coinciden con el proveedor. Solo están presentes los campos guardados que no están vacíos.
+      properties:
+        instrumento:
+          type: string
+          description: '`transferencia` o `pago_movil`'
+        banco:
+          type: string
+        titular:
+          type: string
+        document_type:
+          type: string
+        document:
+          type: string
+        numero_cuenta:
+          type: string
+        telefono:
+          type: string
+        cuenta_id:
+          type: string
+          description: Id de la cuenta de pago de esta opción. Envíe este valor en el comprobante.
+
+    VenezuelaOnRampProofRequest:
+      type: object
+      required: [referencia, cuenta_id, instrumento, fecha]
+      properties:
+        referencia:
+          type: string
+          minLength: 1
+          description: Referencia del pago
+        cuenta_id:
+          type: string
+          minLength: 1
+          description: Debe coincidir con `cuenta_id` de un ítem guardado de `opciones_pago`
+        instrumento:
+          type: string
+          minLength: 1
+          description: Debe coincidir con `instrumento` de esa misma opción guardada
+        fecha:
+          type: string
+          minLength: 1
+          description: Fecha del pago
+
+    VenezuelaOnRampProofResponse:
+      type: object
+      properties:
+        mensaje:
+          type: string
+          description: Presente cuando la respuesta del comprobante del proveedor incluye `mensaje`
 
     OutboundTransactionRequest:
       type: object
@@ -1679,11 +1753,27 @@ components:
             Estado normalizado de la transacción.
 
             - `processing`: Primer estado de una transacción saliente al crearla. El payout está en curso con el proveedor.
-            - `pending`: Primer estado de una transacción entrante al crearla, hasta que el pagador completa el pago.
-            - `done`: Pago o payout completado.
-            - `expired`: El cobro entrante expiró antes del pago.
-            - `cancelled`: La transacción fue cancelada o el proveedor la rechazó.
-          enum: [processing, pending, done, expired, cancelled]
+            - `pending`: Primer estado de una transacción entrante al crearla, hasta que el pagador completa el pago. Un cash-in de Bankizi cuyo estado del proveedor es solo `REQUESTED_REFUND` permanece en `pending` si todavía no estaba en `done`.
+            - `done`: Pago o payout completado. Un cash-in de Bankizi permanece en `done` mientras el proveedor informa `REQUESTED_REFUND`.
+            - `expired`: El cobro entrante expiró antes del pago. Bankizi `EXPIRED` se mapea a este valor después de una lectura autenticada de la transacción.
+            - `cancelled`: La transacción fue cancelada o el proveedor la rechazó. Los estados de cash-out de Bankizi `FAILED`, `REJECT` y `REJECTED` usan `cancelled`. Un reembolso confirmado de Bankizi no.
+            - `reversed`: Reembolso confirmado de Bankizi, de entrada o de salida. `REFUNDED` y `PARTIALLY_REFUNDED` usan este valor después de la lectura autenticada de Bankizi. El aporte neto anterior al saldo se retira una sola vez: el crédito del cash-in, o el débito del cash-out (`amount` más la comisión cobrada). `PARTIALLY_REFUNDED` no deja un crédito ni un débito residual.
+          enum: [processing, pending, done, expired, cancelled, reversed]
+        errorKey:
+          type: string
+          description: >-
+            Opcional. Presente en `GET /br/transactions/{id}/status` cuando la
+            transacción es un pago Bankizi cancelado y el fallo guardado se
+            mapea a una clave estable de HG (por ejemplo `PIX_KEY_INVALID`).
+            Se omite en cualquier otro estado, para AgilizePay, y cuando no hay
+            nada que mapear. No es un código del proveedor. No se devuelve el cuerpo crudo del proveedor.
+          example: "PIX_KEY_INVALID"
+        errorDescription:
+          type: string
+          description: >-
+            Descripción opcional en inglés de `errorKey`. Se omite junto con
+            `errorKey`. Esta cadena no se traduce por idioma.
+          example: "Invalid PIX Key for type CPF"
         direction:
           type: string
           enum: [Inbound, Outbound]
@@ -1693,22 +1783,20 @@ components:
           type: string
         feeBreakdown:
           $ref: '#/components/schemas/FeeBreakdown'
+          description: >-
+            Opcional. Presente cuando la transacción tiene un desglose guardado.
+            Se omite cuando no hay desglose. El estado incluye `transactionFee`,
+            `flatFee` y `collectedAmount`. No incluye `platformFee`. Brasil, Chile,
+            Colombia y Bolivia incluyen `flatFee.source`. `GET /ve/transactions/{id}/status`
+            devuelve los mismos montos y omite `flatFee.source`.
 
     VenezuelaStatusFeeBreakdown:
       type: object
       description: >-
         Desglose de comisión opcional en el estado de Venezuela. Los montos y las tasas son
         cadenas decimales. Se omite cuando no hay desglose. `flatFee` incluye solo `amount`.
-        Esta respuesta no incluye `flatFee.source`.
+        Esta respuesta no incluye `platformFee` ni `flatFee.source`.
       properties:
-        platformFee:
-          type: object
-          properties:
-            amount:
-              type: string
-            rate:
-              type: string
-              nullable: true
         transactionFee:
           type: object
           properties:
@@ -1730,22 +1818,10 @@ components:
       description: >-
         Desglose de comisión opcional en la respuesta de estado de una transacción directa.
         Los montos y las tasas son cadenas decimales. Se omite cuando la transacción no
-        tiene desglose. `collectedAmount` es la comisión porcentual más la comisión fija.
-        `platformFee` es el costo de billetera registrado y no se suma a `collectedAmount`.
-        Incluye `flatFee.source`, que los webhooks de transacción omiten.
+        tiene desglose.         `collectedAmount` es la comisión porcentual más la comisión fija.
+        El `platformFee` guardado (costo de billetera) no se incluye y no se suma a
+        `collectedAmount`. Incluye `flatFee.source`, que los webhooks de transacción omiten.
       properties:
-        platformFee:
-          type: object
-          description: "Porcentaje de billetera registrado. No se suma a `collectedAmount`."
-          properties:
-            amount:
-              type: string
-              example: "60"
-            rate:
-              type: string
-              nullable: true
-              description: "Tasa porcentual de plataforma como cadena decimal (`0.005` es 0,5%)"
-              example: "0.005"
         transactionFee:
           type: object
           description: Porcentaje cobrado al cliente.
@@ -2085,6 +2161,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: reference
+          in: query
+          schema:
+            type: string
+          description: Coincidencia de subcadena sin distinguir mayúsculas en la referencia del checkout
       responses:
         '200':
           description: Correcto
@@ -2308,7 +2389,8 @@ paths:
         Distinto de `GET /transaction/{id}/status`, que devuelve el estado de TransactionRequest.
 
         Una transacción saliente se crea en `processing`. Una transacción entrante se crea en `pending`.
-        Valores posibles de `status`: `processing`, `pending`, `done`, `expired` y `cancelled`.
+        Valores posibles de `status`: `processing`, `pending`, `done`, `expired`, `cancelled` y `reversed`.
+        Un pago Bankizi cancelado también puede incluir `errorKey` y `errorDescription`. El `platformFee` guardado no se devuelve en `feeBreakdown`.
       operationId: getBrTransactionStatus
       parameters:
         - in: path
@@ -2407,7 +2489,7 @@ paths:
       summary: Crear transacción saliente (Chile)
       description: |
         Crea un payout bancario desde una cuenta CLP de Chile. Requiere saldo neto suficiente.
-        La transacción inicia en `processing`.
+        La respuesta es `processing` mientras el payout está en curso, `done` cuando el proveedor ya lo informa como completo, o `cancelled` cuando el proveedor lo rechaza.
       operationId: createClOutboundTransaction
       requestBody:
         required: true
@@ -2792,7 +2874,7 @@ paths:
       description: |
         Solo payouts salientes de Colombia.
         Devuelve `id`, `externalID`, `status`, `direction`, `amount` (string), `currency` y `providerStatus` cuando hubo una actualización.
-        La respuesta también incluye `feeBreakdown` cuando hay un desglose de comisión guardado: `platformFee`, `transactionFee`, `flatFee` (incluido `source`) y `collectedAmount`. El objeto se omite cuando no hay desglose.
+        La respuesta también incluye `feeBreakdown` cuando hay un desglose de comisión guardado: `transactionFee`, `flatFee` (incluido `source`) y `collectedAmount`. El `platformFee` guardado no se devuelve. El objeto se omite cuando no hay desglose.
         Una transacción que no es un payout saliente devuelve `400`.
         Un fallo de actualización devuelve `502` con `error`, `code` y `type`.
       operationId: getCoTransactionStatus
@@ -3517,9 +3599,10 @@ paths:
         Lee el estado de entrada o de salida. `amount` es una cadena decimal USDT. `status` incluye `pending_kyc`.
         `externalID` se omite hasta que existe el id de orden, y entonces se devuelve.
         
-        Campos opcionales, solo cuando están presentes: `orden_id`, `montoFiat`, `tasaCompra`, `banco` y `numero_cuenta` solo de entrada,
+        Campos opcionales, solo cuando están presentes: `orden_id`, `montoFiat`, `tasaCompra`, `banco`, `numero_cuenta` y `opciones_pago` solo de entrada,
         `kyc_url` de salida, y `kyc_expires_at` mientras la retención `pending_kyc` sigue abierta.
-        `feeBreakdown`, cuando existe un desglose, omite `flatFee.source`.
+        `opciones_pago` es la lista de opciones de cobro guardada desde `onramp.tomada`. Se omite cuando no se guardó ninguna, y nunca se devuelve en un payout.
+        `feeBreakdown`, cuando existe un desglose, omite `platformFee` y `flatFee.source`.
         
         En un payout cancelado porque se requería verificación de identidad, `kyc_url` se incluye solo cuando se guardó una URL no vacía.
         `cancelledReason` se incluye solo para `VE_KYC_EXPIRED`, `VE_KYC_DECLINED` o `VE_KYC_REQUIRED`.
@@ -3604,6 +3687,80 @@ paths:
           description: Transacción no encontrada
         '500':
           description: Error interno del servidor
+
+  /ve/transactions/{id}/proof:
+    post:
+      summary: Enviar comprobante de pago del cash-in (Venezuela)
+      description: |
+        Envía el comprobante de pago de una orden USDT de entrada de Venezuela.
+        La autenticación coincide con `GET /ve/transactions/{id}/status`. A diferencia del estado, un
+        token `USER` solo puede enviar el comprobante si es dueño de la cuenta. Un acceso de solo lectura
+        o de equipo devuelve `403`. Los tokens de administrador usan el alcance de transacciones de administrador.
+        **Cuerpo obligatorio:** `referencia`, `cuenta_id`, `instrumento` y `fecha`,
+        cada uno una cadena no vacía. `cuenta_id` e `instrumento` deben coincidir con un
+        ítem de `opciones_pago` ya guardado desde `onramp.tomada`.
+        HG reenvía esos cuatro campos al proveedor y devuelve `mensaje`
+        cuando la respuesta lo incluye. La fila de HG permanece en `pending`. Esta ruta
+        no marca la transacción como `done`.
+        La solicitud se rechaza cuando la fila no es una orden de entrada de Venezuela,
+        falta el id de orden, no se guardó `opciones_pago`, el par
+        `cuenta_id` e `instrumento` no es una de las opciones guardadas,
+        o el estado es `done` o `cancelled`.
+        No se envían el teléfono del pagador, el banco de origen ni el documento de identidad.
+      operationId: submitVeOnRampProof
+      tags:
+        - Venezuela
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VenezuelaOnRampProofRequest'
+            example:
+              referencia: "123456"
+              cuenta_id: "cuenta-1"
+              instrumento: transferencia
+              fecha: "2026-04-01"
+      responses:
+        '200':
+          description: El proveedor aceptó el comprobante. La transacción de HG permanece en pending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VenezuelaOnRampProofResponse'
+              example:
+                mensaje: Comprobante recibido
+        '400':
+          description: >-
+            Falló la validación, la transacción no es una orden de entrada de Venezuela,
+            faltan el id de orden o las opciones de pago guardadas, la opción no
+            coincide, o la orden está en `done` o `cancelled`.
+        '401':
+          description: No autorizado
+        '403':
+          description: >-
+            Se rechaza un token USER que no es dueño de la cuenta, incluido
+            un acceso de solo lectura o de equipo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+                    example: You do not have access to this account
+        '404':
+          description: Transacción no encontrada
+        '500':
+          description: La integración de pago no está configurada
 
   /transactions/{id}/receipt:
     get:
@@ -3893,9 +4050,12 @@ paths:
         
         ## 📋 Estados comunes
         
+        - **pending**: La transacción está pendiente de procesamiento
         - **processing**: La transacción está siendo procesada
         - **done**: La transacción se completó correctamente
-        - **failed**: Falló el procesamiento de la transacción
+        - **cancelled**: La transacción fue cancelada o rechazada
+        - **expired**: El cobro entrante expiró antes del pago
+        - **reversed**: Un reembolso confirmado retiró el movimiento de saldo anterior
         
       operationId: getTransactionStatuses
       tags:
@@ -3925,11 +4085,11 @@ paths:
                         name: "pending"
                         description: "La transacción está pendiente de procesamiento"
                       - id: "550e8400-e29b-41d4-a716-446655440001"
-                        name: "completed"
+                        name: "done"
                         description: "La transacción se completó correctamente"
                       - id: "550e8400-e29b-41d4-a716-446655440002"
-                        name: "failed"
-                        description: "Falló el procesamiento de la transacción"
+                        name: "cancelled"
+                        description: "La transacción fue cancelada o rechazada"
         '401':
           description: No autorizado - Token inválido o ausente
           content:
@@ -4145,7 +4305,7 @@ webhooks:
             examples:
               with_fee_breakdown:
                 summary: Movimiento de cuenta con desglose de comisión
-                description: Movimiento que guardó una comisión porcentual más una comisión fija. `collectedAmount` es ese porcentaje más `15`. `platformFee` y `transactionFee` quedan en la respuesta de estado.
+                description: Movimiento que guardó una comisión porcentual más una comisión fija. `collectedAmount` es ese porcentaje más `15`. El estado devuelve `transactionFee` y omite el `platformFee` guardado.
                 value:
                   topic: "TRANSACTION"
                   eventType: "created"
